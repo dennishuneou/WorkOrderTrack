@@ -1,2 +1,4 @@
-.idea/
-venv/
+.export
+.password
+__pycache__/
+myenv/

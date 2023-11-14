@@ -10,7 +10,7 @@ def register_user():
 
     if current_user.is_authenticated:
         flash('You are already logged in.')
-        return redirect(url_for('main.display_transactions'))
+        return redirect(url_for('main.display_workorders'))
 
     form = RegistrationForm()
 
@@ -30,7 +30,7 @@ def do_login():
 
     if current_user.is_authenticated:
         flash('You are already logged in.')
-        redirect(url_for('main.display_transactions'))
+        redirect(url_for('main.display_workorders'))
 
     form = LoginForm()
 
@@ -40,7 +40,7 @@ def do_login():
             flash('Invalid credentials. Please try again')
             return redirect(url_for('authentication.do_login'))
         login_user(user, form.stay_loggedin.data)
-        return redirect(url_for('main.display_transactions'))
+        return redirect(url_for('main.display_workorders'))
     return render_template('login.html', form=form)
 
 
@@ -49,7 +49,7 @@ def do_login():
 def do_logout():
     logout_user()
     flash('Logged out successfully.')
-    return redirect(url_for('main.display_transactions'))
+    return redirect(url_for('main.display_workorders'))
 
 @at.app_errorhandler(404)
 def page_not_found(error):

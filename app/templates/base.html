@@ -7,11 +7,11 @@
     {% block head %}
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <meta name="description" content="Asset Tracker"/>
-    <meta name="author" content="Bharat Kammakatla"/>
-    <title>Asset Tracker</title>
+    <meta name="description" content="WorkOrder Tracker"/>
+    <meta name="author" content="Dennis Hu"/>
+    <title>WorkOrder Tracker</title>
     {% block styles %}
-    <!-- Bootstrap CSS -->
+    <!-- Bootstrap CSS --> 
     <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
@@ -29,8 +29,8 @@
     {% block navbar %}
     <nav class="navbar navbar-expand-lg navbar-dark sticky-top py-4">
         <div class="container">
-            <a href="{{ url_for('main.display_transactions') }}" class="navbar-brand"><span
-                    class="title">Asset Tracker</span> <i class="fas fa-database" style="padding: 3px"></i></a>
+            <a href="{{ url_for('main.display_workorders') }}" class="navbar-brand"><span
+                    class="title">WorkOrder Tracker</span> <i class="fas fa-database" style="padding: 3px"></i></a>
             <button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#navbarSupportedContent"
                     aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
@@ -38,7 +38,7 @@
             <div class="collapse navbar-collapse" id="navbarSupportedContent">
                 <ul class="navbar-nav ml-auto">
                     <li class="nav-item">
-                        <a href="{{ url_for('main.display_transactions') }}" class="nav-link"> Home </a>
+                        <a href="{{ url_for('main.display_workorders') }}" class="nav-link"> Home </a>
                     </li>
                     <li class="nav-item">
                         <a href=" {{ url_for('authentication.register_user') }} " class="nav-link">
@@ -92,14 +92,7 @@
 {% block footer %}
 <footer class="footer">
     <div class="container text-center">
-        <a target="_blank" href="https://github.com/BharatKammakatla/Asset-Tracker"><i
-                class="fab fa-github fa-lg contact-icon"></i></a>
-        <a target="_blank" href="https://www.linkedin.com/in/bharatkammakatla"><i
-                class="fab fa-linkedin fa-lg contact-icon"></i></a>
-    </div>
-    <div class="container text-center">
-        <small>Made with ❤️ by <a href="https://bharatkammakatla.com">Bharat
-            Kammakatla</a></small>
+        <small>Made by Dennis Hu</small>
     </div>
 </footer>
 {% endblock %}
