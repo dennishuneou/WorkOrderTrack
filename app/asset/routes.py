@@ -1,5 +1,5 @@
 from flask_login import login_required
-from app.asset.forms import AddTransactionForm, EditTransactionForm, EditWorkOrderForm, AddAssetForm, UploadReportForm, ReviewReportForm, ReviewReportFileForm
+from app.asset.forms import AddTransactionForm, EditTransactionForm, EditWorkOrderForm, AddWorkorderForm, UploadReportForm, ReviewReportForm, ReviewReportFileForm
 from app.asset import main
 from app.asset.models import Transaction, WorkOrder, Production
 from flask import render_template, flash, request, redirect, url_for
@@ -8,7 +8,7 @@ from app import db
 #workorder status, unassigned -1, processing 0, waiting for inspection 1 finished 2.
 from flask_login import current_user
 import datetime
-
+from sqlalchemy import func
 @main.route('/')
 @login_required
 def display_workorders():
@@ -17,8 +17,13 @@ def display_workorders():
     query1 = WorkOrder.query.filter_by(asid=current_user.id, status=0)
     query2 =  WorkOrder.query.filter_by(asid=current_user.id, status=1)
     processing = query1.union(query2)
-    completed  = WorkOrder.query.filter_by(asid=current_user.id,status = 2)
-    return render_template('home.html', todoworkorder= todoworkorder, processing=processing, completed=completed)
+    completed = WorkOrder.query.filter(func.DATE(WorkOrder.intime) == func.DATE(datetime.datetime.today()),WorkOrder.asid==current_user.id,WorkOrder.status == 2)
+    completed7day = WorkOrder.query.filter((func.DATE(WorkOrder.intime)) >= (func.DATE(datetime.datetime.today())-7),WorkOrder.asid==current_user.id,WorkOrder.status == 2)
+    completed28day = WorkOrder.query.filter((func.DATE(WorkOrder.intime)) >= (func.DATE(datetime.datetime.today())-28),WorkOrder.asid==current_user.id,WorkOrder.status == 2)
+    cntToday = completed.count()
+    cnt7day = completed7day.count()
+    cnt28day = completed28day.count()
+    return render_template('home.html', todoworkorder= todoworkorder, processing=processing, completed=completed,cntToday=cntToday,cnt7day=cnt7day,cnt28day=cnt28day)
 
 @main.route('/TakeOneComputer/<id>', methods=['GET', 'POST'])
 @login_required
@@ -85,10 +90,10 @@ def ReturnOneComputer(id):
     flash('ReturnOneComputer successfully')
     return redirect(url_for('main.display_workorders'))    
 
-@main.route('/register/asset', methods=['GET', 'POST'])
+@main.route('/register/workorder', methods=['GET', 'POST'])
 @login_required
-def add_asset():
-    form = AddAssetForm()
+def add_workorder():
+    form = AddWorkorderForm()
     if form.validate_on_submit():
         csn_m=form.csn.data.split('\n')
         for x in csn_m:
@@ -97,7 +102,7 @@ def add_asset():
         db.session.commit()
         flash('WorkOrder registered successfully')
         return redirect(url_for('main.display_workorders'))
-    return render_template('add_asset.html', form=form)
+    return render_template('add_workorder.html', form=form)
 
 
 @main.route('/add/transaction', methods=['GET', 'POST'])

@@ -111,7 +111,7 @@ class AddTransactionForm(FlaskForm):
     submit = SubmitField('Add')
 
 
-class AddAssetForm(FlaskForm):
+class AddWorkorderForm(FlaskForm):
     wo = StringField('WorkOrder', validators=[DataRequired()])
     pn = StringField('Production Number', validators=[DataRequired()])
     csn = StringField('Chassis Serial Number', validators=[DataRequired()], widget=TextArea())
