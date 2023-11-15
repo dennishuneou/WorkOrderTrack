@@ -4,29 +4,18 @@
 
 {% block content %}
     <div class="container"><div class="row">
-        <div class="col-12 col-md-6 my-2">
-            <div class="shadow-lg rounded card text-left">
-                <div class="card-body bg-light">
-                    <h4 style="margin-left: 45px"> Upload Report </h4>
-                    <hr> 
-                    {{ form.hidden_tag() }}
-                    {{ render_form(form) }}
-                </div>
-            </div>
-        </div>
-        <div class="col-12 col-md-6 my-2">
+        <div class="col-16 col-md-8 my-4">
             <div class="shadow-lg rounded card text-left">
                 <div class="card-body bg-light">
                     <h4 style="margin-left: 45px"> Upload Report File  </h4>
                     <input type="file" id="file-input" />
                     <button id="read-button">Read File</button>
-                    <pre id="file-contents"></pre>
-                    
                     <script>
                         document.querySelector("#read-button").addEventListener('click', function() {
                             let file = document.querySelector("#file-input").files[0];
                             let reader = new FileReader();
-                            reader.addEventListener('load', function(e) {
+                            reader.addEventListener('load', function(e) 
+                            {
                                     let text = e.target.result;
                                     let linelist = text.split("\r\n");
                                     for (let each in linelist) {
@@ -44,12 +33,17 @@
                                         else if (linelist[each].includes("Slot 4:"))
                                             { document.getElementById('mem1').value = linelist[i]+linelist[i+1]}     
                                     }
+                                    document.getElementById('report').value = text
                             });
                             reader.readAsText(file);
                         });
                     </script>
+                    <hr>
+                    {{ form.hidden_tag() }}
+                    {{ render_form(form) }}
                 </div>
             </div>
         </div>
+        
     </div>
 {% endblock %}

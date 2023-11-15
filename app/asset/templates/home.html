@@ -100,25 +100,31 @@
                              {% endif %}
                         </td>
                         <td>
+                            {% if each.status ==  0 %}
                             <a class="btn btn-light btn-sm"
                                href="{{ url_for('main.ReturnOneComputer', id=each.id) }}"
                                role="button">
                                 <i class="fa fa-arrow-left" aria-hidden="true"></i>
                             </a>
+                            {% endif %}
                         </td>
                         <td>
+                            {% if each.status ==  0 %}
                             <a class="btn btn-light btn-sm"
                                href="{{ url_for('main.UploadReport', id=each.id) }}"
                                role="button">
                                <i class="fa fa-arrow-up" aria-hidden="true"></i>
                             </a>
+                            {% endif %}
                         </td>
                         <td>
+                            {% if each.status ==  1 %}
                             <a class="btn btn-light btn-sm"
-                               href="{{ url_for('main.UploadReport', id=each.id) }}"
+                               href="{{ url_for('main.ReviewReport', id=each.id) }}"
                                role="button">
                                <i class="fa fa-arrow-up" aria-hidden="true"></i>
                             </a>
+                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}

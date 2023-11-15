@@ -1,5 +1,5 @@
 from flask_login import login_required
-from app.asset.forms import AddTransactionForm, EditTransactionForm, EditWorkOrderForm, AddAssetForm, UploadReportForm
+from app.asset.forms import AddTransactionForm, EditTransactionForm, EditWorkOrderForm, AddAssetForm, UploadReportForm, ReviewReportForm, ReviewReportFileForm
 from app.asset import main
 from app.asset.models import Transaction, WorkOrder, Production
 from flask import render_template, flash, request, redirect, url_for
@@ -50,6 +50,29 @@ def UploadReport(id):
         return redirect(url_for('main.display_workorders'))
     return render_template('uploadreport.html', form=form, id=id)
 
+@main.route('/ReviewReport/<id>', methods=['GET', 'POST'])
+@login_required
+def ReviewReport(id): 
+    workorder = WorkOrder.query.get(id)
+    products = Production.query.filter_by(csn=workorder.csn.strip())
+    form = ReviewReportForm(obj=workorder)
+    print(workorder.csn)
+    print(products.count())
+    if products.count()>0 :
+        product = products[0]
+        form = ReviewReportForm(obj=workorder)
+        form.cpu.data = product.cpu
+        form.msn.data = product.msn
+        form.report.data = product.report   
+    workorder.intime=datetime.datetime.now()
+   
+    if form.validate_on_submit():
+        workorder.status = 2
+        db.session.commit()
+        flash('Confirmed')
+        return redirect(url_for('main.display_workorders'))
+    return render_template('reviewreport.html', form=form, id=id)
+
 @main.route('/ReturnOneComputer/<id>', methods=['GET', 'POST'])
 @login_required
 def ReturnOneComputer(id): 
@@ -69,7 +92,7 @@ def add_asset():
     if form.validate_on_submit():
         csn_m=form.csn.data.split('\n')
         for x in csn_m:
-           transaction = WorkOrder(wo=form.wo.data, pn=str(form.pn.data), csn=x, asid=-1,insid=-1,astime=None,intime=None,status=-1)
+           transaction = WorkOrder(wo=form.wo.data, pn=str(form.pn.data), csn=x.strip(), asid=-1,insid=-1,astime=None,intime=None,status=-1)
            db.session.add(transaction)
         db.session.commit()
         flash('WorkOrder registered successfully')
