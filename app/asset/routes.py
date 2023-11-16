@@ -61,13 +61,11 @@ def ReviewReport(id):
     workorder = WorkOrder.query.get(id)
     products = Production.query.filter_by(wo=workorder.wo,csn=workorder.csn.strip())
     form = ReviewReportForm(obj=workorder)
-    print(products.count())
     if products.count()>0 :
         product = products[0]
         form.cpu.data = product.cpu
         form.msn.data = product.msn
         form.report.data = product.report   
-        print(product.report)
     workorder.intime=datetime.datetime.now()
    
     if form.validate_on_submit():
