@@ -37,8 +37,9 @@ class WorkOrder(db.Model):
     intime=db.Column(db.DateTime, nullable=True)
     status =db.Column(db.Integer, nullable=True)
      
-    def __init__(self, wo, pn, csn, asid, insid,astime, intime, status):
+    def __init__(self, wo, customers, pn, csn, asid, insid,astime, intime, status):
         self.wo = wo
+        self.customers = customers
         self.pn = pn
         self.csn = csn
         self.asid = asid

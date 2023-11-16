@@ -68,7 +68,9 @@ class ReviewReportForm(FlaskForm):
     other = StringField('Other Module',render_kw={'readonly': True})
     note  = StringField('Notes',widget=TextArea(),render_kw={'readonly': True})
     report = StringField('Report File',widget=TextArea(),render_kw={'style': 'width: 400px','readonly': True})
+    action = SelectField('Approve or Deny',choices=[('0','Approve'),('-1','Deny')])
     submit = SubmitField('Confirm')
+  
 
 class ReviewReportFileForm(FlaskForm):
     

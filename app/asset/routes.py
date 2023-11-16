@@ -57,23 +57,29 @@ def UploadReport(id):
 
 @main.route('/ReviewReport/<id>', methods=['GET', 'POST'])
 @login_required
-def ReviewReport(id): 
-    workorder = WorkOrder.query.get(id)
-    products = Production.query.filter_by(wo=workorder.wo,csn=workorder.csn.strip())
-    form = ReviewReportForm(obj=workorder)
-    if products.count()>0 :
-        product = products[0]
-        form.cpu.data = product.cpu
-        form.msn.data = product.msn
-        form.report.data = product.report   
-    workorder.intime=datetime.datetime.now()
-   
-    if form.validate_on_submit():
-        workorder.status = 2
-        db.session.commit()
-        flash('Confirmed')
-        return redirect(url_for('main.display_workorders'))
-    return render_template('reviewreport.html', form=form, id=id)
+def ReviewReport(id):
+        workorder = WorkOrder.query.get(id)
+        products = Production.query.filter_by(wo=workorder.wo,csn=workorder.csn.strip())
+        form = ReviewReportForm(obj=workorder)
+        if products.count()>0 :
+            product = products[0]
+            form.cpu.data = product.cpu
+            form.msn.data = product.msn
+            form.report.data = product.report   
+        workorder.intime=datetime.datetime.now()
+        if form.validate_on_submit():
+            if(form.action.data==0) :
+               workorder.status = 2
+            else :
+               workorder.status = 0  
+            db.session.commit()
+            if(form.action.data==0) :
+               flash('Confirmed')
+            else :
+               flash('Denied')
+            return redirect(url_for('main.display_workorders'))
+        return render_template('reviewreport.html', form=form, id=id)
+
 
 @main.route('/ReturnOneComputer/<id>', methods=['GET', 'POST'])
 @login_required
