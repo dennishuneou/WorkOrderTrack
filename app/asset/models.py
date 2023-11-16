@@ -28,6 +28,7 @@ class WorkOrder(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     wo = db.Column(db.String(100), nullable=False)
+    customers = db.Column(db.String(100), nullable=False)
     pn = db.Column(db.String(100), nullable=False)
     csn = db.Column(db.String(100), nullable=False)
     asid = db.Column(db.Integer, nullable=True)

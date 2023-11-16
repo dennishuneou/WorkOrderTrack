@@ -1,5 +1,5 @@
 from flask_login import login_required
-from app.asset.forms import AddTransactionForm, EditTransactionForm, EditWorkOrderForm, AddWorkorderForm, UploadReportForm, ReviewReportForm, ReviewReportFileForm
+from app.asset.forms import EditWorkOrderForm, AddWorkorderForm, UploadReportForm, ReviewReportForm, ReviewReportFileForm
 from app.asset import main
 from app.asset.models import Transaction, WorkOrder, Production
 from flask import render_template, flash, request, redirect, url_for
@@ -59,16 +59,15 @@ def UploadReport(id):
 @login_required
 def ReviewReport(id): 
     workorder = WorkOrder.query.get(id)
-    products = Production.query.filter_by(csn=workorder.csn.strip())
+    products = Production.query.filter_by(wo=workorder.wo,csn=workorder.csn.strip())
     form = ReviewReportForm(obj=workorder)
-    print(workorder.csn)
     print(products.count())
     if products.count()>0 :
         product = products[0]
-        form = ReviewReportForm(obj=workorder)
         form.cpu.data = product.cpu
         form.msn.data = product.msn
         form.report.data = product.report   
+        print(product.report)
     workorder.intime=datetime.datetime.now()
    
     if form.validate_on_submit():
@@ -97,7 +96,7 @@ def add_workorder():
     if form.validate_on_submit():
         csn_m=form.csn.data.split('\n')
         for x in csn_m:
-           transaction = WorkOrder(wo=form.wo.data, pn=str(form.pn.data), csn=x.strip(), asid=-1,insid=-1,astime=None,intime=None,status=-1)
+           transaction = WorkOrder(wo=form.wo.data, customers=form.customers.data, pn=str(form.pn.data), csn=x.strip(), asid=-1,insid=-1,astime=None,intime=None,status=-1)
            db.session.add(transaction)
         db.session.commit()
         flash('WorkOrder registered successfully')
@@ -122,18 +121,3 @@ def add_transaction():
         flash('Asset added successfully')
         return redirect(url_for('main.display_workorders'))
     return render_template('add_transaction.html', form=form)
-
-
-@main.route('/edit/transaction/<id>', methods=['GET', 'POST'])
-@login_required
-def edit_transaction(id):
-    transaction = Transaction.query.get(id)
-    form = EditTransactionForm(obj=transaction)
-    if form.validate_on_submit():
-        transaction.end_time = form.end_time.data
-        transaction.status = form.status.data
-        db.session.add(transaction)
-        db.session.commit()
-        flash('Edit successful')
-        return redirect(url_for('main.display_workorders'))
-    return render_template('edit_transaction.html', form=form, id=id)

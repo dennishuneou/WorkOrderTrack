@@ -17,17 +17,6 @@ def check_if_asset_exist(form, field):
 def get_assets():
     return Asset.query.all()
 
-class EditTransactionForm(FlaskForm):
-    type = StringField('Type', render_kw={'readonly': True})
-    asset_name = StringField('Asset Name', render_kw={'readonly': True})
-    person_name = StringField('Person', render_kw={'readonly': True})
-    start_time = DateField('Start Time', render_kw={'readonly': True})
-    # end_time = DateField('End Time', validators=[DataRequired()])
-    end_time = DateField('End Time', format='%Y-%m-%d', validators=[DataRequired()])
-    status = SelectField('Status', choices=[('In Use', 'In Use'), ('In Store', 'In Store')],
-                         validators=[DataRequired()])
-    submit = SubmitField('Update')
-
 class UploadReportForm(FlaskForm):
     wo = StringField('WorkOrder', render_kw={'readonly': True,'style': 'width: 200px'})
     pn = StringField('ProductionNumber', render_kw={'readonly': True,'style': 'width: 200px'})
@@ -79,7 +68,6 @@ class ReviewReportForm(FlaskForm):
     other = StringField('Other Module',render_kw={'readonly': True})
     note  = StringField('Notes',widget=TextArea(),render_kw={'readonly': True})
     report = StringField('Report File',widget=TextArea(),render_kw={'style': 'width: 400px','readonly': True})
-    
     submit = SubmitField('Confirm')
 
 class ReviewReportFileForm(FlaskForm):
@@ -97,22 +85,9 @@ class EditWorkOrderForm(FlaskForm):
                          validators=[DataRequired()])
     submit = SubmitField('Update')
 
-class AddTransactionForm(FlaskForm):
-    type = SelectField('Type', validators=[DataRequired()],
-                       choices=[('harddisk', 'Hard Disk'), ('testingcard', 'Card')])
-    asset_name = QuerySelectField(label='Asset Name', validators=[DataRequired()], query_factory=get_assets,
-                                  allow_blank=True)
-    #person_name = StringField('Person', validators=[DataRequired()])
-    person_name = StringField('Person', validators=[DataRequired()], widget=TextArea())
-    start_time = DateField('Start Time', format='%Y-%m-%d', validators=[DataRequired()])
-    #start_time = DateField('Start Time', format='%m/%d/%y', render_kw={'placeholder': '6/20/15 for June 20, 2015'})
-    end_time = HiddenField('End Time')
-    status = SelectField('Status', validators=[DataRequired()], choices=[('In Use', 'In Use')])
-    submit = SubmitField('Add')
-
-
 class AddWorkorderForm(FlaskForm):
     wo = StringField('WorkOrder', validators=[DataRequired()])
+    customers = StringField('Customer', validators=[DataRequired()])
     pn = StringField('Production Number', validators=[DataRequired()])
     csn = StringField('Chassis Serial Number', validators=[DataRequired()], widget=TextArea())
     asid= HiddenField('Assembler ID')
