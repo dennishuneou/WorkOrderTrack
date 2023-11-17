@@ -1,5 +1,5 @@
 from flask_login import login_required
-from app.asset.forms import EditWorkOrderForm, AddWorkorderForm, UploadReportForm, ReviewReportForm, ReviewReportFileForm
+from app.asset.forms import AddWorkorderForm, UploadReportForm, ReviewReportForm, ReviewReportFileForm,EditOneComputerForm
 from app.asset import main
 from app.asset.models import Transaction, WorkOrder, Production
 from flask import render_template, flash, request, redirect, url_for
@@ -36,6 +36,33 @@ def TakeOneComputer(id):
     
     flash('TakeOneComputer successfully')
     return redirect(url_for('main.display_workorders'))
+
+@main.route('/DeleteOneComputer/<id>', methods=['GET', 'POST'])
+@login_required
+def DeleteOneComputer(id): 
+    workorder = WorkOrder.query.get(id)
+    workorder.status=0
+    workorder.asid=current_user.id;
+    workorder.astime=datetime.datetime.now()
+    db.session.delete(workorder)
+    db.session.commit()
+    flash('DeleteOneComputer successfully')
+    return redirect(url_for('main.display_workorders'))
+
+@main.route('/EditOneComputer/<id>', methods=['GET', 'POST'])
+@login_required
+def EditOneComputer(id): 
+    workorder = WorkOrder.query.get(id)
+    form = EditOneComputerForm(obj=workorder)
+    if form.validate_on_submit():
+        workorder.wo=form.wo.data
+        workorder.customers=form.customers.data
+        workorder.pn=str(form.pn.data)
+        workorder.csn=form.csn.data.strip()
+        db.session.commit()
+        flash('Update successful')
+        return redirect(url_for('main.display_workorders'))
+    return render_template('edit_OneComputer.html', form=form, id=id) 
 
 @main.route('/UploadReport/<id>', methods=['GET', 'POST'])
 @login_required
@@ -108,20 +135,4 @@ def add_workorder():
     return render_template('add_workorder.html', form=form)
 
 
-@main.route('/add/transaction', methods=['GET', 'POST'])
-@login_required
-def add_transaction():
-    transaction=WorkOrder.query.filter_by(status = -1)
-    form = EditWorkOrderForm(obj=transaction)
-    if form.validate_on_submit():
-        personname_m=form.person_name.data.split('\n')
-        #transaction = Transaction(type=form.type.data, asset_name=str(form.asset_name.data), person_name=form.person_name.data,
-        #            start_time=form.start_time.data, end_time=None, status=form.status.data)
-        for x in personname_m:
-           transaction = Transaction(type=form.type.data, asset_name=str(form.asset_name.data), person_name=x,start_time=form.start_time.data, end_time=None, status=form.status.data)
-           db.session.add(transaction)
 
-        db.session.commit()
-        flash('Asset added successfully')
-        return redirect(url_for('main.display_workorders'))
-    return render_template('add_transaction.html', form=form)

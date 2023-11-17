@@ -76,17 +76,6 @@ class ReviewReportFileForm(FlaskForm):
     
     report = StringField('Report File',widget=TextArea(),render_kw={'style': 'width: 400px','readonly': True})
 
-class EditWorkOrderForm(FlaskForm):
-    wo = StringField('Type', render_kw={'readonly': True})
-    asset_name = StringField('Asset Name', render_kw={'readonly': True})
-    person_name = StringField('Person', render_kw={'readonly': True})
-    start_time = DateField('Start Time', render_kw={'readonly': True})
-    # end_time = DateField('End Time', validators=[DataRequired()])
-    end_time = DateField('End Time', format='%Y-%m-%d', validators=[DataRequired()])
-    status = SelectField('Status', choices=[('In Use', 'In Use'), ('In Store', 'In Store')],
-                         validators=[DataRequired()])
-    submit = SubmitField('Update')
-
 class AddWorkorderForm(FlaskForm):
     wo = StringField('WorkOrder', validators=[DataRequired()])
     customers = StringField('Customer', validators=[DataRequired()])
@@ -98,3 +87,15 @@ class AddWorkorderForm(FlaskForm):
     intime=HiddenField('Inspection Time')
     status= HiddenField('Status')
     submit = SubmitField('Create New WorkOrder')
+
+class EditOneComputerForm(FlaskForm):
+    wo = StringField('WorkOrder', validators=[DataRequired()])
+    customers = StringField('Customer', validators=[DataRequired()])
+    pn = StringField('Production Number', validators=[DataRequired()])
+    csn = StringField('Chassis Serial Number', validators=[DataRequired()])
+    asid= HiddenField('Assembler ID')
+    insid= HiddenField('Inspector ID')
+    astime=HiddenField('Assembling Time')
+    intime=HiddenField('Inspection Time')
+    status= HiddenField('Status')
+    submit = SubmitField('Update')

@@ -54,6 +54,8 @@
                                 <th> Production Number</th>
                                 <th> Chassis SN</th>
                                 <th> Take</th>
+                                <th> Delete</th>
+                                <th> Edit</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -68,6 +70,20 @@
                                 href= "{{ url_for('main.TakeOneComputer',id=workorder.id)}}"
                                 role="button">
                                     <i class="fa fa-arrow-right" aria-hidden="true"></i>
+                                </a>
+                            </td>
+                            <td>       
+                                <a class="btn btn-light btn-sm"
+                                href= "{{ url_for('main.DeleteOneComputer',id=workorder.id)}}"
+                                role="button">
+                                    <i class="fa fa-arrow-right" aria-hidden="true"></i>
+                                </a>
+                            </td>
+                            <td>       
+                                <a class="btn btn-light btn-sm"
+                                href= "{{ url_for('main.EditOneComputer',id=workorder.id)}}"
+                                role="button">
+                                    <i class="fa fa-pencil" aria-hidden="true"></i>
                                 </a>
                             </td>
                         </tr>
