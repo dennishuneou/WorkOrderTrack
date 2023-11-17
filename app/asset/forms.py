@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, HiddenField, SelectField, ValidationError
-from wtforms.validators import DataRequired
+from wtforms.validators import DataRequired, Length
 from wtforms.fields.html5 import DateField
 from wtforms.ext.sqlalchemy.fields import QuerySelectField
 from wtforms.widgets import TextArea
@@ -21,26 +21,26 @@ class UploadReportForm(FlaskForm):
     wo = StringField('WorkOrder', render_kw={'readonly': True,'style': 'width: 200px'})
     pn = StringField('ProductionNumber', render_kw={'readonly': True,'style': 'width: 200px'})
     csn = StringField('Chassis S/N', render_kw={'readonly': True,'style': 'width: 200px'})
-    msn = StringField('Motherboard S/N', validators=[DataRequired()],render_kw={'style': 'width: 200px'})
+    msn = StringField('Motherboard S/N', validators=[DataRequired(),Length(max=100)],render_kw={'style': 'width: 200px'})
     cpu = StringField('CPU', validators=[DataRequired()],render_kw={'style': 'width: 200px'})
-    mem1 = StringField('Memory Slot1',render_kw={'style': 'width: 200px'})
-    mem2 = StringField('Memory Slot2',render_kw={'style': 'width: 200px'})
-    mem3 = StringField('Memory Slot3',render_kw={'style': 'width: 200px'})
-    mem4 = StringField('Memory Slot4',render_kw={'style': 'width: 200px'})
-    gpu1 = StringField('External GPU1',render_kw={'style': 'width: 200px'})
-    gpu2 = StringField('External GPU2',render_kw={'style': 'width: 200px'})
-    sata1 = StringField('SATA1',render_kw={'style': 'width: 200px'})
-    sata2 = StringField('SATA2',render_kw={'style': 'width: 200px'})
-    sata3 = StringField('SATA3',render_kw={'style': 'width: 200px'})
-    sata4 = StringField('SATA4',render_kw={'style': 'width: 200px'})
-    m21 = StringField('M.2 Slot1',render_kw={'style': 'width: 200px'})
-    m22 = StringField('M.2 Slot2',render_kw={'style': 'width: 200px'})
-    wifi = StringField('Wifi Module',render_kw={'style': 'width: 200px'})
-    fg5g = StringField('4G/5G Module',render_kw={'style': 'width: 200px'})
-    can = StringField('CAN Module',render_kw={'style': 'width: 200px'})
-    other = StringField('Other Module',render_kw={'style': 'width: 200px'})
-    note  = StringField('Notes',widget=TextArea())
-    report = StringField('Report File',widget=TextArea(),render_kw={'style': 'width: 400px','readonly': True})
+    mem1 = StringField('Memory Slot1',validators=[Length(max=256)],render_kw={'style': 'width: 200px'})
+    mem2 = StringField('Memory Slot2',validators=[Length(max=256)],render_kw={'style': 'width: 200px'})
+    mem3 = StringField('Memory Slot3',validators=[Length(max=256)],render_kw={'style': 'width: 200px'})
+    mem4 = StringField('Memory Slot4',validators=[Length(max=256)],render_kw={'style': 'width: 200px'})
+    gpu1 = StringField('External GPU1',validators=[Length(max=100)],render_kw={'style': 'width: 200px'})
+    gpu2 = StringField('External GPU2',validators=[Length(max=100)],render_kw={'style': 'width: 200px'})
+    sata1 = StringField('SATA1',validators=[Length(max=100)],render_kw={'style': 'width: 200px'})
+    sata2 = StringField('SATA2',validators=[Length(max=100)],render_kw={'style': 'width: 200px'})
+    sata3 = StringField('SATA3',validators=[Length(max=100)],render_kw={'style': 'width: 200px'})
+    sata4 = StringField('SATA4',validators=[Length(max=100)],render_kw={'style': 'width: 200px'})
+    m21 = StringField('M.2 Slot1',validators=[Length(max=100)],render_kw={'style': 'width: 200px'})
+    m22 = StringField('M.2 Slot2',validators=[Length(max=100)],render_kw={'style': 'width: 200px'})
+    wifi = StringField('Wifi Module',validators=[Length(max=100)],render_kw={'style': 'width: 200px'})
+    fg5g = StringField('4G/5G Module',validators=[Length(max=100)],render_kw={'style': 'width: 200px'})
+    can = StringField('CAN Module',validators=[Length(max=100)],render_kw={'style': 'width: 200px'})
+    other = StringField('Other Module',validators=[Length(max=100)],render_kw={'style': 'width: 200px'})
+    note  = StringField('Notes',validators=[Length(max=256)],widget=TextArea())
+    report = StringField('Report File',validators=[Length(max=512000)],widget=TextArea(),render_kw={'style': 'width: 400px','readonly': True})
 
     submit = SubmitField('Update')
 
@@ -68,7 +68,7 @@ class ReviewReportForm(FlaskForm):
     other = StringField('Other Module',render_kw={'readonly': True})
     note  = StringField('Notes',widget=TextArea(),render_kw={'readonly': True})
     report = StringField('Report File',widget=TextArea(),render_kw={'style': 'width: 400px','readonly': True})
-    action = SelectField('Approve or Deny',choices=[('0','Approve'),('-1','Deny')])
+    action = SelectField('Approve or Deny',choices=[('0','Approve'),('1','Deny')])
     submit = SubmitField('Confirm')
   
 
@@ -77,10 +77,10 @@ class ReviewReportFileForm(FlaskForm):
     report = StringField('Report File',widget=TextArea(),render_kw={'style': 'width: 400px','readonly': True})
 
 class AddWorkorderForm(FlaskForm):
-    wo = StringField('WorkOrder', validators=[DataRequired()])
-    customers = StringField('Customer', validators=[DataRequired()])
-    pn = StringField('Production Number', validators=[DataRequired()])
-    csn = StringField('Chassis Serial Number', validators=[DataRequired()], widget=TextArea())
+    wo = StringField('WorkOrder', validators=[DataRequired(),Length(max=100)])
+    customers = StringField('Customer', validators=[DataRequired(),Length(max=100)])
+    pn = StringField('Production Number', validators=[DataRequired(),Length(max=100)])
+    csn = StringField('Chassis Serial Number', validators=[DataRequired(),Length(max=100)], widget=TextArea())
     asid= HiddenField('Assembler ID')
     insid= HiddenField('Inspector ID')
     astime=HiddenField('Assembling Time')
@@ -89,10 +89,10 @@ class AddWorkorderForm(FlaskForm):
     submit = SubmitField('Create New WorkOrder')
 
 class EditOneComputerForm(FlaskForm):
-    wo = StringField('WorkOrder', validators=[DataRequired()])
-    customers = StringField('Customer', validators=[DataRequired()])
-    pn = StringField('Production Number', validators=[DataRequired()])
-    csn = StringField('Chassis Serial Number', validators=[DataRequired()])
+    wo = StringField('WorkOrder', validators=[DataRequired(),Length(max=100)])
+    customers = StringField('Customer', validators=[DataRequired(),Length(max=100)])
+    pn = StringField('Production Number', validators=[DataRequired(),Length(max=100)])
+    csn = StringField('Chassis Serial Number', validators=[DataRequired(),Length(max=100)])
     asid= HiddenField('Assembler ID')
     insid= HiddenField('Inspector ID')
     astime=HiddenField('Assembling Time')

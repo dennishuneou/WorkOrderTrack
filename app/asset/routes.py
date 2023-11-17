@@ -93,12 +93,33 @@ def ReviewReport(id):
             form.cpu.data = product.cpu
             form.msn.data = product.msn
             form.report.data = product.report   
+            form.mem1.data = product.mem1
+            form.mem2.data = product.mem2
+            form.mem3.data = product.mem3
+            form.mem4.data = product.mem4
+            form.gpu1.data = product.gpu1
+            form.gpu2.data = product.gpu2
+            form.sata1.data= product.sata1
+            form.sata2.data= product.sata2
+            form.sata3.data= product.sata3
+            form.sata4.data= product.sata4
+            form.m21.data= product.m21
+            form.m22.data= product.m22
+            form.wifi.data=product.wifi
+            form.fg5g.data=product.fg5g
+            form.can.data =product.can
+            form.other.data=product.other
+            form.note.data=product.note
         workorder.intime=datetime.datetime.now()
         if form.validate_on_submit():
-            if(form.action.data==0) :
-               workorder.status = 2
-            else :
-               workorder.status = 0  
+            print(form.action.data)
+            if form.action.data == '0' :
+                workorder.status = 2
+                print("it0")
+            else: 
+                workorder.status = 0  
+                print("it1")
+            print(workorder.status)
             db.session.commit()
             if(form.action.data==0) :
                flash('Confirmed')

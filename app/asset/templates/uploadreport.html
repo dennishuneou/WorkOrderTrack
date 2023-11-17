@@ -17,33 +17,66 @@
             <div class="shadow-lg rounded card text-left">
                 <div class="card-body bg-light">
                     <h4 style="margin-left: 45px"> Upload Report File  </h4>
-                    <input type="file" id="file-input" />
+                    <input type="file" id="file-input" accept=".log"/>
                     <button id="read-button">Read File</button>
                     <pre id="file-contents"></pre>
                     <hr>
-                    <script>
+                    <script type="text/javascript">
                         document.querySelector("#read-button").addEventListener('click', function() {
                             let file = document.querySelector("#file-input").files[0];
                             let reader = new FileReader();
-                            reader.addEventListener('load', function(e) 
+                            reader.addEventListener('load', function(e)  //Linux version Log
                             {
                                     let text = e.target.result;
                                     document.querySelector("#file-contents").textContent = text;
-                                    let linelist = text.split("\r\n");
+                                    let linelist = text.split("\n");
+                                    satacnt=0
+                                    memcnt=0
+                                    document.getElementById('mem1').value=''
+                                    document.getElementById('mem2').value=''
+                                    document.getElementById('mem3').value=''
+                                    document.getElementById('mem4').value=''
+                                    document.getElementById('sata1').value=''
+                                    document.getElementById('sata2').value=''
+                                    document.getElementById('sata3').value=''
+                                    document.getElementById('sata4').value=''
+                                    document.getElementById('m21').value=''
+                                    document.getElementById('m22').value=''
+                                    document.getElementById('wifi').value=''
+                                    document.getElementById('can').value=''
+                                    document.getElementById('fg5g').value=''
+                                    document.getElementById('note').value=''
+                                    document.getElementById('other').value=''
+                                    document.getElementById('report').value=''
                                     for (let each in linelist) {
                                         i = parseInt(each) + 1;
-                                        if (linelist[each].includes("Motherboard Serial Number:")) 
+                                        if (linelist[each].includes("Motherboard Serial"))
                                             {document.getElementById('msn').value= linelist[each].replace("Motherboard Serial Number:",'')}
                                         else if (linelist[each].includes("CPU Type:")) 
                                             { document.getElementById('cpu').value = linelist[each].replace("CPU Type:",'')}
-                                        else if (linelist[each].includes("Slot 1:"))
-                                            { document.getElementById('mem1').value = linelist[i]+linelist[i+1]} 
-                                        else if (linelist[each].includes("Slot 2:"))
-                                            { document.getElementById('mem2').value = linelist[i]+linelist[i+1]}       
-                                        else if (linelist[each].includes("Slot 3:"))
-                                            { document.getElementById('mem3').value = linelist[i]+linelist[i+1]}     
-                                        else if (linelist[each].includes("Slot 4:"))
-                                            { document.getElementById('mem1').value = linelist[i]+linelist[i+1]}     
+                                        else if (linelist[each].includes("DIMM") && linelist[each].includes("DDR"))
+                                            {   memcnt=memcnt+1
+                                                memx='mem'+memcnt.toString()
+                                                document.getElementById(memx).value = linelist[each]
+                                            }
+                                        else if (linelist[each].includes("/dev/nvme0n1")) 
+                                            { document.getElementById('m21').value = linelist[each]}
+                                        else if (linelist[each].includes("/dev/nvme1n1")) 
+                                            { document.getElementById('m22').value = linelist[each]}    
+                                        else if (linelist[each].includes("/dev/nvme0n1")) 
+                                            { document.getElementById('m21').value = linelist[each]}
+                                        else if (linelist[each].includes("/dev/sd") && linelist[each].includes("SATA"))
+                                            { 
+                                                satacnt = satacnt +1
+                                                satax ='sata'+ satacnt.toString()
+                                                document.getElementById(satax).value = linelist[each]
+                                            }
+                                        else if (linelist[each].includes("can")) 
+                                            { document.getElementById('can').value += linelist[each]}   
+                                        else if (linelist[each].includes("wlp")) 
+                                            { document.getElementById('wifi').value += linelist[each]}   
+                                        else if (linelist[each].includes("wwan")) 
+                                            { document.getElementById('fg5g').value += linelist[each]}                
                                     }
                                     document.getElementById('report').value = text
                             });
