@@ -30,17 +30,17 @@
         <div class="col col-md-12 my-2">
         <ul class="nav nav-tabs" id="myTab" role="tablist">
             <li class="nav-item">
-               <a class="nav-link" id="home-tab" data-toggle="tab" href="#ToDo" role="tab" aria-controls="home" aria-selected="false">To Do</a>
+               <a class="nav-link active" id="home-tab" data-toggle="tab" href="#ToDo" role="tab" aria-controls="home" aria-selected="false">To Do</a>
             </li>
             <li class="nav-item">
-               <a class="nav-link active show" id="profile-tab" data-toggle="tab" href="#Processing" role="tab" aria-controls="profile" aria-selected="true">Processing</a>
+               <a class="nav-link" id="profile-tab" data-toggle="tab" href="#Processing" role="tab" aria-controls="profile" aria-selected="true">Processing</a>
             </li>
             <li class="nav-item">
                <a class="nav-link" id="contact-tab" data-toggle="tab" href="#Completed" role="tab" aria-controls="contact" aria-selected="false">Completed Today</a>
             </li>
         </ul>
         <div class="tab-content" id="myTabContent">
-            <div class="tab-pane fade" id="ToDo" role="tabpanel" aria-labelledby="home-tab">
+            <div class="tab-pane fade active show" id="ToDo" role="tabpanel" aria-labelledby="home-tab">
       
                 <div class="col my-2">
                      <h6 class="font-weight-bold">To Do WorkOrder</h6>
@@ -76,7 +76,7 @@
                                 <a class="btn btn-light btn-sm"
                                 href= "{{ url_for('main.DeleteOneComputer',id=workorder.id)}}"
                                 role="button">
-                                    <i class="fa fa-arrow-right" aria-hidden="true"></i>
+                                    <i class="fa fa-trash" aria-hidden="true"></i>
                                 </a>
                             </td>
                             <td>       
