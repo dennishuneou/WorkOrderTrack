@@ -1,25 +1,16 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, SubmitField, HiddenField, SelectField, ValidationError
+from wtforms import StringField, SubmitField, HiddenField, SelectField, ValidationError,BooleanField
 from wtforms.validators import DataRequired, Length
 from wtforms.fields.html5 import DateField
 from wtforms.ext.sqlalchemy.fields import QuerySelectField
 from wtforms.widgets import TextArea
-
+from app.auth.forms  import get_usersname
 from app.asset.models import WorkOrder, Production
 
 
-def check_if_asset_exist(form, field):
-    asset = Asset.query.filter_by(asset_name=field.data).first()
-    if asset:
-        raise ValidationError('Asset Already Exists')
-
-
-def get_assets():
-    return Asset.query.all()
-
 class UploadReportForm(FlaskForm):
-    wo = StringField('WorkOrder', render_kw={'readonly': True,'style': 'width: 200px'})
-    pn = StringField('ProductionNumber', render_kw={'readonly': True,'style': 'width: 200px'})
+    wo = StringField('WorkOrder#', render_kw={'readonly': True,'style': 'width: 200px'})
+    pn = StringField('Product Model', render_kw={'readonly': True,'style': 'width: 200px'})
     csn = StringField('Chassis S/N', render_kw={'readonly': True,'style': 'width: 200px'})
     msn = StringField('Motherboard S/N', validators=[DataRequired(),Length(max=100)],render_kw={'style': 'width: 200px'})
     cpu = StringField('CPU', validators=[DataRequired()],render_kw={'style': 'width: 200px'})
@@ -45,8 +36,8 @@ class UploadReportForm(FlaskForm):
     submit = SubmitField('Update')
 
 class ReviewReportForm(FlaskForm):
-    wo = StringField('WorkOrder', render_kw={'readonly': True})
-    pn = StringField('ProductionNumber', render_kw={'readonly': True})
+    wo = StringField('WorkOrder#', render_kw={'readonly': True})
+    pn = StringField('Product Model', render_kw={'readonly': True})
     csn = StringField('Chassis S/N', render_kw={'readonly': True})
     msn = StringField('Motherboard S/N', validators=[DataRequired()],render_kw={'readonly': True})
     cpu = StringField('CPU', validators=[DataRequired()],render_kw={'style': 'width: 200px','readonly': True})
@@ -77,10 +68,17 @@ class ReviewReportFileForm(FlaskForm):
     report = StringField('Report File',widget=TextArea(),render_kw={'style': 'width: 400px','readonly': True})
 
 class AddWorkorderForm(FlaskForm):
-    wo = StringField('WorkOrder', validators=[DataRequired(),Length(max=100)])
-    customers = StringField('Customer', validators=[DataRequired(),Length(max=100)])
-    pn = StringField('Production Number', validators=[DataRequired(),Length(max=100)])
+    wo = StringField('WorkOrder#', validators=[DataRequired(),Length(max=100)])
+    customers = StringField('Customer Name', validators=[DataRequired(),Length(max=100)])
+    pn = StringField('Product Model', validators=[DataRequired(),Length(max=100)])
     csn = StringField('Chassis Serial Number', validators=[DataRequired(),Length(max=100)], widget=TextArea())
+    cpuinstall = BooleanField('CPU Installation')
+    memoryinstall = BooleanField('Memory Installation')
+    gpuinstall = BooleanField('GPU Installation')
+    wifiinstall = BooleanField('Wifi Installation')
+    caninstall = BooleanField('CAN Installation')
+    mezioinstall = BooleanField('MezIO Installation')
+    operator = QuerySelectField('Operator Name', query_factory=get_usersname,allow_blank=True)
     asid= HiddenField('Assembler ID')
     insid= HiddenField('Inspector ID')
     astime=HiddenField('Assembling Time')
@@ -89,10 +87,17 @@ class AddWorkorderForm(FlaskForm):
     submit = SubmitField('Create New WorkOrder')
 
 class EditOneComputerForm(FlaskForm):
-    wo = StringField('WorkOrder', validators=[DataRequired(),Length(max=100)])
-    customers = StringField('Customer', validators=[DataRequired(),Length(max=100)])
-    pn = StringField('Production Number', validators=[DataRequired(),Length(max=100)])
+    wo = StringField('WorkOrder#', validators=[DataRequired(),Length(max=100)])
+    customers = StringField('Customer Name', validators=[DataRequired(),Length(max=100)])
+    pn = StringField('Product Model', validators=[DataRequired(),Length(max=100)])
     csn = StringField('Chassis Serial Number', validators=[DataRequired(),Length(max=100)])
+    cpuinstall = BooleanField('CPU Installation')
+    memoryinstall = BooleanField('Memory Installation')
+    gpuinstall = BooleanField('GPU Installation')
+    wifiinstall = BooleanField('Wifi Installation')
+    caninstall = BooleanField('CAN Installation')
+    mezioinstall = BooleanField('MezIO Installation')
+    operator = QuerySelectField('Operator Name', query_factory=get_usersname,allow_blank=True)
     asid= HiddenField('Assembler ID')
     insid= HiddenField('Inspector ID')
     astime=HiddenField('Assembling Time')

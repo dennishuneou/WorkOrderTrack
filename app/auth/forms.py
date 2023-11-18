@@ -7,7 +7,9 @@ def email_exists(form, field):
     email = User.query.filter_by(user_email=field.data).first()
     if email:
         raise ValidationError('Email already exists')
-
+def get_usersname():
+    return User.query.filter_by(id=1)
+    
 class RegistrationForm(FlaskForm):
     name = StringField("Whats your name", validators=[DataRequired(), Length(3, 15, message='between 3 to 15 characters')])
     email = StringField("Enter your email", validators=[DataRequired(), Email(), email_exists])

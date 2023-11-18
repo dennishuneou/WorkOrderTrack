@@ -121,8 +121,8 @@ def ReviewReport(id):
                 print("it1")
             print(workorder.status)
             db.session.commit()
-            if(form.action.data==0) :
-               flash('Confirmed')
+            if(form.action.data=='0') :
+               flash('Approved')
             else :
                flash('Denied')
             return redirect(url_for('main.display_workorders'))
@@ -146,10 +146,18 @@ def ReturnOneComputer(id):
 def add_workorder():
     form = AddWorkorderForm()
     if form.validate_on_submit():
+        print(form.cpuinstall.data)
+        print(form.memoryinstall.data)
+        print(form.gpuinstall.data)
+        print(form.wifiinstall.data)
+        print(form.mezioinstall.data)
+        print(form.delayassign.data)
+        print(form.operator.data)
         csn_m=form.csn.data.split('\n')
         for x in csn_m:
-           transaction = WorkOrder(wo=form.wo.data, customers=form.customers.data, pn=str(form.pn.data), csn=x.strip(), asid=-1,insid=-1,astime=None,intime=None,status=-1)
-           db.session.add(transaction)
+            if x.strip() != '' :
+                transaction = WorkOrder(wo=form.wo.data, customers=form.customers.data, pn=str(form.pn.data), csn=x.strip(), asid=-1,insid=-1,astime=None,intime=None,status=-1)
+                db.session.add(transaction)
         db.session.commit()
         flash('WorkOrder registered successfully')
         return redirect(url_for('main.display_workorders'))

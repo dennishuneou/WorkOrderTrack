@@ -29,7 +29,8 @@ class User(UserMixin, db.Model):
         db.session.commit()
 
         return
-
+    def __repr__(self):
+        return self.user_name
 @login_manager.user_loader
 def load_user(id):
     return User.query.get(int(id))
