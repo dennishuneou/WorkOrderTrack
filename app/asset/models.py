@@ -31,17 +31,31 @@ class WorkOrder(db.Model):
     customers = db.Column(db.String(100), nullable=False)
     pn = db.Column(db.String(100), nullable=False)
     csn = db.Column(db.String(100), nullable=False)
+    cpuinstall = db.Column(db.Boolean, nullable=True)
+    memoryinstall = db.Column(db.Boolean, nullable=True)
+    gpuinstall = db.Column(db.Boolean, nullable=True)
+    wifiinstall = db.Column(db.Boolean, nullable=True)
+    caninstall = db.Column(db.Boolean, nullable=True)
+    mezioinstall = db.Column(db.Boolean, nullable=True)
+    osinstall = db.Column(db.String(40), nullable=True)
     asid = db.Column(db.Integer, nullable=True)
     insid=db.Column(db.Integer, nullable=True)
     astime=db.Column(db.DateTime, nullable=True)
     intime=db.Column(db.DateTime, nullable=True)
     status =db.Column(db.Integer, nullable=True)
      
-    def __init__(self, wo, customers, pn, csn, asid, insid,astime, intime, status):
+    def __init__(self, wo, customers, pn, csn, cpuinstall, memoryinstall, gpuinstall,  wifiinstall, caninstall, mezioinstall, osinstall, asid, insid,astime, intime, status):
         self.wo = wo
         self.customers = customers
         self.pn = pn
         self.csn = csn
+        self.cpuinstall = cpuinstall
+        self.memoryinstall = memoryinstall
+        self.gpuinstall = gpuinstall
+        self.wifiinstall = wifiinstall
+        self.caninstall = caninstall
+        self.mezioinstall = mezioinstall
+        self.osinstall = osinstall
         self.asid = asid
         self.insid = insid
         self.astime = astime

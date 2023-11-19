@@ -11,18 +11,19 @@ class User(UserMixin, db.Model):
     user_email = db.Column(db.String(60), unique=True, index=True)
     user_password = db.Column(db.String(80))
     registration_date = db.Column(db.DateTime, default=datetime.now())
-
+    role = db.Column(db.Integer)
 
     def check_password(self, password):
         return bcrypt.check_password_hash(self.user_password, password)
 
     #class method belongs to a class but not associated to any class instance
     @classmethod
-    def create_user(cls, user, email, password):
+    def create_user(cls, user, email, password, role):
 
         user = cls(user_name=user,
                    user_email=email,
-                   user_password=bcrypt.generate_password_hash(password).decode('utf-8')
+                   user_password=bcrypt.generate_password_hash(password).decode('utf-8'),
+                   role = role
                    )
 
         db.session.add(user)

@@ -18,12 +18,13 @@ def register_user():
         User.create_user(
             user=form.name.data,
             email=form.email.data,
-            password=form.password.data
+            password=form.password.data,
+            role = form.role.data
         )
         flash('Registration Successful')
         return redirect(url_for('authentication.do_login'))
 
-    return render_template('registration.html', form=form)
+    return render_template('registration.html', form=form,userrole=0)
 
 @at.route('/login', methods=['GET', 'POST'])
 def do_login():
@@ -31,9 +32,7 @@ def do_login():
     if current_user.is_authenticated:
         flash('You are already logged in.')
         redirect(url_for('main.display_workorders'))
-
     form = LoginForm()
-
     if form.validate_on_submit():
         user = User.query.filter_by(user_email=form.email.data).first()
         if not user or not user.check_password(form.password.data):
@@ -41,7 +40,7 @@ def do_login():
             return redirect(url_for('authentication.do_login'))
         login_user(user, form.stay_loggedin.data)
         return redirect(url_for('main.display_workorders'))
-    return render_template('login.html', form=form)
+    return render_template('login.html', form=form, userrole=0)
 
 
 @at.route('/logout')
@@ -53,4 +52,4 @@ def do_logout():
 
 @at.app_errorhandler(404)
 def page_not_found(error):
-    return render_template('404.html'), 404
+    return render_template('404.html',userrole=0), 404

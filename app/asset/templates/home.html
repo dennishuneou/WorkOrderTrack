@@ -54,8 +54,11 @@
                                 <th> Product Number</th>
                                 <th> Chassis SN</th>
                                 <th> Take</th>
+                                <th> Assigned</th>
+                                {% if userrole > 0 %}
                                 <th> Delete</th>
                                 <th> Edit</th>
+                                {% endif %}
                             </tr>
                         </thead>
                         <tbody>
@@ -72,6 +75,12 @@
                                     <i class="fa fa-arrow-right" aria-hidden="true"></i>
                                 </a>
                             </td>
+                            {% if workorder.asid == -1 %}
+                            <td> Not yet </td>
+                            {% else %}
+                            <td>{{ workorder.asid|usersname }} </td>
+                            {% endif %}
+                            {% if userrole > 0 %}
                             <td>       
                                 <a class="btn btn-light btn-sm"
                                 href= "{{ url_for('main.DeleteOneComputer',id=workorder.id)}}"
@@ -86,6 +95,7 @@
                                     <i class="fa fa-pencil" aria-hidden="true"></i>
                                 </a>
                             </td>
+                            {% endif %}
                         </tr>
                         {% endfor %}
                         </tbody>
@@ -109,7 +119,10 @@
                             <th> Status</th>
                             <th> Return</th>
                             <th> Upload Report</th>
+                            {% if userrole > 0 %}
+                            <th> Build By </th>
                             <th> Inspection</th>
+                            {% endif %}
                         </tr>
                     </thead>
                     <tbody>
@@ -153,6 +166,8 @@
                             </a>
                             {% endif %}
                         </td>
+                        {% if userrole > 0 %}
+                        <td> {{ each.asid | usersname }}</td>
                         <td>
                             {% if each.status ==  1 %}
                             <a class="btn btn-light btn-sm"
@@ -162,6 +177,7 @@
                             </a>
                             {% endif %}
                         </td>
+                        {% endif %}
                     </tr>
                     {% endfor %}
                     </tbody>
@@ -182,6 +198,7 @@
                             <th> Chassis SN</th>
                             <th> Start Time</th>
                             <th> Inspection Time</th>
+                            <th> Build By </th>
                         </tr>
                     </thead>
                     <tbody>
@@ -203,6 +220,7 @@
                                 {{each.intime.strftime('%Y/%m/%d %H:%M')}} 
                              {% endif %}
                         </td>
+                        <td> {{ each.asid | usersname }}</td>
                     </tr>
                     {% endfor %}
                     </tbody>

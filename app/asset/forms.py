@@ -1,12 +1,11 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, HiddenField, SelectField, ValidationError,BooleanField
-from wtforms.validators import DataRequired, Length
+from wtforms.validators import DataRequired, Length, InputRequired
 from wtforms.fields.html5 import DateField
 from wtforms.ext.sqlalchemy.fields import QuerySelectField
 from wtforms.widgets import TextArea
-from app.auth.forms  import get_usersname
 from app.asset.models import WorkOrder, Production
-
+from app.auth.forms  import get_userrole,get_usersname
 
 class UploadReportForm(FlaskForm):
     wo = StringField('WorkOrder#', render_kw={'readonly': True,'style': 'width: 200px'})
@@ -78,6 +77,7 @@ class AddWorkorderForm(FlaskForm):
     wifiinstall = BooleanField('Wifi Installation')
     caninstall = BooleanField('CAN Installation')
     mezioinstall = BooleanField('MezIO Installation')
+    osinstall = StringField('Installation OS Name', validators=[Length(max=40)])
     operator = QuerySelectField('Operator Name', query_factory=get_usersname,allow_blank=True)
     asid= HiddenField('Assembler ID')
     insid= HiddenField('Inspector ID')
@@ -97,6 +97,7 @@ class EditOneComputerForm(FlaskForm):
     wifiinstall = BooleanField('Wifi Installation')
     caninstall = BooleanField('CAN Installation')
     mezioinstall = BooleanField('MezIO Installation')
+    osinstall = StringField('Installation OS Name', validators=[Length(max=40)])
     operator = QuerySelectField('Operator Name', query_factory=get_usersname,allow_blank=True)
     asid= HiddenField('Assembler ID')
     insid= HiddenField('Inspector ID')

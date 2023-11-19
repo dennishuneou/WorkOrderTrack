@@ -39,13 +39,15 @@
                 <ul class="navbar-nav ml-auto">
                     <li class="nav-item">
                         <a href="{{ url_for('main.display_workorders') }}" class="nav-link"> Home </a>
-                    </li>
-                    {% if current_user.is_authenticated %}
+                    </li> 
+                    {% if userrole > 1 %}
                     <li class="nav-item">
                         <a href="{{ url_for('main.add_workorder') }}"      class="nav-link">Create New WorkOrder</a>
                     </li>
-                    {% else %}
-                    <li class="nav-item">
+                    {% endif %}
+
+                    {% if not current_user.is_authenticated %}
+                     <li class="nav-item">
                         <a href=" {{ url_for('authentication.register_user') }} " class="nav-link">
                             Register </a>
                     </li>
