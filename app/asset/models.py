@@ -38,13 +38,14 @@ class WorkOrder(db.Model):
     caninstall = db.Column(db.Boolean, nullable=True)
     mezioinstall = db.Column(db.Boolean, nullable=True)
     osinstall = db.Column(db.String(40), nullable=True)
+    packgo = db.Column(db.Boolean, nullable=True)
     asid = db.Column(db.Integer, nullable=True)
     insid=db.Column(db.Integer, nullable=True)
     astime=db.Column(db.DateTime, nullable=True)
     intime=db.Column(db.DateTime, nullable=True)
     status =db.Column(db.Integer, nullable=True)
      
-    def __init__(self, wo, customers, pn, csn, cpuinstall, memoryinstall, gpuinstall,  wifiinstall, caninstall, mezioinstall, osinstall, asid, insid,astime, intime, status):
+    def __init__(self, wo, customers, pn, csn, cpuinstall, memoryinstall, gpuinstall,  wifiinstall, caninstall, mezioinstall, osinstall, packgo, asid, insid,astime, intime, status):
         self.wo = wo
         self.customers = customers
         self.pn = pn
@@ -56,6 +57,7 @@ class WorkOrder(db.Model):
         self.caninstall = caninstall
         self.mezioinstall = mezioinstall
         self.osinstall = osinstall
+        self.packgo = packgo
         self.asid = asid
         self.insid = insid
         self.astime = astime

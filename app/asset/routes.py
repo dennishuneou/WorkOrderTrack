@@ -36,10 +36,107 @@ def display_workorders():
         completed = WorkOrder.query.filter(func.DATE(WorkOrder.intime) == func.DATE(datetime.datetime.today()),WorkOrder.status == 2)
         completed7day = WorkOrder.query.filter((func.DATE(WorkOrder.intime)) >= (func.DATE(datetime.datetime.today())-7),WorkOrder.status == 2)
         completed28day = WorkOrder.query.filter((func.DATE(WorkOrder.intime)) >= (func.DATE(datetime.datetime.today())-28),WorkOrder.status == 2)
-    cntToday = completed.count()
-    cnt7day = completed7day.count()
-    cnt28day = completed28day.count()
+    #Total
+    cntToday = [0,0,0,0,0]
+    cntToday[0] = completed.count()
+    #Build, not Pack & Go
+    cntToday[1] = cntToday[0] - completed.filter_by(packgo=True).count()
+    #OS, installed OS
+    cntToday[2] = cntToday[1] - completed.filter_by(osinstall=None).count()
+    #Module, installed module
+    cntToday[3] = cntToday[1] - completed.filter_by(gpuinstall = False,wifiinstall = False, caninstall = False, mezioinstall = False).count()
+    #Gpu, Installed GPU
+    cntToday[4] = completed.filter_by(gpuinstall=True).count()
+
+    #Total
+    cnt7day = [0,0,0,0,0]
+    cnt7day[0] = completed7day.count()
+    #Build, not Pack & Go
+    cnt7day[1] = cnt7day[0] - completed7day.filter_by(packgo=True).count()
+    #OS, installed OS
+    cnt7day[2] = cnt7day[1] - completed7day.filter_by(osinstall=None).count()
+    #Module, installed module
+    cnt7day[3] = cnt7day[1] - completed7day.filter_by(gpuinstall = False,wifiinstall = False, caninstall = False, mezioinstall = False).count()
+    #Gpu, Installed GPU
+    cnt7day[4] = completed7day.filter_by(gpuinstall=True).count()
+
+    #Total
+    cnt28day = [0,0,0,0,0]
+    cnt28day[0] = completed28day.count()
+    #Build, not Pack & Go
+    cnt28day[1] = cnt28day[0] - completed28day.filter_by(packgo=True).count()
+    #OS, installed OS
+    cnt28day[2] = cnt28day[1] - completed28day.filter_by(osinstall=None).count()
+    #Module, installed module
+    cnt28day[3] = cnt28day[1] - completed28day.filter_by(gpuinstall = False,wifiinstall = False, caninstall = False, mezioinstall = False).count()
+    #Gpu, Installed GPU
+    cnt28day[4] = completed28day.filter_by(gpuinstall=True).count()
+
     return render_template('home.html', todoworkorder= todoworkorder, processing=processing, completed=completed,cntToday=cntToday,
+                          cnt7day=cnt7day,cnt28day=cnt28day,userrole=role)
+
+@main.route('/register/report', methods=['GET', 'POST'])
+@login_required
+def report():
+    role = get_userrole(current_user.id)
+    if role == 0 :
+        todoworkorder1 = WorkOrder.query.filter_by(status=-1,asid=-1)
+        todoworkorder2 = WorkOrder.query.filter_by(status=-1,asid=current_user.id)
+        todoworkorder  = todoworkorder1.union(todoworkorder2)
+    else :
+        todoworkorder = WorkOrder.query.filter_by(status=-1)  
+    if role == 0 :
+        query1 = WorkOrder.query.filter_by(asid=current_user.id, status=0)
+        query2 =  WorkOrder.query.filter_by(asid=current_user.id, status=1)
+    else :
+        query1 = WorkOrder.query.filter_by(status=0)
+        query2 =  WorkOrder.query.filter_by(status=1)
+    processing = query1.union(query2)
+    if role == 0 :
+        completed = WorkOrder.query.filter(func.DATE(WorkOrder.intime) == func.DATE(datetime.datetime.today()),WorkOrder.asid==current_user.id,WorkOrder.status == 2)
+        completed7day = WorkOrder.query.filter((func.DATE(WorkOrder.intime)) >= (func.DATE(datetime.datetime.today())-7),WorkOrder.asid==current_user.id,WorkOrder.status == 2)
+        completed28day = WorkOrder.query.filter((func.DATE(WorkOrder.intime)) >= (func.DATE(datetime.datetime.today())-28),WorkOrder.asid==current_user.id,WorkOrder.status == 2)
+    else :
+        completed = WorkOrder.query.filter(func.DATE(WorkOrder.intime) == func.DATE(datetime.datetime.today()),WorkOrder.status == 2)
+        completed7day = WorkOrder.query.filter((func.DATE(WorkOrder.intime)) >= (func.DATE(datetime.datetime.today())-7),WorkOrder.status == 2)
+        completed28day = WorkOrder.query.filter((func.DATE(WorkOrder.intime)) >= (func.DATE(datetime.datetime.today())-28),WorkOrder.status == 2)
+    #Total
+    cntToday = [0,0,0,0,0]
+    cntToday[0] = completed.count()
+    #Build, not Pack & Go
+    cntToday[1] = cntToday[0] - completed.filter_by(packgo=True).count()
+    #OS, installed OS
+    cntToday[2] = cntToday[1] - completed.filter_by(osinstall=None).count()
+    #Module, installed module
+    cntToday[3] = cntToday[1] - completed.filter_by(gpuinstall = False,wifiinstall = False, caninstall = False, mezioinstall = False).count()
+    #Gpu, Installed GPU
+    cntToday[4] = completed.filter_by(gpuinstall=True).count()
+
+    #Total
+    cnt7day = [0,0,0,0,0]
+    cnt7day[0] = completed7day.count()
+    #Build, not Pack & Go
+    cnt7day[1] = cnt7day[0] - completed7day.filter_by(packgo=True).count()
+    #OS, installed OS
+    cnt7day[2] = cnt7day[1] - completed7day.filter_by(osinstall=None).count()
+    #Module, installed module
+    cnt7day[3] = cnt7day[1] - completed7day.filter_by(gpuinstall = False,wifiinstall = False, caninstall = False, mezioinstall = False).count()
+    #Gpu, Installed GPU
+    cnt7day[4] = completed7day.filter_by(gpuinstall=True).count()
+
+    #Total
+    cnt28day = [0,0,0,0,0]
+    cnt28day[0] = completed28day.count()
+    #Build, not Pack & Go
+    cnt28day[1] = cnt28day[0] - completed28day.filter_by(packgo=True).count()
+    #OS, installed OS
+    cnt28day[2] = cnt28day[1] - completed28day.filter_by(osinstall=None).count()
+    #Module, installed module
+    cnt28day[3] = cnt28day[1] - completed28day.filter_by(gpuinstall = False,wifiinstall = False, caninstall = False, mezioinstall = False).count()
+    #Gpu, Installed GPU
+    cnt28day[4] = completed28day.filter_by(gpuinstall=True).count()
+
+    return render_template('report.html', todoworkorder= todoworkorder, processing=processing, completed=completed,cntToday=cntToday,
                           cnt7day=cnt7day,cnt28day=cnt28day,userrole=role)
 
 @main.route('/TakeOneComputer/<id>', methods=['GET', 'POST'])
@@ -82,6 +179,7 @@ def EditOneComputer(id):
         workorder.mezioinstall = form.mezioinstall.data
         workorder.caninstall = form.caninstall.data
         workorder.osinstall = form.osinstall.data
+        workorder.packgo = form.packgo.data
         if form.operator.data == None :
             asidset =-1
         else :
@@ -187,7 +285,7 @@ def add_workorder():
                 transaction = WorkOrder(wo=form.wo.data, customers=form.customers.data, pn=str(form.pn.data), csn=x.strip(), 
                 cpuinstall=form.cpuinstall.data,memoryinstall=form.memoryinstall.data,gpuinstall=form.gpuinstall.data,
                 wifiinstall=form.wifiinstall.data,mezioinstall=form.mezioinstall.data,caninstall=form.caninstall.data,
-                osinstall=form.osinstall.data,asid=asidset,insid=-1,astime=None,intime=None,status=-1)
+                osinstall=form.osinstall.data,packgo=form.packgo.data,asid=asidset,insid=-1,astime=None,intime=None,status=-1)
                 db.session.add(transaction)
         db.session.commit()
         flash('WorkOrder registered successfully')
