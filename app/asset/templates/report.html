@@ -3,7 +3,6 @@
 {% block content %}
 
 <div class="container">
-    <h1> Total </h1>
     <div class="row">
     <!--[Count section] start-->
     <div class="col-md-12 col-xl-4">
@@ -222,158 +221,97 @@
         <div class="col col-md-16 my-4">
         <ul class="nav nav-tabs" id="myTab" role="tablist">
             <li class="nav-item">
-               <a class="nav-link active" id="home-tab" data-toggle="tab" href="#ToDo" role="tab" aria-controls="home" aria-selected="false">To Do</a>
+               <a class="nav-link active" id="home-tab" data-toggle="tab" href="#ToDo" role="tab" aria-controls="home" aria-selected="false">Last 14 Days</a>
             </li>
             <li class="nav-item">
-               <a class="nav-link" id="profile-tab" data-toggle="tab" href="#Processing" role="tab" aria-controls="profile" aria-selected="true">Processing</a>
-            </li>
-            <li class="nav-item">
-               <a class="nav-link" id="contact-tab" data-toggle="tab" href="#Completed" role="tab" aria-controls="contact" aria-selected="false">Completed Today</a>
+               <a class="nav-link" id="profile-tab" data-toggle="tab" href="#Processing" role="tab" aria-controls="profile" aria-selected="true">Last 28 Days</a>
             </li>
         </ul>
         <div class="tab-content" id="myTabContent">
             <div class="tab-pane fade active show" id="ToDo" role="tabpanel" aria-labelledby="home-tab">
                 <div class="col my-2">
-                     <h6 class="font-weight-bold">To Do WorkOrder</h6>
+                    <h6 class="font-weight-bold">Summary of last 14 Days </h6>
                 </div>
                 <div class="table-responsive">
                     <table class="table table-striped table-hover">
                         <thead class="thead-light">
                             <tr style="background-color: #e3f2fd;">
-                                <th> ID</th>
-                                <th> WorkOrder</th>
-                                <th> Product Number</th>
-                                <th> Chassis SN</th>
-                                <th> Take</th>
-                                <th> Assigned</th>
-                                {% if userrole > 0 %}
-                                <th> Delete</th>
-                                <th> Edit</th>
-                                {% endif %}
+                                <th> Name</th>
+                                <th> NRU</th>
+                                <th> POCs</th>
+                                <th> Nuvo-5000</th>
+                                <th> Nuvo-6000</th>
+                                <th> Nuvo-7000</th>
+                                <th> Nuvo-8000</th>
+                                <th> Nuvo-9000</th>
+                                <th> Nuvo-10000</th>
+                                <th> Build</th>
+                                <th> Pack&Go</th>
                             </tr>
                         </thead>
                         <tbody>
-                        {% for workorder in todoworkorder %}
-                        <tr>
-                            <td> {{ workorder.id }}</td>
-                            <td> {{ workorder.wo }}</td>
-                            <td> {{ workorder.pn }}</td>
-                            <td> {{ workorder.csn }}</td>
-                            <td>
-                                <a class="btn btn-light btn-sm"
-                                href= "{{ url_for('main.TakeOneComputer',id=workorder.id)}}"
-                                role="button">
-                                    <i class="fa fa-arrow-right" aria-hidden="true"></i>
-                                </a>
-                            </td>
-                            {% if workorder.asid == -1 %}
-                            <td> Not yet </td>
-                            {% else %}
-                            <td>{{ workorder.asid|usersname }} </td>
-                            {% endif %}
-                            {% if userrole > 0 %}
-                            <td>       
-                                <a class="btn btn-light btn-sm"
-                                href= "{{ url_for('main.DeleteOneComputer',id=workorder.id)}}"
-                                role="button">
-                                    <i class="fa fa-trash" aria-hidden="true"></i>
-                                </a>
-                            </td>
-                            <td>       
-                                <a class="btn btn-light btn-sm"
-                                href= "{{ url_for('main.EditOneComputer',id=workorder.id)}}"
-                                role="button">
-                                    <i class="fa fa-pencil" aria-hidden="true"></i>
-                                </a>
-                            </td>
-                            {% endif %}
-                        </tr>
-                        {% endfor %}
+                            {% for rows in table2weeks %}
+                            <tr>
+                                <td> {{ rows[0] }}</td>
+                                <td> {{ rows[1] }}</td>
+                                <td> {{ rows[2] }}</td>
+                                <td> {{ rows[3] }}</td>
+                                <td> {{ rows[4] }}</td>
+                                <td> {{ rows[5] }}</td>
+                                <td> {{ rows[6] }}</td>
+                                <td> {{ rows[7] }}</td>
+                                <td> {{ rows[8] }}</td>
+                                <td> {{ rows[9] }}</td>
+                                <td> {{ rows[10] }}</td>
+                            </tr>
+                            {% endfor %}
                         </tbody>
                     </table>
                 </div>
             </div>
         <div class="tab-pane fade" id="Processing" role="tabpanel" aria-labelledby="home-tab">
-            <div class="col my-2">
-                <h6 class="font-weight-bold">Processing WorkOrder</h6>
-            </div>
-        
-            <div class="table-responsive">
-                <table class="table table-striped table-hover">
-                    <thead class="thead-light">
-                        <tr style="background-color: #e3f2fd;">
-                            <th> ID</th>
-                            <th> WorkOrder</th>
-                            <th> Product Number</th>
-                            <th> Chassis SN</th>
-                            <th> Start Time</th>
-                            <th> Status</th>
-                            <th> Return</th>
-                            <th> Upload Report</th>
-                            {% if userrole > 0 %}
-                            <th> Build By </th>
-                            <th> Inspection</th>
-                            {% endif %}
-                        </tr>
-                    </thead>
-                    <tbody>
-                    {% for each in processing %}
-                    <tr>
-                        <td> {{ each.id }}</td>
-                        <td> {{ each.wo }}</td>
-                        <td> {{ each.pn }}</td>
-                        <td> {{ each.csn }}</td>
-                        <td> {% if each.astime == None %} 
-                            {{each.astime}} 
-                         {% else %}
-                           {{each.astime.strftime('%Y/%m/%d %H:%M')}} 
-                        {% endif %}
-                        </td>
-                        <td> {% if each.status ==  -1 %}
-                            <span class="badge badge-warning">Unassigned</span>
-                             {% elif each.status == 0 %}
-                            <span class="badge badge-warning">Processing</span>
-                             {% elif each.status == 1 %} 
-                            <span class="badge badge-success">Waiting for inspection</span>
-                             {% else %}
-                            <span class="badge badge-success">Finished</span>
-                             {% endif %}
-                        </td>
-                        <td>
-                            {% if each.status ==  0 %}
-                            <a class="btn btn-light btn-sm"
-                               href="{{ url_for('main.ReturnOneComputer', id=each.id) }}"
-                               role="button">
-                                <i class="fa fa-arrow-left" aria-hidden="true"></i>
-                            </a>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if each.status ==  0 %}
-                            <a class="btn btn-light btn-sm"
-                               href="{{ url_for('main.UploadReport', id=each.id) }}"
-                               role="button">
-                               <i class="fa fa-arrow-up" aria-hidden="true"></i>
-                            </a>
-                            {% endif %}
-                        </td>
-                        {% if userrole > 0 %}
-                        <td> {{ each.asid | usersname }}</td>
-                        <td>
-                            {% if each.status ==  1 %}
-                            <a class="btn btn-light btn-sm"
-                               href="{{ url_for('main.ReviewReport', id=each.id) }}"
-                               role="button">
-                               <i class="fa fa-arrow-up" aria-hidden="true"></i>
-                            </a>
-                            {% endif %}
-                        </td>
-                        {% endif %}
-                    </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+            <div class="tab-content" id="myTabContent">
+                <div class="tab-pane fade active show" id="ToDo" role="tabpanel" aria-labelledby="home-tab">
+                    <div class="col my-2">
+                        <h6 class="font-weight-bold">Summary of last 28 Days </h6>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead class="thead-light">
+                                <tr style="background-color: #85bd6d;">
+                                    <th> Name</th>
+                                    <th> NRU</th>
+                                    <th> POCs</th>
+                                    <th> Nuvo-5000</th>
+                                    <th> Nuvo-6000</th>
+                                    <th> Nuvo-7000</th>
+                                    <th> Nuvo-8000</th>
+                                    <th> Nuvo-9000</th>
+                                    <th> Nuvo-10000</th>
+                                    <th> Build</th>
+                                    <th> Pack&Go</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for rows in table2weeks %}
+                                <tr>
+                                    <td> {{ rows[0] }}</td>
+                                    <td> {{ rows[1] }}</td>
+                                    <td> {{ rows[2] }}</td>
+                                    <td> {{ rows[3] }}</td>
+                                    <td> {{ rows[4] }}</td>
+                                    <td> {{ rows[5] }}</td>
+                                    <td> {{ rows[6] }}</td>
+                                    <td> {{ rows[7] }}</td>
+                                    <td> {{ rows[8] }}</td>
+                                    <td> {{ rows[9] }}</td>
+                                    <td> {{ rows[10] }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
         </div>
        <div class="tab-pane fade" id="Completed" role="tabpanel" aria-labelledby="home-tab">
             <div class="col my-2">
@@ -393,27 +331,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                    {% for each in completed %}
-                    <tr>
-                        <td> {{ each.id }}</td>
-                        <td> {{ each.wo }}</td>
-                        <td> {{ each.pn }}</td>
-                        <td> {{ each.csn }}</td>
-                        <td> {% if each.astime == None %} 
-                            {{each.astime}} 
-                         {% else %}
-                           {{each.astime.strftime('%Y/%m/%d %H:%M')}} 
-                        {% endif %}
-                        </td>
-                        <td> {% if each.intime == None %} 
-                                 {{each.intime}} 
-                              {% else %}
-                                {{each.intime.strftime('%Y/%m/%d %H:%M')}} 
-                             {% endif %}
-                        </td>
-                        <td> {{ each.asid | usersname }}</td>
-                    </tr>
-                    {% endfor %}
+                   
                     </tbody>
                 </table>
             </div>

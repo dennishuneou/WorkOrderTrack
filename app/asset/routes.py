@@ -1,7 +1,7 @@
 from flask_login import login_required
 from app.asset.forms import AddWorkorderForm, UploadReportForm, ReviewReportForm, ReviewReportFileForm,EditOneComputerForm
 from app.asset import main
-from app.asset.models import Transaction, WorkOrder, Production
+from app.asset.models import WorkOrder, Production
 from flask import render_template, flash, request, redirect, url_for
 from app import db
 #Dennis
@@ -10,6 +10,7 @@ from flask_login import current_user
 import datetime
 from sqlalchemy import func
 from app.auth.forms  import get_userrole, get_usersname, get_useridbyname, get_username
+from app.auth.models import User
 
 @main.route('/')
 @login_required
@@ -79,27 +80,12 @@ def display_workorders():
 @login_required
 def report():
     role = get_userrole(current_user.id)
-    if role == 0 :
-        todoworkorder1 = WorkOrder.query.filter_by(status=-1,asid=-1)
-        todoworkorder2 = WorkOrder.query.filter_by(status=-1,asid=current_user.id)
-        todoworkorder  = todoworkorder1.union(todoworkorder2)
-    else :
-        todoworkorder = WorkOrder.query.filter_by(status=-1)  
-    if role == 0 :
-        query1 = WorkOrder.query.filter_by(asid=current_user.id, status=0)
-        query2 =  WorkOrder.query.filter_by(asid=current_user.id, status=1)
-    else :
-        query1 = WorkOrder.query.filter_by(status=0)
-        query2 =  WorkOrder.query.filter_by(status=1)
-    processing = query1.union(query2)
-    if role == 0 :
-        completed = WorkOrder.query.filter(func.DATE(WorkOrder.intime) == func.DATE(datetime.datetime.today()),WorkOrder.asid==current_user.id,WorkOrder.status == 2)
-        completed7day = WorkOrder.query.filter((func.DATE(WorkOrder.intime)) >= (func.DATE(datetime.datetime.today())-7),WorkOrder.asid==current_user.id,WorkOrder.status == 2)
-        completed28day = WorkOrder.query.filter((func.DATE(WorkOrder.intime)) >= (func.DATE(datetime.datetime.today())-28),WorkOrder.asid==current_user.id,WorkOrder.status == 2)
-    else :
-        completed = WorkOrder.query.filter(func.DATE(WorkOrder.intime) == func.DATE(datetime.datetime.today()),WorkOrder.status == 2)
-        completed7day = WorkOrder.query.filter((func.DATE(WorkOrder.intime)) >= (func.DATE(datetime.datetime.today())-7),WorkOrder.status == 2)
-        completed28day = WorkOrder.query.filter((func.DATE(WorkOrder.intime)) >= (func.DATE(datetime.datetime.today())-28),WorkOrder.status == 2)
+    if role < 2:
+        return redirect(url_for('main.display_workorders'))
+
+    completed = WorkOrder.query.filter(func.DATE(WorkOrder.intime) == func.DATE(datetime.datetime.today()),WorkOrder.status == 2)
+    completed7day = WorkOrder.query.filter((func.DATE(WorkOrder.intime)) >= (func.DATE(datetime.datetime.today())-7),WorkOrder.status == 2)
+    completed28day = WorkOrder.query.filter((func.DATE(WorkOrder.intime)) >= (func.DATE(datetime.datetime.today())-28),WorkOrder.status == 2)
     #Total
     cntToday = [0,0,0,0,0]
     cntToday[0] = completed.count()
@@ -135,9 +121,67 @@ def report():
     cnt28day[3] = cnt28day[1] - completed28day.filter_by(gpuinstall = False,wifiinstall = False, caninstall = False, mezioinstall = False).count()
     #Gpu, Installed GPU
     cnt28day[4] = completed28day.filter_by(gpuinstall=True).count()
-
-    return render_template('report.html', todoworkorder= todoworkorder, processing=processing, completed=completed,cntToday=cntToday,
-                          cnt7day=cnt7day,cnt28day=cnt28day,userrole=role)
+    #Last 2 wwek, 4 week performance
+    # Operator name,  POC, Nuvo-5000, Nuvo-6000, Nuvo-7000, Nuvo-8000,Nuvo-9000, Muvo-10000, Pack&Go
+    users = User.query.all()
+    
+    table2weeks = []
+    table4weeks = []
+    for user in users :
+        if user.role < 3 :
+           completed2weeks = WorkOrder.query.filter((func.DATE(WorkOrder.intime)) >= (func.DATE(datetime.datetime.today())-14),WorkOrder.status == 2, WorkOrder.asid == user.id)
+           completed4weeks = WorkOrder.query.filter((func.DATE(WorkOrder.intime)) >= (func.DATE(datetime.datetime.today())-28),WorkOrder.status == 2, WorkOrder.asid == user.id)
+           if completed2weeks.count() :
+              #calculate POC, Nuvo-5000, Nuvo-6000, Nuvo-7000, Nuvo-8000,Nuvo-9000, Muvo-10000, Pack&Go
+              rows = []
+              rows.append(user.user_name)
+              nNRU = completed2weeks.filter(WorkOrder.pn.contains("NRU")).count()
+              rows.append(nNRU)
+              nPoc = completed2weeks.filter(WorkOrder.pn.contains("POC")).count()
+              rows.append(nPoc)
+              nNuvo5= completed2weeks.filter(WorkOrder.pn.contains("Nuvo-5")).count()
+              rows.append(nNuvo5)
+              nNuvo6= completed2weeks.filter(WorkOrder.pn.contains("Nuvo-6")).count()
+              rows.append(nNuvo6)
+              nNuvo7= completed2weeks.filter(WorkOrder.pn.contains("Nuvo-7")).count()
+              rows.append(nNuvo7)
+              nNuvo8= completed2weeks.filter(WorkOrder.pn.contains("Nuvo-8")).count()
+              rows.append(nNuvo8)
+              nNuvo9= completed2weeks.filter(WorkOrder.pn.contains("Nuvo-9")).count()
+              rows.append(nNuvo9)
+              nNuvoa= completed2weeks.filter(WorkOrder.pn.contains("Nuvo-10")).count()
+              rows.append(nNuvoa)
+              nTotal= nNRU + nPoc + nNuvo5 + nNuvo6 + nNuvo7 + nNuvo8 + nNuvo9 + nNuvoa
+              rows.append(nTotal)
+              nPackgo= completed2weeks.filter(WorkOrder.packgo==True).count()
+              rows.append(nPackgo)
+              table2weeks.append(rows)
+           if completed4weeks.count() :
+              #calculate POC, Nuvo-5000, Nuvo-6000, Nuvo-7000, Nuvo-8000,Nuvo-9000, Muvo-10000, Pack&Go
+              rows = []
+              rows.append(user.user_name)
+              nNRU = completed4weeks.filter(WorkOrder.pn.contains("NRU")).count()
+              rows.append(nNRU)
+              nPoc = completed4weeks.filter(WorkOrder.pn.contains("POC")).count()
+              rows.append(nPoc)
+              nNuvo5= completed4weeks.filter(WorkOrder.pn.contains("Nuvo-5")).count()
+              rows.append(nNuvo5)
+              nNuvo6= completed4weeks.filter(WorkOrder.pn.contains("Nuvo-6")).count()
+              rows.append(nNuvo6)
+              nNuvo7= completed4weeks.filter(WorkOrder.pn.contains("Nuvo-7")).count()
+              rows.append(nNuvo7)
+              nNuvo8= completed4weeks.filter(WorkOrder.pn.contains("Nuvo-8")).count()
+              rows.append(nNuvo8)
+              nNuvo9= completed4weeks.filter(WorkOrder.pn.contains("Nuvo-9")).count()
+              rows.append(nNuvo9)
+              nNuvoa= completed4weeks.filter(WorkOrder.pn.contains("Nuvo-10")).count()
+              rows.append(nNuvoa)
+              nTotal= nNRU + nPoc + nNuvo5 + nNuvo6 + nNuvo7 + nNuvo8 + nNuvo9 + nNuvoa
+              rows.append(nTotal)
+              nPackgo= completed4weeks.filter(WorkOrder.packgo==True).count()
+              rows.append(nPackgo)
+              table4weeks.append(rows)
+    return render_template('report.html', cntToday=cntToday,cnt7day=cnt7day,cnt28day=cnt28day,userrole=role,table2weeks=table2weeks,table4weeks=table4weeks)
 
 @main.route('/TakeOneComputer/<id>', methods=['GET', 'POST'])
 @login_required
