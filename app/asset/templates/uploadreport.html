@@ -65,7 +65,7 @@
                                             { document.getElementById('m22').value = linelist[each]}    
                                         else if (linelist[each].includes("/dev/nvme0n1")) 
                                             { document.getElementById('m21').value = linelist[each]}
-                                        else if (linelist[each].includes("/dev/sd") && linelist[each].includes("SATA"))
+                                        else if (linelist[each].includes("/dev/sd") && (linelist[each].includes("SATA")||linelist[each].includes("M.2"))&&(linelist[i].includes("/boot")!=true))
                                             { 
                                                 satacnt = satacnt +1
                                                 satax ='sata'+ satacnt.toString()
