@@ -1,5 +1,5 @@
 from flask_login import login_required
-from app.asset.forms import AddWorkorderForm, UploadReportForm, ReviewReportForm, ReviewReportFileForm,EditOneComputerForm
+from app.asset.forms import AddWorkorderForm, UploadReportForm, ReviewReportForm, ReviewReportFileForm,EditOneComputerForm,UploadFileForm
 from app.asset import main
 from app.asset.models import WorkOrder, Production
 from flask import render_template, flash, request, redirect, url_for
@@ -79,6 +79,15 @@ def display_workorders():
 @main.route('/register/report', methods=['GET', 'POST'])
 @login_required
 def report():
+    form = UploadFileForm()
+    searched = 0
+    if request.method == "POST":
+        #Prepare the search results between start date and end date
+        if form.enddate.data != None and form.startdate.data != None:
+            if form.enddate.data > form.startdate.data :
+                completedss = WorkOrder.query.filter(func.DATE(WorkOrder.intime) >= func.DATE(form.startdate.data ),WorkOrder.status == 2)
+                completedss = completedss.filter((func.DATE(WorkOrder.intime)) <= (func.DATE(form.enddate.data )))
+                searched = 1
     role = get_userrole(current_user.id)
     if role < 2:
         return redirect(url_for('main.display_workorders'))
@@ -127,10 +136,45 @@ def report():
     
     table2weeks = []
     table4weeks = []
+    tablesearch = []
     for user in users :
         if user.role < 3 :
            completed2weeks = WorkOrder.query.filter((func.DATE(WorkOrder.intime)) >= (func.DATE(datetime.datetime.today())-14),WorkOrder.status == 2, WorkOrder.asid == user.id)
            completed4weeks = WorkOrder.query.filter((func.DATE(WorkOrder.intime)) >= (func.DATE(datetime.datetime.today())-28),WorkOrder.status == 2, WorkOrder.asid == user.id)
+           if searched == 1:
+              completedssbyuser=completedss.filter(WorkOrder.asid == user.id)
+              if completedssbyuser.count() :
+              #calculate POC, Nuvo-5000, Nuvo-6000, Nuvo-7000, Nuvo-8000,Nuvo-9000, Muvo-10000, Pack&Go
+                rows = []
+                rows.append(user.user_name)
+                nNRU = completedssbyuser.filter(WorkOrder.pn.contains("NRU")).count()
+                rows.append(nNRU)
+                nPoc = completedssbyuser.filter(WorkOrder.pn.contains("POC")).count()
+                rows.append(nPoc)
+                nNuvo5= completedssbyuser.filter(WorkOrder.pn.contains("Nuvo-5")).count()
+                rows.append(nNuvo5)
+                nNuvo6= completedssbyuser.filter(WorkOrder.pn.contains("Nuvo-6")).count()
+                rows.append(nNuvo6)
+                nNuvo7= completedssbyuser.filter(WorkOrder.pn.contains("Nuvo-7")).count()
+                rows.append(nNuvo7)
+                nNuvo8= completedssbyuser.filter(WorkOrder.pn.contains("Nuvo-8")).count()
+                rows.append(nNuvo8)
+                nNuvo9= completedssbyuser.filter(WorkOrder.pn.contains("Nuvo-9")).count()
+                rows.append(nNuvo9)
+                nNuvoa= completedssbyuser.filter(WorkOrder.pn.contains("Nuvo-10")).count()
+                rows.append(nNuvoa)
+                nTotal= nNRU + nPoc + nNuvo5 + nNuvo6 + nNuvo7 + nNuvo8 + nNuvo9 + nNuvoa
+                rows.append(nTotal)
+                nInsOS = completedssbyuser.filter(WorkOrder.osinstall != '').count()
+                rows.append(nInsOS)
+                nInsGPU = completedssbyuser.filter(WorkOrder.gpuinstall == True).count()
+                rows.append(nInsGPU)
+                nInsModule = completedssbyuser.count() - completedssbyuser.filter_by(gpuinstall = False,wifiinstall = False, caninstall = False, mezioinstall = False).count()
+                rows.append(nInsModule)
+                nPackgo= completedssbyuser.filter(WorkOrder.packgo==True).count()
+                rows.append(nPackgo)
+                tablesearch.append(rows)
+
            if completed2weeks.count() :
               #calculate POC, Nuvo-5000, Nuvo-6000, Nuvo-7000, Nuvo-8000,Nuvo-9000, Muvo-10000, Pack&Go
               rows = []
@@ -153,9 +197,16 @@ def report():
               rows.append(nNuvoa)
               nTotal= nNRU + nPoc + nNuvo5 + nNuvo6 + nNuvo7 + nNuvo8 + nNuvo9 + nNuvoa
               rows.append(nTotal)
+              nInsOS = completed2weeks.filter(WorkOrder.osinstall != '').count()
+              rows.append(nInsOS)
+              nInsGPU = completed2weeks.filter(WorkOrder.gpuinstall == True).count()
+              rows.append(nInsGPU)
+              nInsModule = completed2weeks.count() - completed2weeks.filter_by(gpuinstall = False,wifiinstall = False, caninstall = False, mezioinstall = False).count()
+              rows.append(nInsModule)
               nPackgo= completed2weeks.filter(WorkOrder.packgo==True).count()
               rows.append(nPackgo)
               table2weeks.append(rows)
+
            if completed4weeks.count() :
               #calculate POC, Nuvo-5000, Nuvo-6000, Nuvo-7000, Nuvo-8000,Nuvo-9000, Muvo-10000, Pack&Go
               rows = []
@@ -178,11 +229,18 @@ def report():
               rows.append(nNuvoa)
               nTotal= nNRU + nPoc + nNuvo5 + nNuvo6 + nNuvo7 + nNuvo8 + nNuvo9 + nNuvoa
               rows.append(nTotal)
+              nInsOS = completed4weeks.filter(WorkOrder.osinstall != '').count()
+              rows.append(nInsOS)
+              nInsGPU = completed4weeks.filter(WorkOrder.gpuinstall == True).count()
+              rows.append(nInsGPU)
+              nInsModule = completed4weeks.count() - completed4weeks.filter_by(gpuinstall = False,wifiinstall = False, caninstall = False, mezioinstall = False).count()
+              rows.append(nInsModule)
               nPackgo= completed4weeks.filter(WorkOrder.packgo==True).count()
               rows.append(nPackgo)
               table4weeks.append(rows)
-    return render_template('report.html', cntToday=cntToday,cnt7day=cnt7day,cnt28day=cnt28day,userrole=role,table2weeks=table2weeks,table4weeks=table4weeks)
 
+    return render_template('report.html', cntToday=cntToday,cnt7day=cnt7day,cnt28day=cnt28day,userrole=role,table2weeks=table2weeks,table4weeks=table4weeks,form=form,tablesearch=tablesearch,searched=searched)
+    
 @main.route('/TakeOneComputer/<id>', methods=['GET', 'POST'])
 @login_required
 def TakeOneComputer(id): 

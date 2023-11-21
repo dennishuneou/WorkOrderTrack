@@ -1,11 +1,16 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, SubmitField, HiddenField, SelectField, ValidationError,BooleanField
+from wtforms import StringField, SubmitField, HiddenField, SelectField, ValidationError,BooleanField, DateField
 from wtforms.validators import DataRequired, Length, InputRequired
 from wtforms.fields.html5 import DateField
 from wtforms.ext.sqlalchemy.fields import QuerySelectField
 from wtforms.widgets import TextArea
 from app.asset.models import WorkOrder, Production
 from app.auth.forms  import get_userrole,get_usersname
+
+class UploadFileForm(FlaskForm):
+    startdate = DateField('Start Date')
+    enddate   = DateField('End Date')
+    submit    = SubmitField('Search')
 
 class UploadReportForm(FlaskForm):
     wo = StringField('WorkOrder#', render_kw={'readonly': True,'style': 'width: 200px'})

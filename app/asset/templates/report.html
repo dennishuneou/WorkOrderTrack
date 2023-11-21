@@ -1,5 +1,16 @@
 {% extends 'base.html' %}
 
+{% macro render_date_field(field) %}
+<div class="form__group">
+    {{ field.label(class_="form__label") }}
+    {{ field(class_="form__field")}}
+
+    {%- for error in field.errors %}
+        <span class="form__error">{{ error }}</span>
+    {% endfor %}
+</div>
+{% endmacro %}
+
 {% block content %}
 
 <div class="container">
@@ -35,7 +46,7 @@
                 <div class="col-6">
                     <div class="row align-items-center justify-content-center">
                         <div class="col text-left">
-                            <h6 class="text-left m-b-0"><span class="text-muted">OS</span> </h6>
+                            <h6 class="text-left m-b-0"><span class="text-muted">InstallOS</span> </h6>
                         </div>
                         <div class="col text-right">
                             <h6 class="text-right m-b-0">{{ cntToday[2] }}</h6>
@@ -48,7 +59,7 @@
                 <div class="col-6">
                     <div class="row align-items-center justify-content-center">
                         <div class="col text-left">
-                            <h6 class="text-left m-b-0"><span class="text-muted">Module</span> </h6>
+                            <h6 class="text-left m-b-0"><span class="text-muted">InstallModule</span> </h6>
                         </div>
                         <div class="col text-right">
                             <h6 class="text-right m-b-0">{{ cntToday[3] }}</h6>
@@ -61,7 +72,7 @@
                 <div class="col-6">
                     <div class="row align-items-center justify-content-center">
                         <div class="col text-left">
-                            <h6 class="text-left m-b-0"><span class="text-muted">GPU</span> </h6>
+                            <h6 class="text-left m-b-0"><span class="text-muted">InstallGPU</span> </h6>
                         </div>
                         <div class="col text-right">
                             <h6 class="text-right m-b-0">{{ cntToday[4] }}</h6>
@@ -105,7 +116,7 @@
                     <div class="col-6">
                         <div class="row align-items-center justify-content-center">
                             <div class="col text-left">
-                                <h6 class="text-left m-b-0"><span class="text-muted">OS</span> </h6>
+                                <h6 class="text-left m-b-0"><span class="text-muted">InstallOS</span> </h6>
                             </div>
                             <div class="col text-right">
                                 <h6 class="text-right m-b-0">{{ cnt7day[2] }}</h6>
@@ -118,7 +129,7 @@
                     <div class="col-6">
                         <div class="row align-items-center justify-content-center">
                             <div class="col text-left">
-                                <h6 class="text-left m-b-0"><span class="text-muted">Module</span> </h6>
+                                <h6 class="text-left m-b-0"><span class="text-muted">InstallModule</span> </h6>
                             </div>
                             <div class="col text-right">
                                 <h6 class="text-right m-b-0">{{ cnt7day[3] }}</h6>
@@ -131,7 +142,7 @@
                     <div class="col-6">
                         <div class="row align-items-center justify-content-center">
                             <div class="col text-left">
-                                <h6 class="text-left m-b-0"><span class="text-muted">GPU</span> </h6>
+                                <h6 class="text-left m-b-0"><span class="text-muted">InstallGPU</span> </h6>
                             </div>
                             <div class="col text-right">
                                 <h6 class="text-right m-b-0">{{ cnt7day[4] }}</h6>
@@ -175,7 +186,7 @@
                         <div class="col-6">
                             <div class="row align-items-center justify-content-center">
                                 <div class="col text-left">
-                                    <h6 class="text-left m-b-0"><span class="text-muted">OS</span> </h6>
+                                    <h6 class="text-left m-b-0"><span class="text-muted">InstallOS</span> </h6>
                                 </div>
                                 <div class="col text-right">
                                     <h6 class="text-right m-b-0">{{ cnt28day[2] }}</h6>
@@ -188,7 +199,7 @@
                         <div class="col-6">
                             <div class="row align-items-center justify-content-center">
                                 <div class="col text-left">
-                                    <h6 class="text-left m-b-0"><span class="text-muted">Module</span> </h6>
+                                    <h6 class="text-left m-b-0"><span class="text-muted">InstallModule</span> </h6>
                                 </div>
                                 <div class="col text-right">
                                     <h6 class="text-right m-b-0">{{ cnt28day[3] }}</h6>
@@ -201,7 +212,7 @@
                         <div class="col-6">
                             <div class="row align-items-center justify-content-center">
                                 <div class="col text-left">
-                                    <h6 class="text-left m-b-0"><span class="text-muted">GPU</span> </h6>
+                                    <h6 class="text-left m-b-0"><span class="text-muted">InstallGPU</span> </h6>
                                 </div>
                                 <div class="col text-right">
                                     <h6 class="text-right m-b-0">{{ cnt28day[4] }}</h6>
@@ -239,13 +250,16 @@
                                 <th> Name</th>
                                 <th> NRU</th>
                                 <th> POCs</th>
-                                <th> Nuvo-5000</th>
-                                <th> Nuvo-6000</th>
-                                <th> Nuvo-7000</th>
-                                <th> Nuvo-8000</th>
-                                <th> Nuvo-9000</th>
-                                <th> Nuvo-10000</th>
+                                <th> Nuvo-5x</th>
+                                <th> Nuvo-6x</th>
+                                <th> Nuvo-7x</th>
+                                <th> Nuvo-8x</th>
+                                <th> Nuvo-9x</th>
+                                <th> Nuvo-10x</th>
                                 <th> Build</th>
+                                <th> Ins OS</th>
+                                <th> Ins GPU</th>
+                                <th> Ins Module</th>
                                 <th> Pack&Go</th>
                             </tr>
                         </thead>
@@ -263,6 +277,9 @@
                                 <td> {{ rows[8] }}</td>
                                 <td> {{ rows[9] }}</td>
                                 <td> {{ rows[10] }}</td>
+                                <td> {{ rows[11] }}</td>
+                                <td> {{ rows[12] }}</td>
+                                <td> {{ rows[13] }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -282,13 +299,16 @@
                                     <th> Name</th>
                                     <th> NRU</th>
                                     <th> POCs</th>
-                                    <th> Nuvo-5000</th>
-                                    <th> Nuvo-6000</th>
-                                    <th> Nuvo-7000</th>
-                                    <th> Nuvo-8000</th>
-                                    <th> Nuvo-9000</th>
-                                    <th> Nuvo-10000</th>
+                                    <th> Nuvo-5x</th>
+                                    <th> Nuvo-6x</th>
+                                    <th> Nuvo-7x</th>
+                                    <th> Nuvo-8x</th>
+                                    <th> Nuvo-9x</th>
+                                    <th> Nuvo-10x</th>
                                     <th> Build</th>
+                                    <th> Ins OS</th>
+                                    <th> Ins GPU</th>
+                                    <th> Ins Module</th>
                                     <th> Pack&Go</th>
                                 </tr>
                             </thead>
@@ -306,6 +326,9 @@
                                     <td> {{ rows[8] }}</td>
                                     <td> {{ rows[9] }}</td>
                                     <td> {{ rows[10] }}</td>
+                                    <td> {{ rows[11] }}</td>
+                                    <td> {{ rows[12] }}</td>
+                                    <td> {{ rows[13] }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -340,4 +363,68 @@
   </div>
 </div>
 </div>
+<form name="Uploadfile" method="post" novalidate class="form">
+    <div class="form__container">
+        {{ form.hidden_tag() }}
+        {{ render_date_field(form.startdate) }}
+        {{ render_date_field(form.enddate) }}
+      
+        <div>
+            {{ form.submit(class_="button button--form") }}
+        </div>
+    </div>
+</form>
+{% if searched ==1 %}
+<hr> </hr>
+<div class="row">
+    <div class="col col-md-16 my-4">
+    <div class="tab-content" id="myTabContent">
+            <div class="col my-2">
+                <h3 class="font-weight-bold">Summary of  Search Results</h3>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="thead-light">
+                        <tr style="background-color: #e3f2fd;">
+                            <th> Name</th>
+                            <th> NRU</th>
+                            <th> POCs</th>
+                            <th> Nuvo-5x</th>
+                            <th> Nuvo-6x</th>
+                            <th> Nuvo-7x</th>
+                            <th> Nuvo-8x</th>
+                            <th> Nuvo-9x</th>
+                            <th> Nuvo-10x</th>
+                            <th> Build</th>
+                            <th> Ins OS</th>
+                            <th> Ins GPU</th>
+                            <th> Ins Module</th>
+                            <th> Pack&Go</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for rows in tablesearch %}
+                        <tr>
+                            <td> {{ rows[0] }}</td>
+                            <td> {{ rows[1] }}</td>
+                            <td> {{ rows[2] }}</td>
+                            <td> {{ rows[3] }}</td>
+                            <td> {{ rows[4] }}</td>
+                            <td> {{ rows[5] }}</td>
+                            <td> {{ rows[6] }}</td>
+                            <td> {{ rows[7] }}</td>
+                            <td> {{ rows[8] }}</td>
+                            <td> {{ rows[9] }}</td>
+                            <td> {{ rows[10] }}</td>
+                            <td> {{ rows[11] }}</td>
+                            <td> {{ rows[12] }}</td>
+                            <td> {{ rows[13] }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+</div>        
+{% endif %}
 {% endblock %}
