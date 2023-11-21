@@ -10,4 +10,7 @@ Show productivity of Operator
   since if running python3 run.py, the behavior of checkbox in the form works abnormal.
 # firefox looks like some abnormal behavior when exeuting the javascript code to read filw owned but root.
 #  chrome works well  
+#run with gunicorn
+# add gunicornconfig.py
+gunicorn --config gunicornconfig.py 'app:create_app()'
 
