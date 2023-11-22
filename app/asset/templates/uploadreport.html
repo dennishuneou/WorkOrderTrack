@@ -54,7 +54,7 @@
                                             {document.getElementById('msn').value= linelist[each].replace("Motherboard Serial Number:",'')}
                                         else if (linelist[each].includes("CPU Type:")) 
                                             { document.getElementById('cpu').value = linelist[each].replace("CPU Type:",'')}
-                                        else if (linelist[each].includes("DIMM") && linelist[each].includes("DDR"))
+                                        else if ((linelist[each].includes("DIMM")||linelist[each].includes("Channel")) && linelist[each].includes("DDR"))
                                             {   memcnt=memcnt+1
                                                 memx='mem'+memcnt.toString()
                                                 document.getElementById(memx).value = linelist[each]
