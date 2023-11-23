@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% from 'bootstrap/form.html' import render_form %}
+
+
+{% block content %}
+    <div class="container"><div class="row">
+        <div class="col-16 col-md-12 my-4">
+            <div class="shadow-lg rounded card text-left">
+                <div class="card-body bg-light">
+                    <h4 style="margin-left: 45px"> Review Report </h4>
+                    <hr>     
+                    {{ form.hidden_tag() }}
+                    {{ render_form(form) }}
+                </div>
+            </div>
+            <div class="shadow-lg rounded card text-left">
+                <div class="card-body bg-light">
+                    <h4 style="margin-left: 45px"> Download Report File  </h4>
+                    <button id="download-button">Download File</button>
+                    <pre id="file-contents"></pre>
+                    <hr>
+                    <script>
+                        document.querySelector("#download-button").addEventListener('click', function() {
+                            document.querySelector("#file-contents").textContent = document.getElementById('report').value;
+                        });
+                    </script>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

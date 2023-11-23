@@ -7,9 +7,19 @@ from wtforms.widgets import TextArea
 from app.asset.models import WorkOrder, Production
 from app.auth.forms  import get_userrole,get_usersname
 
-class UploadFileForm(FlaskForm):
+class ReportSearchForm(FlaskForm):
     startdate = DateField('Start Date')
     enddate   = DateField('End Date')
+    submit    = SubmitField('Search')
+
+class QueryForm(FlaskForm):
+    startdate = DateField('Start Date')
+    enddate   = DateField('End Date')
+    operator  = QuerySelectField('Operator Name', query_factory=get_usersname,allow_blank=True)
+    wo = StringField('WorkOrder#', validators=[Length(max=100)])
+    customers = StringField('Customer Name', validators=[Length(max=100)])
+    pn = StringField('Product Model', validators=[Length(max=100)])
+    csn = StringField('Chassis Serial Number', validators=[Length(max=100)])
     submit    = SubmitField('Search')
 
 class UploadReportForm(FlaskForm):
@@ -38,6 +48,13 @@ class UploadReportForm(FlaskForm):
     report = StringField('Report File',validators=[Length(max=512000)],widget=TextArea(),render_kw={'style': 'width: 400px','readonly': True})
 
     submit = SubmitField('Update')
+
+class ViewReportForm(FlaskForm):
+    wo = StringField('WorkOrder#', render_kw={'readonly': True})
+    pn = StringField('Product Model', render_kw={'readonly': True})
+    csn = StringField('Chassis S/N', render_kw={'readonly': True})
+    report = StringField('Report File',widget=TextArea(),render_kw={'style': 'width: 400px','readonly': True})
+    
 
 class ReviewReportForm(FlaskForm):
     wo = StringField('WorkOrder#', render_kw={'readonly': True})

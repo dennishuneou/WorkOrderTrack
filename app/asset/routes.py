@@ -1,5 +1,5 @@
 from flask_login import login_required
-from app.asset.forms import AddWorkorderForm, UploadReportForm, ReviewReportForm, ReviewReportFileForm,EditOneComputerForm,UploadFileForm
+from app.asset.forms import AddWorkorderForm, UploadReportForm, ReviewReportForm, ReviewReportFileForm,EditOneComputerForm,ReportSearchForm,QueryForm,ViewReportForm
 from app.asset import main
 from app.asset.models import WorkOrder, Production
 from flask import render_template, flash, request, redirect, url_for
@@ -76,10 +76,64 @@ def display_workorders():
     return render_template('home.html', todoworkorder= todoworkorder, processing=processing, completed=completed,cntToday=cntToday,
                           cnt7day=cnt7day,cnt28day=cnt28day,userrole=role)
 
+@main.route('/register/query', methods=['GET', 'POST'])
+@login_required
+def query():
+    form = QueryForm()
+    searched = 0
+    if request.method == "POST":
+        #Prepare the search results between start date and end date
+        if form.enddate.data != None and form.startdate.data != None:
+            if form.enddate.data > form.startdate.data :
+                completedss = WorkOrder.query.filter(func.DATE(WorkOrder.intime) >= func.DATE(form.startdate.data ),WorkOrder.status == 2)
+                completedss = completedss.filter((func.DATE(WorkOrder.intime)) <= (func.DATE(form.enddate.data )))
+                searched = 1
+    role = get_userrole(current_user.id)
+    if role < 2:
+        return redirect(url_for('main.display_workorders'))
+    #Search by time, operator name, wo, customer name, pn, csn.
+    # user can check the detail of WO and report
+    # Name, Customers, WO#, PN, CSN, 
+    searchtable = []
+    if searched == 1 :
+        if form.operator.data != None :
+            asid = get_useridbyname(form.operator.data.user_name)
+            completedss = completedss.filter(WorkOrder.asid == asid)
+            print(1)
+        if form.wo.data != '':
+            wo = form.wo.data
+            completedss = completedss.filter(WorkOrder.wo == wo)
+            print(2)
+        if form.pn.data != '' :
+            pn = form.pn.data
+            completedss = completedss.filter(WorkOrder.pn.contains(pn))
+            print(3)
+        if form.csn.data != '' :
+            csn = form.csn.data
+            completedss = completedss.filter(WorkOrder.csn.contains(csn))
+            print(4)
+        if form.customers.data != '' :
+            customer = form.customers.data
+            completedss = completedss.filter(WorkOrder.customers.contains(customer))
+            print(5)
+        for workord in completedss :
+            rows = []
+            rows.append(workord.id)
+            rows.append(workord.wo)
+            rows.append(workord.customers)
+            rows.append(workord.pn)
+            rows.append(workord.csn)
+            rows.append(get_username(workord.asid))
+            rows.append(workord.astime.strftime("%m/%d %H:%M"))
+            rows.append(get_username(workord.insid))
+            rows.append(workord.intime.strftime("%m/%d %H:%M"))
+            searchtable.append(rows)
+    return render_template('query.html', form=form, userrole=role, searched=searched,searchtable=searchtable)
+
 @main.route('/register/report', methods=['GET', 'POST'])
 @login_required
 def report():
-    form = UploadFileForm()
+    form = ReportSearchForm()
     searched = 0
     if request.method == "POST":
         #Prepare the search results between start date and end date
@@ -345,11 +399,9 @@ def ReviewReport(id):
             print(form.action.data)
             if form.action.data == '0' :
                 workorder.status = 2
-                print("it0")
+                workorder.insid = current_user.id
             else: 
                 workorder.status = 0  
-                print("it1")
-            print(workorder.status)
             db.session.commit()
             if(form.action.data=='0') :
                flash('Approved')
@@ -357,6 +409,14 @@ def ReviewReport(id):
                flash('Denied')
             return redirect(url_for('main.display_workorders'))
         return render_template('reviewreport.html', form=form, id=id, userrole = role)
+
+@main.route('/ViewReport/<wo>/<csn>', methods=['GET', 'POST'])
+@login_required
+def ViewReport(wo,csn):
+        products = Production.query.filter_by(wo=wo,csn=csn)
+        form = ViewReportForm(obj=products[0])
+        role = get_userrole(current_user.id)
+        return render_template('viewreport.html', form=form, userrole = role)
 
 
 @main.route('/ReturnOneComputer/<id>', methods=['GET', 'POST'])

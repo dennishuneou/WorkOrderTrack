@@ -15,21 +15,6 @@
 
 <div class="container">
     <div class="row">
-    <div class="col-md-12 col-xl-4"> 
-        <form name="Uploadfile" method="post" novalidate class="form">
-            <div class="form__container">
-                {{ form.hidden_tag() }}
-                {{ render_date_field(form.startdate) }}
-                {{ render_date_field(form.enddate) }}
-              
-                <div>
-                    {{ form.submit(class_="button button--form") }}
-                </div>
-            </div>
-        </form>    
-    </div>
-    </div>
-    <div class="row">
     <!--[Count section] start-->
     <div class="col-md-12 col-xl-4">
     <div class="card card-social">
@@ -356,6 +341,21 @@
 </div>
 </div>
 <div class="container">
+    <div class="row">
+        <div class="col-md-12 col-xl-4"> 
+            <form name="Uploadfile" method="post" novalidate class="form">
+                <div class="form__container">
+                    {{ form.hidden_tag() }}
+                    {{ render_date_field(form.startdate) }}
+                    {{ render_date_field(form.enddate) }}
+                  
+                    <div>
+                        {{ form.submit(class_="button button--form") }}
+                    </div>
+                </div>
+            </form>    
+        </div>
+    </div>
 {% if searched ==1 %}
 <div class="row">
     <div class="col col-md-16 my-4">

@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+
+{% macro render_date_field(field) %}
+<div class="form__group">
+    {{ field.label(class_="form__label") }}
+    {{ field(class_="form__field")}}
+
+    {%- for error in field.errors %}
+        <span class="form__error">{{ error }}</span>
+    {% endfor %}
+</div>
+{% endmacro %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-12 col-xl-4"> 
+            <form name="Uploadfile" method="post" novalidate class="form">
+                <div class="form__container">
+                    {{ form.hidden_tag() }}
+                    {{ render_date_field(form.startdate) }}
+                    {{ render_date_field(form.enddate) }}
+                    {{ render_date_field(form.operator) }}
+                    {{ render_date_field(form.wo) }}
+                    {{ render_date_field(form.pn) }}
+                    {{ render_date_field(form.csn) }}
+                    {{ render_date_field(form.customers) }}
+                    <div>
+                        {{ form.submit(class_="button button--form") }}
+                    </div>
+                </div>
+            </form>    
+        </div>
+    </div>
+ </div>   
+{% if searched ==1 %}
+<div class="container">
+<div class="row">
+    <div class="col col-md-16 my-4">
+        <ul class="nav nav-tabs" id="myTab" role="tablist">
+            <li class="nav-item">
+               <a class="nav-link active" id="home-tab" data-toggle="tab" href="#Search" role="tab" aria-controls="home" aria-selected="true">Search results</a>
+            </li>
+        </ul>
+    <div class="tab-content" id="myTabContent">
+            <div class="col my-2">
+                <h6 class="font-weight-bold">Summary of  Search Results</h6>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="thead-light">
+                        <tr style="background-color: #e3f2fd;">
+                            <th> ID</th>
+                            <th> WO#</th>
+                            <th> Customer</th>
+                            <th> PN</th>
+                            <th> Chassis#</th>
+                            <th> Build By</th>
+                            <th> Build Time</th>
+                            <th> Inspect By</th>
+                            <th> Inspect Time</th>
+                            <th> View Report</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for rows in searchtable %}
+                        <tr>
+                            <td> {{ rows[0] }} </td>
+                            <td> {{ rows[1] }} </td>
+                            <td> {{ rows[2] }} </td>
+                            <td> {{ rows[3] }} </td>
+                            <td> {{ rows[4] }} </td>
+                            <td> {{ rows[5] }} </td>
+                            <td> {{ rows[6] }} </td>
+                            <td> {{ rows[7] }} </td>
+                            <td> {{ rows[8] }} </td>
+                            <td>       
+                                <a class="btn btn-light btn-sm"
+                                href= "{{ url_for('main.ViewReport',wo=rows[1],csn=rows[4])}}"
+                                role="button">
+                                    <i class="fa fa-arrow-right" aria-hidden="true"></i>
+                                </a>
+                            </td> 
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+</div>        
+{% endif %}
+{% endblock %}

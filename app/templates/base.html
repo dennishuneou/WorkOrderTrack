@@ -42,6 +42,9 @@
                     </li> 
                     {% if userrole > 1 %}
                     <li class="nav-item">
+                        <a href="{{ url_for('main.query') }}"      class="nav-link">Query</a>
+                    </li>
+                    <li class="nav-item">
                         <a href="{{ url_for('main.report') }}"      class="nav-link">Report</a>
                     </li>
                     {% endif %}
