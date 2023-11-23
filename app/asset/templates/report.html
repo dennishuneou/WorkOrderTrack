@@ -343,12 +343,17 @@
 <div class="container">
     <div class="row">
         <div class="col-md-12 col-xl-4"> 
-            <form name="Uploadfile" method="post" novalidate class="form">
+            <form name="Uploadfile" method="post" novalidate class="formsimple">
                 <div class="form__container">
                     {{ form.hidden_tag() }}
-                    {{ render_date_field(form.startdate) }}
-                    {{ render_date_field(form.enddate) }}
-                  
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            {{ form.startdate.label }} {{ form.startdate(size=20, class_="form-control") }}
+                            </div>
+                        <div class="form-group col-md-6">    
+                            {{ form.enddate.label }} {{ form.enddate(size=20, class_="form-control") }}
+                        </div>
+                    </div>    
                     <div>
                         {{ form.submit(class_="button button--form") }}
                     </div>

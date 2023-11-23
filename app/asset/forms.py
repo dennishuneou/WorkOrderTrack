@@ -19,7 +19,7 @@ class QueryForm(FlaskForm):
     wo = StringField('WorkOrder#', validators=[Length(max=100)])
     customers = StringField('Customer Name', validators=[Length(max=100)])
     pn = StringField('Product Model', validators=[Length(max=100)])
-    csn = StringField('Chassis Serial Number', validators=[Length(max=100)])
+    csn = StringField('Chassis S/N', validators=[Length(max=100)])
     submit    = SubmitField('Search')
 
 class UploadReportForm(FlaskForm):

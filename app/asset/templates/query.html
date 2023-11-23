@@ -10,21 +10,49 @@
     {% endfor %}
 </div>
 {% endmacro %}
-
+<style> 
+    .newspaper {
+      column-count: 3;
+      column-gap: 40px;
+      column-rule: 1px solid lightblue;
+    }
+    
+    h2 {
+      column-span: all;
+    }
+    </style>
 {% block content %}
 <div class="container">
     <div class="row">
-        <div class="col-md-12 col-xl-4"> 
-            <form name="Uploadfile" method="post" novalidate class="form">
+        <div class="col-md-12 col-xl-4">
+           <form name="Uploadfile" method="post" novalidate class="formsimple">
                 <div class="form__container">
                     {{ form.hidden_tag() }}
-                    {{ render_date_field(form.startdate) }}
-                    {{ render_date_field(form.enddate) }}
+                    <div class="form-row">
+                    <div class="form-group col-md-6">
+                        {{ form.startdate.label }} {{ form.startdate(size=20, class_="form-control") }}
+                        </div>
+                    <div class="form-group col-md-6">    
+                        {{ form.enddate.label }} {{ form.enddate(size=20, class_="form-control") }}
+                        </div>
+                    </div>
+                    <div class="form-row">
+                    <div class="form-group col-md-6">
+                        {{ form.wo.label }} {{ form.wo(size=20, class_="form-control") }}
+                        </div>
+                    <div class="form-group col-md-6">    
+                        {{ form.pn.label }} {{ form.pn(size=20, class_="form-control") }}
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            {{ form.csn.label }} {{ form.csn(class_="form-control") }}
+                            </div>
+                        <div class="form-group col-md-6">    
+                            {{ form.customers.label }} {{ form.customers(size=20, class_="form-control") }}
+                            </div>
+                    </div>
                     {{ render_date_field(form.operator) }}
-                    {{ render_date_field(form.wo) }}
-                    {{ render_date_field(form.pn) }}
-                    {{ render_date_field(form.csn) }}
-                    {{ render_date_field(form.customers) }}
                     <div>
                         {{ form.submit(class_="button button--form") }}
                     </div>
