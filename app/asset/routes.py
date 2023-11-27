@@ -45,7 +45,7 @@ def display_workorders():
     #OS, installed OS
     cntToday[2] = cntToday[1] - completed.filter_by(osinstall=None).count()
     #Module, installed module
-    cntToday[3] = cntToday[1] - completed.filter_by(gpuinstall = False,wifiinstall = False, caninstall = False, mezioinstall = False).count()
+    cntToday[3] = cntToday[1] - completed.filter_by(gpuinstall = False,wifiinstall = False, caninstall = False, mezioinstall = False, packgo=False).count()
     #Gpu, Installed GPU
     cntToday[4] = completed.filter_by(gpuinstall=True).count()
 
@@ -57,7 +57,7 @@ def display_workorders():
     #OS, installed OS
     cnt7day[2] = cnt7day[1] - completed7day.filter_by(osinstall=None).count()
     #Module, installed module
-    cnt7day[3] = cnt7day[1] - completed7day.filter_by(gpuinstall = False,wifiinstall = False, caninstall = False, mezioinstall = False).count()
+    cnt7day[3] = cnt7day[1] - completed7day.filter_by(gpuinstall = False,wifiinstall = False, caninstall = False, mezioinstall = False, packgo=False).count()
     #Gpu, Installed GPU
     cnt7day[4] = completed7day.filter_by(gpuinstall=True).count()
 
@@ -69,7 +69,7 @@ def display_workorders():
     #OS, installed OS
     cnt28day[2] = cnt28day[1] - completed28day.filter_by(osinstall=None).count()
     #Module, installed module
-    cnt28day[3] = cnt28day[1] - completed28day.filter_by(gpuinstall = False,wifiinstall = False, caninstall = False, mezioinstall = False).count()
+    cnt28day[3] = cnt28day[1] - completed28day.filter_by(gpuinstall = False,wifiinstall = False, caninstall = False, mezioinstall = False, packgo=False).count()
     #Gpu, Installed GPU
     cnt28day[4] = completed28day.filter_by(gpuinstall=True).count()
 
@@ -157,7 +157,7 @@ def report():
     #OS, installed OS
     cntToday[2] = cntToday[1] - completed.filter_by(osinstall=None).count()
     #Module, installed module
-    cntToday[3] = cntToday[1] - completed.filter_by(gpuinstall = False,wifiinstall = False, caninstall = False, mezioinstall = False).count()
+    cntToday[3] = cntToday[1] - completed.filter_by(gpuinstall = False,wifiinstall = False, caninstall = False, mezioinstall = False, packgo=False).count()
     #Gpu, Installed GPU
     cntToday[4] = completed.filter_by(gpuinstall=True).count()
 
@@ -169,7 +169,7 @@ def report():
     #OS, installed OS
     cnt7day[2] = cnt7day[1] - completed7day.filter_by(osinstall=None).count()
     #Module, installed module
-    cnt7day[3] = cnt7day[1] - completed7day.filter_by(gpuinstall = False,wifiinstall = False, caninstall = False, mezioinstall = False).count()
+    cnt7day[3] = cnt7day[1] - completed7day.filter_by(gpuinstall = False,wifiinstall = False, caninstall = False, mezioinstall = False, packgo=False).count()
     #Gpu, Installed GPU
     cnt7day[4] = completed7day.filter_by(gpuinstall=True).count()
 
@@ -181,7 +181,7 @@ def report():
     #OS, installed OS
     cnt28day[2] = cnt28day[1] - completed28day.filter_by(osinstall=None).count()
     #Module, installed module
-    cnt28day[3] = cnt28day[1] - completed28day.filter_by(gpuinstall = False,wifiinstall = False, caninstall = False, mezioinstall = False).count()
+    cnt28day[3] = cnt28day[1] - completed28day.filter_by(gpuinstall = False,wifiinstall = False, caninstall = False, mezioinstall = False, packgo=False).count()
     #Gpu, Installed GPU
     cnt28day[4] = completed28day.filter_by(gpuinstall=True).count()
     #Last 2 wwek, 4 week performance
@@ -223,7 +223,7 @@ def report():
                 rows.append(nInsOS)
                 nInsGPU = completedssbyuser.filter(WorkOrder.gpuinstall == True).count()
                 rows.append(nInsGPU)
-                nInsModule = completedssbyuser.count() - completedssbyuser.filter_by(gpuinstall = False,wifiinstall = False, caninstall = False, mezioinstall = False).count()
+                nInsModule = completedssbyuser.count() - completedssbyuser.filter_by(gpuinstall = False,wifiinstall = False, caninstall = False, mezioinstall = False, packgo=False).count()
                 rows.append(nInsModule)
                 nPackgo= completedssbyuser.filter(WorkOrder.packgo==True).count()
                 rows.append(nPackgo)
@@ -255,7 +255,7 @@ def report():
               rows.append(nInsOS)
               nInsGPU = completed2weeks.filter(WorkOrder.gpuinstall == True).count()
               rows.append(nInsGPU)
-              nInsModule = completed2weeks.count() - completed2weeks.filter_by(gpuinstall = False,wifiinstall = False, caninstall = False, mezioinstall = False).count()
+              nInsModule = completed2weeks.count() - completed2weeks.filter_by(gpuinstall = False,wifiinstall = False, caninstall = False, mezioinstall = False, packgo=False).count()
               rows.append(nInsModule)
               nPackgo= completed2weeks.filter(WorkOrder.packgo==True).count()
               rows.append(nPackgo)
@@ -287,7 +287,7 @@ def report():
               rows.append(nInsOS)
               nInsGPU = completed4weeks.filter(WorkOrder.gpuinstall == True).count()
               rows.append(nInsGPU)
-              nInsModule = completed4weeks.count() - completed4weeks.filter_by(gpuinstall = False,wifiinstall = False, caninstall = False, mezioinstall = False).count()
+              nInsModule = completed4weeks.count() - completed4weeks.filter_by(gpuinstall = False,wifiinstall = False, caninstall = False, mezioinstall = False, packgo=False).count()
               rows.append(nInsModule)
               nPackgo= completed4weeks.filter(WorkOrder.packgo==True).count()
               rows.append(nPackgo)
