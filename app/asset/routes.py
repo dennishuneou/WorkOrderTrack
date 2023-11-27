@@ -43,7 +43,7 @@ def display_workorders():
     #Build, not Pack & Go
     cntToday[1] = cntToday[0] - completed.filter_by(packgo=True).count()
     #OS, installed OS
-    cntToday[2] = cntToday[1] - completed.filter_by(osinstall=None).count()
+    cntToday[2] = cntToday[1] - completed.filter_by(osinstall='',packgo=False).count()
     #Module, installed module
     cntToday[3] = cntToday[1] - completed.filter_by(gpuinstall = False,wifiinstall = False, caninstall = False, mezioinstall = False, packgo=False).count()
     #Gpu, Installed GPU
@@ -55,7 +55,7 @@ def display_workorders():
     #Build, not Pack & Go
     cnt7day[1] = cnt7day[0] - completed7day.filter_by(packgo=True).count()
     #OS, installed OS
-    cnt7day[2] = cnt7day[1] - completed7day.filter_by(osinstall=None).count()
+    cnt7day[2] = cnt7day[1] - completed7day.filter_by(osinstall='').count()
     #Module, installed module
     cnt7day[3] = cnt7day[1] - completed7day.filter_by(gpuinstall = False,wifiinstall = False, caninstall = False, mezioinstall = False, packgo=False).count()
     #Gpu, Installed GPU
@@ -67,7 +67,7 @@ def display_workorders():
     #Build, not Pack & Go
     cnt28day[1] = cnt28day[0] - completed28day.filter_by(packgo=True).count()
     #OS, installed OS
-    cnt28day[2] = cnt28day[1] - completed28day.filter_by(osinstall=None).count()
+    cnt28day[2] = cnt28day[1] - completed28day.filter_by(osinstall='').count()
     #Module, installed module
     cnt28day[3] = cnt28day[1] - completed28day.filter_by(gpuinstall = False,wifiinstall = False, caninstall = False, mezioinstall = False, packgo=False).count()
     #Gpu, Installed GPU
@@ -155,7 +155,7 @@ def report():
     #Build, not Pack & Go
     cntToday[1] = cntToday[0] - completed.filter_by(packgo=True).count()
     #OS, installed OS
-    cntToday[2] = cntToday[1] - completed.filter_by(osinstall=None).count()
+    cntToday[2] = cntToday[1] - completed.filter_by(osinstall='').count()
     #Module, installed module
     cntToday[3] = cntToday[1] - completed.filter_by(gpuinstall = False,wifiinstall = False, caninstall = False, mezioinstall = False, packgo=False).count()
     #Gpu, Installed GPU
@@ -167,7 +167,7 @@ def report():
     #Build, not Pack & Go
     cnt7day[1] = cnt7day[0] - completed7day.filter_by(packgo=True).count()
     #OS, installed OS
-    cnt7day[2] = cnt7day[1] - completed7day.filter_by(osinstall=None).count()
+    cnt7day[2] = cnt7day[1] - completed7day.filter_by(osinstall='').count()
     #Module, installed module
     cnt7day[3] = cnt7day[1] - completed7day.filter_by(gpuinstall = False,wifiinstall = False, caninstall = False, mezioinstall = False, packgo=False).count()
     #Gpu, Installed GPU
@@ -179,7 +179,7 @@ def report():
     #Build, not Pack & Go
     cnt28day[1] = cnt28day[0] - completed28day.filter_by(packgo=True).count()
     #OS, installed OS
-    cnt28day[2] = cnt28day[1] - completed28day.filter_by(osinstall=None).count()
+    cnt28day[2] = cnt28day[1] - completed28day.filter_by(osinstall='').count()
     #Module, installed module
     cnt28day[3] = cnt28day[1] - completed28day.filter_by(gpuinstall = False,wifiinstall = False, caninstall = False, mezioinstall = False, packgo=False).count()
     #Gpu, Installed GPU
