@@ -312,6 +312,9 @@ def TakeOneComputer(id):
 def DeleteOneComputer(id): 
     workorder = WorkOrder.query.get(id)
     db.session.delete(workorder)
+    products = Production.query.filter_by(wo = workorder.wo, csn =workorder.csn)
+    if products.count() :
+        db.session.delete(products[0])
     db.session.commit()
     flash('DeleteOneComputer successfully')
     return redirect(url_for('main.display_workorders'))
