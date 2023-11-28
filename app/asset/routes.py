@@ -84,7 +84,7 @@ def query():
     if request.method == "POST":
         #Prepare the search results between start date and end date
         if form.enddate.data != None and form.startdate.data != None:
-            if form.enddate.data > form.startdate.data :
+            if form.enddate.data >= form.startdate.data :
                 completedss = WorkOrder.query.filter(func.DATE(WorkOrder.intime) >= func.DATE(form.startdate.data ),WorkOrder.status == 2)
                 completedss = completedss.filter((func.DATE(WorkOrder.intime)) <= (func.DATE(form.enddate.data )))
                 searched = 1
@@ -138,7 +138,7 @@ def report():
     if request.method == "POST":
         #Prepare the search results between start date and end date
         if form.enddate.data != None and form.startdate.data != None:
-            if form.enddate.data > form.startdate.data :
+            if form.enddate.data >= form.startdate.data :
                 completedss = WorkOrder.query.filter(func.DATE(WorkOrder.intime) >= func.DATE(form.startdate.data ),WorkOrder.status == 2)
                 completedss = completedss.filter((func.DATE(WorkOrder.intime)) <= (func.DATE(form.enddate.data )))
                 searched = 1
