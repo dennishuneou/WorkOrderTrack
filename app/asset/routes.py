@@ -359,6 +359,9 @@ def UploadReport(id):
         mem1=form.mem1.data, mem2=form.mem2.data, mem3=form.mem3.data, mem4=form.mem4.data, gpu1=form.gpu1.data, gpu2=form.gpu2.data, sata1=form.sata1.data, sata2=form.sata2.data,
         sata3=form.sata3.data, sata4=form.sata4.data, m21=form.m21.data, m22=form.m22.data, wifi=form.wifi.data, fg5g=form.fg5g.data,
         can=form.can.data,other=form.other.data,note=form.note.data,report=form.report.data)
+        existproduct = Production.query.filter_by(wo=form.wo.data,csn=form.csn.data.strip())
+        if existproduct.count() :
+            db.session.delete(existproduct[0])
         db.session.add(transaction)
         db.session.commit()
         flash('Upload successful')
