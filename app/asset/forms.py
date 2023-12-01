@@ -5,7 +5,7 @@ from wtforms.fields.html5 import DateField
 from wtforms.ext.sqlalchemy.fields import QuerySelectField
 from wtforms.widgets import TextArea
 from app.asset.models import WorkOrder, Production
-from app.auth.forms  import get_userrole,get_usersname
+from app.auth.forms  import get_userrole,get_usersname,get_operateusersname
 
 class ReportSearchForm(FlaskForm):
     startdate = DateField('Start Date')
@@ -15,7 +15,7 @@ class ReportSearchForm(FlaskForm):
 class QueryForm(FlaskForm):
     startdate = DateField('Start Date')
     enddate   = DateField('End Date')
-    operator  = QuerySelectField('Operator Name', query_factory=get_usersname,allow_blank=True)
+    operator  = QuerySelectField('Operator Name', query_factory=get_operateusersname,allow_blank=True)
     wo = StringField('WorkOrder#', validators=[Length(max=100)])
     customers = StringField('Customer Name', validators=[Length(max=100)])
     pn = StringField('Product Model', validators=[Length(max=100)])
@@ -101,7 +101,7 @@ class AddWorkorderForm(FlaskForm):
     mezioinstall = BooleanField('MezIO Installation')
     osinstall = StringField('Installation OS Name', validators=[Length(max=100)])
     packgo = BooleanField('Pack & Go')
-    operator = QuerySelectField('Operator Name', query_factory=get_usersname,allow_blank=True)
+    operator = QuerySelectField('Operator Name', query_factory=get_operateusersname,allow_blank=True)
     asid= HiddenField('Assembler ID')
     insid= HiddenField('Inspector ID')
     astime=HiddenField('Assembling Time')
@@ -122,7 +122,7 @@ class EditOneComputerForm(FlaskForm):
     mezioinstall = BooleanField('MezIO Installation')
     osinstall = StringField('Installation OS Name', validators=[Length(max=100)])
     packgo = BooleanField('Pack & Go')
-    operator = QuerySelectField('Operator Name', query_factory=get_usersname,allow_blank=True)
+    operator = QuerySelectField('Operator Name', query_factory=get_operateusersname,allow_blank=True)
     asid= HiddenField('Assembler ID')
     insid= HiddenField('Inspector ID')
     astime=HiddenField('Assembling Time')

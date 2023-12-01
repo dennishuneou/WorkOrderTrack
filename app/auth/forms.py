@@ -2,7 +2,7 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, PasswordField, BooleanField, SelectField
 from wtforms.validators import DataRequired, Length, Email, EqualTo, ValidationError, InputRequired
 from app.auth.models import User
-#role  [(0,'Assemble Technican'),(1,'Quality Inspector'),(2,'Quality Manager')]
+#role  [(0,'Assemble Technican'),(1,'Quality Inspector'),(2,'Quality Manager'),(3,'Supervisor')]]
 def email_exists(form, field):
     email = User.query.filter_by(user_email=field.data).first()
     if email:
@@ -14,6 +14,8 @@ def username_exists(form, field):
 
 def get_usersname():
     return User.query.all()
+def get_operateusersname():
+    return User.query.filter(User.role < 3)
 def get_username(userid):
     users = User.query.filter_by(id=userid)
     if users.count() :
@@ -42,7 +44,7 @@ class RegistrationForm(FlaskForm):
     email = StringField("Enter your email", validators=[DataRequired(), Email(), email_exists])
     password = PasswordField("Password", validators=[DataRequired(), Length(5), EqualTo('confirm_password', message='passwords should match' )])
     confirm_password = PasswordField("Confirm Password", validators=[DataRequired()])
-    role = SelectField('Role',coerce=int, choices=[(0,'Assemble Technican'),(1,'Quality Inspector'),(2,'Quality Manager')])
+    role = SelectField('Role',coerce=int, choices=[(0,'Assemble Technican'),(1,'Quality Inspector'),(2,'Quality Manager'),(3,'Supervisor')])
     submit = SubmitField("Register")
 
 class LoginForm(FlaskForm):
