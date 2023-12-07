@@ -7,6 +7,22 @@ from wtforms.widgets import TextArea
 from app.asset.models import WorkOrder, Production
 from app.auth.forms  import get_userrole,get_usersname,get_operateusersname
 
+def wocsn_exists(form, field):
+    csn_m=form.csn.data.split('\n')
+    duplicated=0
+    csntoolong=0
+    for x in csn_m:
+        if x.strip() != '' :
+            if len(x.strip()) < 100 :
+               if WorkOrder.query.filter_by(wo=form.wo.data,csn=x.strip()).count() :
+                  duplicated=1
+            else :
+                csntoolong=1
+    if duplicated:
+        raise ValidationError('Same WO# with same CSN#')
+    if csntoolong:
+        raise ValidationError('CSN# longer than 100')    
+
 class ReportSearchForm(FlaskForm):
     startdate = DateField('Start Date')
     enddate   = DateField('End Date')
@@ -92,7 +108,7 @@ class AddWorkorderForm(FlaskForm):
     wo = StringField('WorkOrder#', validators=[DataRequired(),Length(max=100)])
     customers = StringField('Customer Name', validators=[DataRequired(),Length(max=100)])
     pn = StringField('Product Model', validators=[DataRequired(),Length(max=100)])
-    csn = StringField('Chassis Serial Number', validators=[DataRequired(),Length(max=100)], widget=TextArea())
+    csn = StringField('Chassis Serial Number', validators=[DataRequired(),Length(max=600),wocsn_exists], widget=TextArea())
     cpuinstall = BooleanField('CPU Installation')
     memoryinstall = BooleanField('Memory Installation')
     gpuinstall = BooleanField('GPU Installation')
