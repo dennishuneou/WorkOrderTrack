@@ -16,12 +16,17 @@ from app.auth.models import User
 @login_required
 def display_workorders():
     role = get_userrole(current_user.id)
+    if  datetime.datetime.today().weekday() == 0:
+        delta = 3
+    else :
+        delta = 1
     if role == 0 :
         todoworkorder1 = WorkOrder.query.filter_by(status=-1,asid=-1)
         todoworkorder2 = WorkOrder.query.filter_by(status=-1,asid=current_user.id)
         todoworkorder  = todoworkorder1.union(todoworkorder2)
     else :
         todoworkorder = WorkOrder.query.filter_by(status=-1)  
+    todoworkorder = todoworkorder.order_by(WorkOrder.wo)    
     if role == 0 :
         query1 = WorkOrder.query.filter_by(asid=current_user.id, status=0)
         query2 =  WorkOrder.query.filter_by(asid=current_user.id, status=1)
@@ -29,14 +34,19 @@ def display_workorders():
         query1 = WorkOrder.query.filter_by(status=0)
         query2 =  WorkOrder.query.filter_by(status=1)
     processing = query1.union(query2)
+    processing = processing.order_by(WorkOrder.wo) 
     if role == 0 :
         completed = WorkOrder.query.filter(func.DATE(WorkOrder.intime) == func.DATE(datetime.datetime.today()),WorkOrder.asid==current_user.id,WorkOrder.status == 2)
+        completedlastwday = WorkOrder.query.filter(func.DATE(WorkOrder.intime) == (func.DATE(datetime.datetime.today())-delta),WorkOrder.asid==current_user.id,WorkOrder.status == 2)
         completed7day = WorkOrder.query.filter((func.DATE(WorkOrder.intime)) >= (func.DATE(datetime.datetime.today())-7),WorkOrder.asid==current_user.id,WorkOrder.status == 2)
         completed28day = WorkOrder.query.filter((func.DATE(WorkOrder.intime)) >= (func.DATE(datetime.datetime.today())-28),WorkOrder.asid==current_user.id,WorkOrder.status == 2)
     else :
         completed = WorkOrder.query.filter(func.DATE(WorkOrder.intime) == func.DATE(datetime.datetime.today()),WorkOrder.status == 2)
+        completedlastwday = WorkOrder.query.filter(func.DATE(WorkOrder.intime) == (func.DATE(datetime.datetime.today())-delta),WorkOrder.status == 2)
         completed7day = WorkOrder.query.filter((func.DATE(WorkOrder.intime)) >= (func.DATE(datetime.datetime.today())-7),WorkOrder.status == 2)
         completed28day = WorkOrder.query.filter((func.DATE(WorkOrder.intime)) >= (func.DATE(datetime.datetime.today())-28),WorkOrder.status == 2)
+    completed = completed.order_by(WorkOrder.wo)
+    completedlastwday = completedlastwday.order_by(WorkOrder.wo)
     #Total
     cntToday = [0,0,0,0,0]
     cntToday[0] = completed.count()
@@ -73,7 +83,7 @@ def display_workorders():
     #Gpu, Installed GPU
     cnt28day[4] = completed28day.filter_by(gpuinstall=True).count()
 
-    return render_template('home.html', todoworkorder= todoworkorder, processing=processing, completed=completed,cntToday=cntToday,
+    return render_template('home.html', todoworkorder= todoworkorder, processing=processing, completed=completed, completedlastwday=completedlastwday,cntToday=cntToday,
                           cnt7day=cnt7day,cnt28day=cnt28day,userrole=role)
 
 @main.route('/register/query', methods=['GET', 'POST'])
@@ -87,6 +97,7 @@ def query():
             if form.enddate.data >= form.startdate.data :
                 completedss = WorkOrder.query.filter(func.DATE(WorkOrder.intime) >= func.DATE(form.startdate.data ),WorkOrder.status == 2)
                 completedss = completedss.filter((func.DATE(WorkOrder.intime)) <= (func.DATE(form.enddate.data )))
+                completedss = completedss.order_by(WorkOrder.asid)
                 searched = 1
     role = get_userrole(current_user.id)
     if role < 2:
@@ -115,7 +126,6 @@ def query():
         if form.customers.data != '' :
             customer = form.customers.data
             completedss = completedss.filter(WorkOrder.customers.contains(customer))
-            print(5)
         for workord in completedss :
             rows = []
             rows.append(workord.id)
@@ -301,7 +311,7 @@ def TakeOneComputer(id):
     workorder = WorkOrder.query.get(id)
     workorder.status=0
     workorder.asid=current_user.id
-    workorder.astime=datetime.datetime.now()
+    workorder.tktime=datetime.datetime.now()
     db.session.commit()
     
     flash('TakeOneComputer successfully')
@@ -344,6 +354,8 @@ def EditOneComputer(id):
         else :
             asidset = form.operator.data.id
         workorder.asid = asidset    
+        workorder.csid = current_user.id
+        workorder.cstime=datetime.datetime.now()
         db.session.commit()
         flash('Update successful')
         return redirect(url_for('main.display_workorders'))
@@ -353,7 +365,7 @@ def EditOneComputer(id):
 @login_required
 def UploadReport(id): 
     workorder = WorkOrder.query.get(id)
-    workorder.intime=datetime.datetime.now()
+    workorder.astime=datetime.datetime.now()
     form = UploadReportForm(obj=workorder)
     role = get_userrole(current_user.id)
     if form.validate_on_submit():
@@ -453,7 +465,7 @@ def add_workorder():
                 transaction = WorkOrder(wo=form.wo.data, customers=form.customers.data, pn=str(form.pn.data), csn=x.strip(), 
                 cpuinstall=form.cpuinstall.data,memoryinstall=form.memoryinstall.data,gpuinstall=form.gpuinstall.data,
                 wifiinstall=form.wifiinstall.data,mezioinstall=form.mezioinstall.data,caninstall=form.caninstall.data,
-                osinstall=form.osinstall.data,packgo=form.packgo.data,asid=asidset,insid=-1,astime=None,intime=None,status=-1)
+                osinstall=form.osinstall.data,packgo=form.packgo.data,asid=asidset,insid=-1,astime=None,intime=None,tktime=None,csid=current_user.id,cstime=datetime.datetime.now(),status=-1)
                 db.session.add(transaction)
         db.session.commit()
         flash('WorkOrder registered successfully')

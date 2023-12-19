@@ -122,6 +122,9 @@ class AddWorkorderForm(FlaskForm):
     insid= HiddenField('Inspector ID')
     astime=HiddenField('Assembling Time')
     intime=HiddenField('Inspection Time')
+    csid= HiddenField('Creator ID')
+    cstime=HiddenField('Creating Time')
+    tktime=HiddenField('Take Time')
     status= HiddenField('Status')
     submit = SubmitField('Create New WorkOrder')
 
@@ -143,5 +146,7 @@ class EditOneComputerForm(FlaskForm):
     insid= HiddenField('Inspector ID')
     astime=HiddenField('Assembling Time')
     intime=HiddenField('Inspection Time')
+    csid= HiddenField('Creator ID')
+    cstime=HiddenField('Creating Time')
     status= HiddenField('Status')
     submit = SubmitField('Update')

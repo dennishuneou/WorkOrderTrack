@@ -19,11 +19,14 @@ class WorkOrder(db.Model):
     packgo = db.Column(db.Boolean, nullable=True)
     asid = db.Column(db.Integer, nullable=True)
     insid=db.Column(db.Integer, nullable=True)
+    tktime=db.Column(db.DateTime, nullable=True)
     astime=db.Column(db.DateTime, nullable=True)
     intime=db.Column(db.DateTime, nullable=True)
     status =db.Column(db.Integer, nullable=True)
-     
-    def __init__(self, wo, customers, pn, csn, cpuinstall, memoryinstall, gpuinstall,  wifiinstall, caninstall, mezioinstall, osinstall, packgo, asid, insid,astime, intime, status):
+    csid=db.Column(db.Integer, nullable=True)
+    cstime=db.Column(db.DateTime, nullable=True)
+
+    def __init__(self, wo, customers, pn, csn, cpuinstall, memoryinstall, gpuinstall,  wifiinstall, caninstall, mezioinstall, osinstall, packgo, asid, insid,astime, intime, csid, cstime, tktime, status):
         self.wo = wo
         self.customers = customers
         self.pn = pn
@@ -38,8 +41,11 @@ class WorkOrder(db.Model):
         self.packgo = packgo
         self.asid = asid
         self.insid = insid
+        self.tktime = tktime
         self.astime = astime
         self.intime = intime
+        self.csid = csid
+        self.cstime = cstime
         self.status = status
 
     def __repr__(self):
