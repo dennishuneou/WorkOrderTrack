@@ -262,7 +262,7 @@
                             <td> {{ workorder.wo }}</td>
                             <td> {{ workorder.pn }}</td>
                             <td> {{ workorder.csn }}</td>
-                            <td> {{ workorder.cstime.strftime('%y/%m/%d %H:%M') }}</td>
+                            <td> {{ workorder.cstime.strftime('%m/%d %H:%M') }}</td>
                             <td>
                                 <a class="btn btn-light btn-sm"
                                 href= "{{ url_for('main.TakeOneComputer',id=workorder.id)}}"
@@ -310,7 +310,8 @@
                             <th> WorkOrder</th>
                             <th> Product Number</th>
                             <th> Chassis SN</th>
-                            <th> Start Time</th>
+                            <th> Create at</th>
+                            <th> Take at</th>
                             <th> Status</th>
                             <th> Return</th>
                             <th> Upload Report</th>
@@ -327,10 +328,11 @@
                         <td> {{ each.wo }}</td>
                         <td> {{ each.pn }}</td>
                         <td> {{ each.csn }}</td>
+                        <td> {{ each.cstime.strftime('%m/%d %H:%M') }}</td>
                         <td> {% if each.tktime == None %} 
                             {{each.tktime}} 
                          {% else %}
-                           {{each.tktime.strftime('%y/%m/%d %H:%M')}} 
+                           {{each.tktime.strftime('%m/%d %H:%M')}} 
                         {% endif %}
                         </td>
                         <td> {% if each.status ==  -1 %}
@@ -359,6 +361,8 @@
                                role="button">
                                <i class="fa fa-arrow-up" aria-hidden="true"></i>
                             </a>
+                            {% elif each.status ==  1 %}
+                               {{each.astime.strftime('%m/%d %H:%M')}} 
                             {% endif %}
                         </td>
                         {% if userrole > 0 %}
@@ -406,18 +410,18 @@
                         <td> {{ each.wo }}</td>
                         <td> {{ each.pn }}</td>
                         <td> {{ each.csn }}</td>
-                        <td> {{each.cstime.strftime('%y/%m/%d %H:%M')}} </td>
-                        <td> {{each.tktime.strftime('%y/%m/%d %H:%M')}} </td>
+                        <td> {{each.cstime.strftime('%m/%d %H:%M')}} </td>
+                        <td> {{each.tktime.strftime('%m/%d %H:%M')}} </td>
                         <td> {% if each.astime == None %} 
                             {{each.astime}} 
                          {% else %}
-                           {{each.astime.strftime('%y/%m/%d %H:%M')}} 
+                           {{each.astime.strftime('%m/%d %H:%M')}} 
                         {% endif %}
                         </td>
                         <td> {% if each.intime == None %} 
                                  {{each.intime}} 
                               {% else %}
-                                {{each.intime.strftime('%y/%m/%d %H:%M')}} 
+                                {{each.intime.strftime('%m/%d %H:%M')}} 
                              {% endif %}
                         </td>
                         <td> {{ each.asid | usersname }}</td>
@@ -455,18 +459,18 @@
                         <td> {{ each.wo }}</td>
                         <td> {{ each.pn }}</td>
                         <td> {{ each.csn }}</td>
-                        <td> {{each.cstime.strftime('%y/%m/%d %H:%M')}} </td>
-                        <td> {{each.tktime.strftime('%y/%m/%d %H:%M')}} </td>
+                        <td> {{each.cstime.strftime('%m/%d %H:%M')}} </td>
+                        <td> {{each.tktime.strftime('%m/%d %H:%M')}} </td>
                         <td> {% if each.astime == None %} 
                             {{each.astime}} 
                          {% else %}
-                           {{each.astime.strftime('%y/%m/%d %H:%M')}} 
+                           {{each.astime.strftime('%m/%d %H:%M')}} 
                         {% endif %}
                         </td>
                         <td> {% if each.intime == None %} 
                                  {{each.intime}} 
                               {% else %}
-                                {{each.intime.strftime('%y/%m/%d %H:%M')}} 
+                                {{each.intime.strftime('%m/%d %H:%M')}} 
                              {% endif %}
                         </td>
                         <td> {{ each.asid | usersname }}</td>
