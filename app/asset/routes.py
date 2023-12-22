@@ -86,7 +86,7 @@ def display_workorders():
     return render_template('home.html', todoworkorder= todoworkorder, processing=processing, completed=completed, completedlastwday=completedlastwday,cntToday=cntToday,
                           cnt7day=cnt7day,cnt28day=cnt28day,userrole=role)
 
-@main.route('/register/query', methods=['GET', 'POST'])
+@main.route('/query', methods=['GET', 'POST'])
 @login_required
 def query():
     form = QueryForm()
@@ -133,6 +133,8 @@ def query():
             rows.append(workord.customers)
             rows.append(workord.pn)
             rows.append(workord.csn)
+            rows.append(workord.cstime.strftime("%m/%d %H:%M"))
+            rows.append(workord.tktime.strftime("%m/%d %H:%M"))
             rows.append(get_username(workord.asid))
             rows.append(workord.astime.strftime("%m/%d %H:%M"))
             rows.append(get_username(workord.insid))

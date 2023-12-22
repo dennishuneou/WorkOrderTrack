@@ -244,6 +244,7 @@
                             <tr style="background-color: #e3f2fd;">
                                 <th> ID</th>
                                 <th> WorkOrder</th>
+                                <th> Customer</th>
                                 <th> Product Number</th>
                                 <th> Chassis SN</th>
                                 <th> Created at</th>
@@ -260,6 +261,7 @@
                         <tr>
                             <td> {{ workorder.id }}</td>
                             <td> {{ workorder.wo }}</td>
+                            <td> {{ workorder.customers }}</td>
                             <td> {{ workorder.pn }}</td>
                             <td> {{ workorder.csn }}</td>
                             <td> {{ workorder.cstime.strftime('%m/%d %H:%M') }}</td>
@@ -308,6 +310,7 @@
                         <tr style="background-color: #e3f2fd;">
                             <th> ID</th>
                             <th> WorkOrder</th>
+                            <th> Customer</th>
                             <th> Product Number</th>
                             <th> Chassis SN</th>
                             <th> Create at</th>
@@ -326,6 +329,7 @@
                     <tr>
                         <td> {{ each.id }}</td>
                         <td> {{ each.wo }}</td>
+                        <td> {{ each.customers }}</td>
                         <td> {{ each.pn }}</td>
                         <td> {{ each.csn }}</td>
                         <td> {{ each.cstime.strftime('%m/%d %H:%M') }}</td>
@@ -393,6 +397,7 @@
                         <tr style="background-color: #e3f2fd;">
                             <th> ID</th>
                             <th> WorkOrder</th>
+                            <th> Customer</th>
                             <th> Product Number</th>
                             <th> Chassis SN</th>
                             <th> Created at</th>
@@ -408,6 +413,7 @@
                     <tr>
                         <td> {{ each.id }}</td>
                         <td> {{ each.wo }}</td>
+                        <td> {{ each.customers }}</td>
                         <td> {{ each.pn }}</td>
                         <td> {{ each.csn }}</td>
                         <td> {{each.cstime.strftime('%m/%d %H:%M')}} </td>
@@ -442,6 +448,7 @@
                         <tr style="background-color: #e3f2fd;">
                             <th> ID</th>
                             <th> WorkOrder</th>
+                            <th> Customer</th>
                             <th> Product Number</th>
                             <th> Chassis SN</th>
                             <th> Created at</th>
@@ -457,6 +464,7 @@
                     <tr>
                         <td> {{ each.id }}</td>
                         <td> {{ each.wo }}</td>
+                        <td> {{ each.customers }}</td>
                         <td> {{ each.pn }}</td>
                         <td> {{ each.csn }}</td>
                         <td> {{each.cstime.strftime('%m/%d %H:%M')}} </td>

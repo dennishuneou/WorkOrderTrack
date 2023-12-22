@@ -22,6 +22,7 @@
     }
     </style>
 {% block content %}
+
 <div class="container">
     <div class="row">
         <div class="col-md-12 col-xl-4">
@@ -67,15 +68,33 @@
     <div class="col col-md-16 my-4">
         <ul class="nav nav-tabs" id="myTab" role="tablist">
             <li class="nav-item">
-               <a class="nav-link active" id="home-tab" data-toggle="tab" href="#Search" role="tab" aria-controls="home" aria-selected="true">Search results</a>
+               <a class="nav-link active" id="home-tab"  data-toggle="tab" href="#Search" role="tab" aria-controls="home" aria-selected="true">Search results</a>
             </li>
         </ul>
     <div class="tab-content" id="myTabContent">
             <div class="col my-2">
                 <h6 class="font-weight-bold">Summary of  Search Results</h6>
             </div>
+            <div class="col-md-4 text-right"> <button id="exporttable" class="btn btn-primary">Export</button> </div>
+            <script> 
+                document.querySelector("#exporttable").addEventListener('click', function(){
+                        var table = $("#reporttable");
+                        if(table && table.length){
+                          $(table).table2excel({
+                            exclude: ".noExl",
+                            name: "Excel Document Name",
+                            filename: "WO" + new Date().toISOString().replace(/[\-\:\.]/g, "") + ".xls",
+                            fileext: ".xls",
+                            exclude_img: true,
+                            exclude_links: true,
+                            exclude_inputs: true,
+                            preserveColors: false
+                          });
+                        }
+                      });
+                    </script>
             <div class="table-responsive">
-                <table class="table table-striped table-hover">
+                <table id="reporttable" data-search="true"  class="table table-striped table-hover">
                     <thead class="thead-light">
                         <tr style="background-color: #e3f2fd;">
                             <th> ID</th>
@@ -83,8 +102,10 @@
                             <th> Customer</th>
                             <th> PN</th>
                             <th> Chassis#</th>
-                            <th> Build By</th>
-                            <th> Build Time</th>
+                            <th> Create at</th>
+                            <th> Take at</th>
+                            <th> Built By</th>
+                            <th> Built Time</th>
                             <th> Inspect By</th>
                             <th> Inspect Time</th>
                             <th> View Report</th>
@@ -102,6 +123,8 @@
                             <td> {{ rows[6] }} </td>
                             <td> {{ rows[7] }} </td>
                             <td> {{ rows[8] }} </td>
+                            <td> {{ rows[9] }} </td>
+                            <td> {{ rows[10] }} </td>
                             <td>       
                                 <a class="btn btn-light btn-sm"
                                 href= "{{ url_for('main.ViewReport',wo=rows[1],csn=rows[4])}}"
@@ -117,6 +140,7 @@
         </div>
     </div>
 </div>
+
 </div>        
 {% endif %}
 {% endblock %}
