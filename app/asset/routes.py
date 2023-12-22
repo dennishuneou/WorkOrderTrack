@@ -213,9 +213,9 @@ def report():
               #calculate POC, Nuvo-5000, Nuvo-6000, Nuvo-7000, Nuvo-8000,Nuvo-9000, Muvo-10000, Pack&Go
                 rows = []
                 rows.append(user.user_name)
-                nNRU = completedssbyuser.filter(WorkOrder.pn.contains("NRU")).count()
+                nNRU = completed4weeks.filter(WorkOrder.pn.contains("NRU")).count()
                 rows.append(nNRU)
-                nPoc = completedssbyuser.filter(WorkOrder.pn.contains("POC")).count()
+                nPoc = completedssbyuser.filter(WorkOrder.pn.contains("POC")).count()+completed4weeks.filter(WorkOrder.pn.contains("IGT")).count()
                 rows.append(nPoc)
                 nNuvo5= completedssbyuser.filter(WorkOrder.pn.contains("Nuvo-5")).count()
                 rows.append(nNuvo5)
@@ -245,9 +245,9 @@ def report():
               #calculate POC, Nuvo-5000, Nuvo-6000, Nuvo-7000, Nuvo-8000,Nuvo-9000, Muvo-10000, Pack&Go
               rows = []
               rows.append(user.user_name)
-              nNRU = completed2weeks.filter(WorkOrder.pn.contains("NRU")).count()
+              nNRU = completed4weeks.filter(WorkOrder.pn.contains("NRU")).count()
               rows.append(nNRU)
-              nPoc = completed2weeks.filter(WorkOrder.pn.contains("POC")).count()
+              nPoc = completed2weeks.filter(WorkOrder.pn.contains("POC")).count()+completed4weeks.filter(WorkOrder.pn.contains("IGT")).count()
               rows.append(nPoc)
               nNuvo5= completed2weeks.filter(WorkOrder.pn.contains("Nuvo-5")).count()
               rows.append(nNuvo5)
@@ -279,7 +279,7 @@ def report():
               rows.append(user.user_name)
               nNRU = completed4weeks.filter(WorkOrder.pn.contains("NRU")).count()
               rows.append(nNRU)
-              nPoc = completed4weeks.filter(WorkOrder.pn.contains("POC")).count()
+              nPoc = completed4weeks.filter(WorkOrder.pn.contains("POC")).count()+completed4weeks.filter(WorkOrder.pn.contains("IGT")).count()
               rows.append(nPoc)
               nNuvo5= completed4weeks.filter(WorkOrder.pn.contains("Nuvo-5")).count()
               rows.append(nNuvo5)
