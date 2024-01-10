@@ -232,14 +232,64 @@
         <div class="col col-md-16 my-4">
         <ul class="nav nav-tabs" id="myTab" role="tablist">
             <li class="nav-item">
-               <a class="nav-link active" id="home-tab" data-toggle="tab" href="#ToDo" role="tab" aria-controls="home" aria-selected="false">Last 14 Days</a>
+               <a class="nav-link active" id="home-tab" data-toggle="tab" href="#DAYS7" role="tab" aria-controls="home" aria-selected="true">Last 7 Days</a>
             </li>
             <li class="nav-item">
-               <a class="nav-link" id="profile-tab" data-toggle="tab" href="#Processing" role="tab" aria-controls="profile" aria-selected="true">Last 28 Days</a>
+               <a class="nav-link" id="home-tab" data-toggle="tab" href="#DAYS14" role="tab" aria-controls="home" aria-selected="false">Last 14 Days</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link " id="home-tab" data-toggle="tab" href="#DAYS28" role="tab" aria-controls="home" aria-selected="false">Last 28 Days</a>
             </li>
         </ul>
         <div class="tab-content" id="myTabContent">
-            <div class="tab-pane fade active show" id="ToDo" role="tabpanel" aria-labelledby="home-tab">
+            <div class="tab-pane fade active show" id="DAYS7" role="tabpanel" aria-labelledby="home-tab">
+                <div class="col my-2">
+                    <h6 class="font-weight-bold">Summary of last 7 Days </h6>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="thead-light">
+                            <tr style="background-color: #e3f2fd;">
+                                <th> Name</th>
+                                <th> NRU</th>
+                                <th> POCs</th>
+                                <th> Nuvo-5x</th>
+                                <th> Nuvo-6x</th>
+                                <th> Nuvo-7x</th>
+                                <th> Nuvo-8x</th>
+                                <th> Nuvo-9x</th>
+                                <th> Nuvo-10x</th>
+                                <th> Build</th>
+                                <th> Ins OS</th>
+                                <th> Ins GPU</th>
+                                <th> Ins Module</th>
+                                <th> Pack&Go</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for rows in table1week %}
+                            <tr>
+                                <td> {{ rows[0] }}</td>
+                                <td> {{ rows[1] }}</td>
+                                <td> {{ rows[2] }}</td>
+                                <td> {{ rows[3] }}</td>
+                                <td> {{ rows[4] }}</td>
+                                <td> {{ rows[5] }}</td>
+                                <td> {{ rows[6] }}</td>
+                                <td> {{ rows[7] }}</td>
+                                <td> {{ rows[8] }}</td>
+                                <td> {{ rows[9] }}</td>
+                                <td> {{ rows[10] }}</td>
+                                <td> {{ rows[11] }}</td>
+                                <td> {{ rows[12] }}</td>
+                                <td> {{ rows[13] }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="tab-pane fade" id="DAYS14" role="tabpanel" aria-labelledby="home-tab">
                 <div class="col my-2">
                     <h6 class="font-weight-bold">Summary of last 14 Days </h6>
                 </div>
@@ -286,9 +336,7 @@
                     </table>
                 </div>
             </div>
-        <div class="tab-pane fade" id="Processing" role="tabpanel" aria-labelledby="home-tab">
-            <div class="tab-content" id="myTabContent">
-                <div class="tab-pane fade active show" id="ToDo" role="tabpanel" aria-labelledby="home-tab">
+            <div class="tab-pane fade" id="DAYS28" role="tabpanel" aria-labelledby="home-tab">
                     <div class="col my-2">
                         <h6 class="font-weight-bold">Summary of last 28 Days </h6>
                     </div>
@@ -334,11 +382,10 @@
                             </tbody>
                         </table>
                     </div>
-                </div>
             </div>
         </div>
+    </div>
   </div>
-</div>
 </div>
 <div class="container">
     <div class="row">
@@ -415,9 +462,8 @@
                     </tbody>
                 </table>
             </div>
-        </div>
+    </div>
     </div>
 </div>
-</div>        
 {% endif %}
 {% endblock %}

@@ -106,6 +106,7 @@ def query():
     # user can check the detail of WO and report
     # Name, Customers, WO#, PN, CSN, 
     searchtable = []
+    tablesearchsummary = []
     if searched == 1 :
         if form.operator.data != None :
             asid = get_useridbyname(form.operator.data.user_name)
@@ -126,6 +127,42 @@ def query():
         if form.customers.data != '' :
             customer = form.customers.data
             completedss = completedss.filter(WorkOrder.customers.contains(customer))
+        users = User.query.all()    
+        for user in users :
+            if user.role < 3 :
+                if searched == 1:
+                    completedssbyuser=completedss.filter(WorkOrder.asid == user.id)
+                    if completedssbyuser.count() :
+                    #calculate POC, Nuvo-5000, Nuvo-6000, Nuvo-7000, Nuvo-8000,Nuvo-9000, Muvo-10000, Pack&Go
+                        rows = []
+                        rows.append(user.user_name)
+                        nNRU = completedssbyuser.filter(WorkOrder.pn.contains("NRU")).filter(WorkOrder.packgo!=True).count()
+                        rows.append(nNRU)
+                        nPoc = completedssbyuser.filter(WorkOrder.pn.contains("POC")).filter(WorkOrder.packgo!=True).count()+completedssbyuser.filter(WorkOrder.pn.contains("IGT")).filter(WorkOrder.packgo!=True).count()
+                        rows.append(nPoc)
+                        nNuvo5= completedssbyuser.filter(WorkOrder.pn.contains("Nuvo-5")).filter(WorkOrder.packgo!=True).count()
+                        rows.append(nNuvo5)
+                        nNuvo6= completedssbyuser.filter(WorkOrder.pn.contains("Nuvo-6")).filter(WorkOrder.packgo!=True).count()
+                        rows.append(nNuvo6)
+                        nNuvo7= completedssbyuser.filter(WorkOrder.pn.contains("Nuvo-7")).filter(WorkOrder.packgo!=True).count()
+                        rows.append(nNuvo7)
+                        nNuvo8= completedssbyuser.filter(WorkOrder.pn.contains("Nuvo-8")).filter(WorkOrder.packgo!=True).count()
+                        rows.append(nNuvo8)
+                        nNuvo9= completedssbyuser.filter(WorkOrder.pn.contains("Nuvo-9")).filter(WorkOrder.packgo!=True).count()
+                        rows.append(nNuvo9)
+                        nNuvoa= completedssbyuser.filter(WorkOrder.pn.contains("Nuvo-10")).filter(WorkOrder.packgo!=True).count()
+                        rows.append(nNuvoa)
+                        nTotal= nNRU + nPoc + nNuvo5 + nNuvo6 + nNuvo7 + nNuvo8 + nNuvo9 + nNuvoa
+                        rows.append(nTotal)
+                        nInsOS = completedssbyuser.filter(WorkOrder.osinstall != '').count()
+                        rows.append(nInsOS)
+                        nInsGPU = completedssbyuser.filter(WorkOrder.gpuinstall == True).count()
+                        rows.append(nInsGPU)
+                        nInsModule = completedssbyuser.count() - completedssbyuser.filter_by(gpuinstall = False,wifiinstall = False, caninstall = False, mezioinstall = False).count()
+                        rows.append(nInsModule)
+                        nPackgo= completedssbyuser.filter(WorkOrder.packgo==True).count()
+                        rows.append(nPackgo)
+                        tablesearchsummary.append(rows)
         for workord in completedss :
             rows = []
             rows.append(workord.id)
@@ -140,7 +177,7 @@ def query():
             rows.append(get_username(workord.insid))
             rows.append(workord.intime.strftime("%m/%d %H:%M"))
             searchtable.append(rows)
-    return render_template('query.html', form=form, userrole=role, searched=searched,searchtable=searchtable)
+    return render_template('query.html', form=form, userrole=role, searched=searched,tablesearchsummary=tablesearchsummary,searchtable=searchtable)
 
 @main.route('/register/report', methods=['GET', 'POST'])
 @login_required
@@ -200,11 +237,13 @@ def report():
     # Operator name,  POC, Nuvo-5000, Nuvo-6000, Nuvo-7000, Nuvo-8000,Nuvo-9000, Muvo-10000, Pack&Go
     users = User.query.all()
     
+    table1week  = []
     table2weeks = []
     table4weeks = []
     tablesearch = []
     for user in users :
         if user.role < 3 :
+           completed1week  = WorkOrder.query.filter((func.DATE(WorkOrder.intime)) >= (func.DATE(datetime.datetime.today())-7),WorkOrder.status == 2, WorkOrder.asid == user.id)
            completed2weeks = WorkOrder.query.filter((func.DATE(WorkOrder.intime)) >= (func.DATE(datetime.datetime.today())-14),WorkOrder.status == 2, WorkOrder.asid == user.id)
            completed4weeks = WorkOrder.query.filter((func.DATE(WorkOrder.intime)) >= (func.DATE(datetime.datetime.today())-28),WorkOrder.status == 2, WorkOrder.asid == user.id)
            if searched == 1:
@@ -213,21 +252,21 @@ def report():
               #calculate POC, Nuvo-5000, Nuvo-6000, Nuvo-7000, Nuvo-8000,Nuvo-9000, Muvo-10000, Pack&Go
                 rows = []
                 rows.append(user.user_name)
-                nNRU = completed4weeks.filter(WorkOrder.pn.contains("NRU")).count()
+                nNRU = completedssbyuser.filter(WorkOrder.pn.contains("NRU")).filter(WorkOrder.packgo!=True).count()
                 rows.append(nNRU)
-                nPoc = completedssbyuser.filter(WorkOrder.pn.contains("POC")).count()+completed4weeks.filter(WorkOrder.pn.contains("IGT")).count()
+                nPoc = completedssbyuser.filter(WorkOrder.pn.contains("POC")).filter(WorkOrder.packgo!=True).count()+completedssbyuser.filter(WorkOrder.pn.contains("IGT")).filter(WorkOrder.packgo!=True).count()
                 rows.append(nPoc)
-                nNuvo5= completedssbyuser.filter(WorkOrder.pn.contains("Nuvo-5")).count()
+                nNuvo5= completedssbyuser.filter(WorkOrder.pn.contains("Nuvo-5")).filter(WorkOrder.packgo!=True).count()
                 rows.append(nNuvo5)
-                nNuvo6= completedssbyuser.filter(WorkOrder.pn.contains("Nuvo-6")).count()
+                nNuvo6= completedssbyuser.filter(WorkOrder.pn.contains("Nuvo-6")).filter(WorkOrder.packgo!=True).count()
                 rows.append(nNuvo6)
-                nNuvo7= completedssbyuser.filter(WorkOrder.pn.contains("Nuvo-7")).count()
+                nNuvo7= completedssbyuser.filter(WorkOrder.pn.contains("Nuvo-7")).filter(WorkOrder.packgo!=True).count()
                 rows.append(nNuvo7)
-                nNuvo8= completedssbyuser.filter(WorkOrder.pn.contains("Nuvo-8")).count()
+                nNuvo8= completedssbyuser.filter(WorkOrder.pn.contains("Nuvo-8")).filter(WorkOrder.packgo!=True).count()
                 rows.append(nNuvo8)
-                nNuvo9= completedssbyuser.filter(WorkOrder.pn.contains("Nuvo-9")).count()
+                nNuvo9= completedssbyuser.filter(WorkOrder.pn.contains("Nuvo-9")).filter(WorkOrder.packgo!=True).count()
                 rows.append(nNuvo9)
-                nNuvoa= completedssbyuser.filter(WorkOrder.pn.contains("Nuvo-10")).count()
+                nNuvoa= completedssbyuser.filter(WorkOrder.pn.contains("Nuvo-10")).filter(WorkOrder.packgo!=True).count()
                 rows.append(nNuvoa)
                 nTotal= nNRU + nPoc + nNuvo5 + nNuvo6 + nNuvo7 + nNuvo8 + nNuvo9 + nNuvoa
                 rows.append(nTotal)
@@ -240,26 +279,57 @@ def report():
                 nPackgo= completedssbyuser.filter(WorkOrder.packgo==True).count()
                 rows.append(nPackgo)
                 tablesearch.append(rows)
+           if completed1week.count() :
+              #calculate POC, Nuvo-5000, Nuvo-6000, Nuvo-7000, Nuvo-8000,Nuvo-9000, Muvo-10000, Pack&Go
+              rows = []
+              rows.append(user.user_name)
+              nNRU = completed1week.filter(WorkOrder.pn.contains("NRU")).filter(WorkOrder.packgo!=True).count()
+              rows.append(nNRU)
+              nPoc = completed1week.filter(WorkOrder.pn.contains("POC")).filter(WorkOrder.packgo!=True).count()+completed1week.filter(WorkOrder.pn.contains("IGT")).filter(WorkOrder.packgo!=True).count()
+              rows.append(nPoc)
+              nNuvo5= completed1week.filter(WorkOrder.pn.contains("Nuvo-5")).filter(WorkOrder.packgo!=True).count()
+              rows.append(nNuvo5)
+              nNuvo6= completed1week.filter(WorkOrder.pn.contains("Nuvo-6")).filter(WorkOrder.packgo!=True).count()
+              rows.append(nNuvo6)
+              nNuvo7= completed1week.filter(WorkOrder.pn.contains("Nuvo-7")).filter(WorkOrder.packgo!=True).count()
+              rows.append(nNuvo7)
+              nNuvo8= completed1week.filter(WorkOrder.pn.contains("Nuvo-8")).filter(WorkOrder.packgo!=True).count()
+              rows.append(nNuvo8)
+              nNuvo9= completed1week.filter(WorkOrder.pn.contains("Nuvo-9")).filter(WorkOrder.packgo!=True).count()
+              rows.append(nNuvo9)
+              nNuvoa= completed1week.filter(WorkOrder.pn.contains("Nuvo-10")).filter(WorkOrder.packgo!=True).count()
+              rows.append(nNuvoa)
+              nTotal= nNRU + nPoc + nNuvo5 + nNuvo6 + nNuvo7 + nNuvo8 + nNuvo9 + nNuvoa
+              rows.append(nTotal)
+              nInsOS = completed1week.filter(WorkOrder.osinstall != '').count()
+              rows.append(nInsOS)
+              nInsGPU = completed1week.filter(WorkOrder.gpuinstall == True).count()
+              rows.append(nInsGPU)
+              nInsModule = completed1week.count() - completed1week.filter_by(gpuinstall = False,wifiinstall = False, caninstall = False, mezioinstall = False).count()
+              rows.append(nInsModule)
+              nPackgo= completed1week.filter(WorkOrder.packgo==True).count()
+              rows.append(nPackgo)
+              table1week.append(rows)
 
            if completed2weeks.count() :
               #calculate POC, Nuvo-5000, Nuvo-6000, Nuvo-7000, Nuvo-8000,Nuvo-9000, Muvo-10000, Pack&Go
               rows = []
               rows.append(user.user_name)
-              nNRU = completed4weeks.filter(WorkOrder.pn.contains("NRU")).count()
+              nNRU = completed2weeks.filter(WorkOrder.pn.contains("NRU")).filter(WorkOrder.packgo!=True).count()
               rows.append(nNRU)
-              nPoc = completed2weeks.filter(WorkOrder.pn.contains("POC")).count()+completed4weeks.filter(WorkOrder.pn.contains("IGT")).count()
+              nPoc = completed2weeks.filter(WorkOrder.pn.contains("POC")).filter(WorkOrder.packgo!=True).count()+completed2weeks.filter(WorkOrder.pn.contains("IGT")).filter(WorkOrder.packgo!=True).count()
               rows.append(nPoc)
-              nNuvo5= completed2weeks.filter(WorkOrder.pn.contains("Nuvo-5")).count()
+              nNuvo5= completed2weeks.filter(WorkOrder.pn.contains("Nuvo-5")).filter(WorkOrder.packgo!=True).count()
               rows.append(nNuvo5)
-              nNuvo6= completed2weeks.filter(WorkOrder.pn.contains("Nuvo-6")).count()
+              nNuvo6= completed2weeks.filter(WorkOrder.pn.contains("Nuvo-6")).filter(WorkOrder.packgo!=True).count()
               rows.append(nNuvo6)
-              nNuvo7= completed2weeks.filter(WorkOrder.pn.contains("Nuvo-7")).count()
+              nNuvo7= completed2weeks.filter(WorkOrder.pn.contains("Nuvo-7")).filter(WorkOrder.packgo!=True).count()
               rows.append(nNuvo7)
-              nNuvo8= completed2weeks.filter(WorkOrder.pn.contains("Nuvo-8")).count()
+              nNuvo8= completed2weeks.filter(WorkOrder.pn.contains("Nuvo-8")).filter(WorkOrder.packgo!=True).count()
               rows.append(nNuvo8)
-              nNuvo9= completed2weeks.filter(WorkOrder.pn.contains("Nuvo-9")).count()
+              nNuvo9= completed2weeks.filter(WorkOrder.pn.contains("Nuvo-9")).filter(WorkOrder.packgo!=True).count()
               rows.append(nNuvo9)
-              nNuvoa= completed2weeks.filter(WorkOrder.pn.contains("Nuvo-10")).count()
+              nNuvoa= completed2weeks.filter(WorkOrder.pn.contains("Nuvo-10")).filter(WorkOrder.packgo!=True).count()
               rows.append(nNuvoa)
               nTotal= nNRU + nPoc + nNuvo5 + nNuvo6 + nNuvo7 + nNuvo8 + nNuvo9 + nNuvoa
               rows.append(nTotal)
@@ -277,21 +347,21 @@ def report():
               #calculate POC, Nuvo-5000, Nuvo-6000, Nuvo-7000, Nuvo-8000,Nuvo-9000, Muvo-10000, Pack&Go
               rows = []
               rows.append(user.user_name)
-              nNRU = completed4weeks.filter(WorkOrder.pn.contains("NRU")).count()
+              nNRU = completed4weeks.filter(WorkOrder.pn.contains("NRU")).filter(WorkOrder.packgo!=True).count()
               rows.append(nNRU)
-              nPoc = completed4weeks.filter(WorkOrder.pn.contains("POC")).count()+completed4weeks.filter(WorkOrder.pn.contains("IGT")).count()
+              nPoc = completed4weeks.filter(WorkOrder.pn.contains("POC")).filter(WorkOrder.packgo!=True).count()+completed4weeks.filter(WorkOrder.pn.contains("IGT")).filter(WorkOrder.packgo!=True).count()
               rows.append(nPoc)
-              nNuvo5= completed4weeks.filter(WorkOrder.pn.contains("Nuvo-5")).count()
+              nNuvo5= completed4weeks.filter(WorkOrder.pn.contains("Nuvo-5")).filter(WorkOrder.packgo!=True).count()
               rows.append(nNuvo5)
-              nNuvo6= completed4weeks.filter(WorkOrder.pn.contains("Nuvo-6")).count()
+              nNuvo6= completed4weeks.filter(WorkOrder.pn.contains("Nuvo-6")).filter(WorkOrder.packgo!=True).count()
               rows.append(nNuvo6)
-              nNuvo7= completed4weeks.filter(WorkOrder.pn.contains("Nuvo-7")).count()
+              nNuvo7= completed4weeks.filter(WorkOrder.pn.contains("Nuvo-7")).filter(WorkOrder.packgo!=True).count()
               rows.append(nNuvo7)
-              nNuvo8= completed4weeks.filter(WorkOrder.pn.contains("Nuvo-8")).count()
+              nNuvo8= completed4weeks.filter(WorkOrder.pn.contains("Nuvo-8")).filter(WorkOrder.packgo!=True).count()
               rows.append(nNuvo8)
-              nNuvo9= completed4weeks.filter(WorkOrder.pn.contains("Nuvo-9")).count()
+              nNuvo9= completed4weeks.filter(WorkOrder.pn.contains("Nuvo-9")).filter(WorkOrder.packgo!=True).count()
               rows.append(nNuvo9)
-              nNuvoa= completed4weeks.filter(WorkOrder.pn.contains("Nuvo-10")).count()
+              nNuvoa= completed4weeks.filter(WorkOrder.pn.contains("Nuvo-10")).filter(WorkOrder.packgo!=True).count()
               rows.append(nNuvoa)
               nTotal= nNRU + nPoc + nNuvo5 + nNuvo6 + nNuvo7 + nNuvo8 + nNuvo9 + nNuvoa
               rows.append(nTotal)
@@ -305,7 +375,7 @@ def report():
               rows.append(nPackgo)
               table4weeks.append(rows)
 
-    return render_template('report.html', cntToday=cntToday,cnt7day=cnt7day,cnt28day=cnt28day,userrole=role,table2weeks=table2weeks,table4weeks=table4weeks,form=form,tablesearch=tablesearch,searched=searched)
+    return render_template('report.html', cntToday=cntToday,cnt7day=cnt7day,cnt28day=cnt28day,userrole=role,table1week=table1week,table2weeks=table2weeks,table4weeks=table4weeks,form=form,tablesearch=tablesearch,searched=searched)
     
 @main.route('/TakeOneComputer/<id>', methods=['GET', 'POST'])
 @login_required
