@@ -36,6 +36,7 @@ class QueryForm(FlaskForm):
     customers = StringField('Customer Name', validators=[Length(max=100)])
     pn = StringField('Product Model', validators=[Length(max=100)])
     csn = StringField('Chassis S/N', validators=[Length(max=100)])
+    packgo = BooleanField('Pack & Go')
     submit    = SubmitField('Search')
 
 class UploadReportForm(FlaskForm):

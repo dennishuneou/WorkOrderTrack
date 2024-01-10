@@ -54,6 +54,11 @@
                             </div>
                     </div>
                     {{ render_date_field(form.operator) }}
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            {{ form.packgo.label }} {{ form.packgo(class_="form-check") }}
+                        </div>
+                    </div>
                     <div>
                         {{ form.submit(class_="button button--form") }}
                     </div>

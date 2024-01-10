@@ -120,10 +120,12 @@ def display_workorders():
                 nPackgo= completedssbyuser.filter(WorkOrder.packgo==True).count()
                 rows.append(nPackgo)
                 tablesearchsummary.append(rows)
-    searchtable = []                
-    for workord in completed7day.order_by(WorkOrder.asid):
+    searchtable = []  
+    seq = 0;              
+    for workord in completed7day.filter(WorkOrder.packgo!=True).order_by(WorkOrder.asid):
         rows = []
-        rows.append(workord.id)
+        seq = seq + 1
+        rows.append(seq)
         rows.append(workord.wo)
         rows.append(workord.customers)
         rows.append(workord.pn)
@@ -149,6 +151,9 @@ def query():
             if form.enddate.data >= form.startdate.data :
                 completedss = WorkOrder.query.filter(func.DATE(WorkOrder.intime) >= func.DATE(form.startdate.data ),WorkOrder.status == 2)
                 completedss = completedss.filter((func.DATE(WorkOrder.intime)) <= (func.DATE(form.enddate.data )))
+                print(form.packgo.data)
+                if(form.packgo.data != True) :
+                    completedss = completedss.filter(WorkOrder.packgo!=True)
                 completedss = completedss.order_by(WorkOrder.asid)
                 searched = 1
     role = get_userrole(current_user.id)
