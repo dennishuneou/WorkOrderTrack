@@ -82,9 +82,61 @@ def display_workorders():
     cnt28day[3] = cnt28day[1] - completed28day.filter_by(gpuinstall = False,wifiinstall = False, caninstall = False, mezioinstall = False, packgo=False).count()
     #Gpu, Installed GPU
     cnt28day[4] = completed28day.filter_by(gpuinstall=True).count()
-
+    
+    #Completed  days by user
+    tablesearchsummary = []
+    users = User.query.all()    
+    for user in users :
+        if user.role < 3 :
+            completedssbyuser=completed7day.filter(WorkOrder.asid == user.id)
+            if completedssbyuser.count() :
+                #calculate POC, Nuvo-5000, Nuvo-6000, Nuvo-7000, Nuvo-8000,Nuvo-9000, Muvo-10000, Pack&Go
+                rows = []
+                rows.append(user.user_name)
+                nNRU = completedssbyuser.filter(WorkOrder.pn.contains("NRU")).filter(WorkOrder.packgo!=True).count()
+                rows.append(nNRU)
+                nPoc = completedssbyuser.filter(WorkOrder.pn.contains("POC")).filter(WorkOrder.packgo!=True).count()+completedssbyuser.filter(WorkOrder.pn.contains("IGT")).filter(WorkOrder.packgo!=True).count()
+                rows.append(nPoc)
+                nNuvo5= completedssbyuser.filter(WorkOrder.pn.contains("Nuvo-5")).filter(WorkOrder.packgo!=True).count()
+                rows.append(nNuvo5)
+                nNuvo6= completedssbyuser.filter(WorkOrder.pn.contains("Nuvo-6")).filter(WorkOrder.packgo!=True).count()
+                rows.append(nNuvo6)
+                nNuvo7= completedssbyuser.filter(WorkOrder.pn.contains("Nuvo-7")).filter(WorkOrder.packgo!=True).count()
+                rows.append(nNuvo7)
+                nNuvo8= completedssbyuser.filter(WorkOrder.pn.contains("Nuvo-8")).filter(WorkOrder.packgo!=True).count()
+                rows.append(nNuvo8)
+                nNuvo9= completedssbyuser.filter(WorkOrder.pn.contains("Nuvo-9")).filter(WorkOrder.packgo!=True).count()
+                rows.append(nNuvo9)
+                nNuvoa= completedssbyuser.filter(WorkOrder.pn.contains("Nuvo-10")).filter(WorkOrder.packgo!=True).count()
+                rows.append(nNuvoa)
+                nTotal= nNRU + nPoc + nNuvo5 + nNuvo6 + nNuvo7 + nNuvo8 + nNuvo9 + nNuvoa
+                rows.append(nTotal)
+                nInsOS = completedssbyuser.filter(WorkOrder.osinstall != '').count()
+                rows.append(nInsOS)
+                nInsGPU = completedssbyuser.filter(WorkOrder.gpuinstall == True).count()
+                rows.append(nInsGPU)
+                nInsModule = completedssbyuser.count() - completedssbyuser.filter_by(gpuinstall = False,wifiinstall = False, caninstall = False, mezioinstall = False).count()
+                rows.append(nInsModule)
+                nPackgo= completedssbyuser.filter(WorkOrder.packgo==True).count()
+                rows.append(nPackgo)
+                tablesearchsummary.append(rows)
+    searchtable = []                
+    for workord in completed7day.order_by(WorkOrder.asid):
+        rows = []
+        rows.append(workord.id)
+        rows.append(workord.wo)
+        rows.append(workord.customers)
+        rows.append(workord.pn)
+        rows.append(workord.csn)
+        rows.append(workord.cstime.strftime("%m/%d %H:%M"))
+        rows.append(workord.tktime.strftime("%m/%d %H:%M"))
+        rows.append(get_username(workord.asid))
+        rows.append(workord.astime.strftime("%m/%d %H:%M"))
+        rows.append(get_username(workord.insid))
+        rows.append(workord.intime.strftime("%m/%d %H:%M"))
+        searchtable.append(rows)
     return render_template('home.html', todoworkorder= todoworkorder, processing=processing, completed=completed, completedlastwday=completedlastwday,cntToday=cntToday,
-                          cnt7day=cnt7day,cnt28day=cnt28day,userrole=role)
+                          cnt7day=cnt7day,cnt28day=cnt28day,tablesearchsummary=tablesearchsummary,searchtable=searchtable,userrole=role)
 
 @main.route('/query', methods=['GET', 'POST'])
 @login_required
