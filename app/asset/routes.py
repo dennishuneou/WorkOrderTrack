@@ -83,14 +83,14 @@ def display_workorders():
     #Gpu, Installed GPU
     cnt28day[4] = completed28day.filter_by(gpuinstall=True).count()
     
-    #Completed  days by user
+    #Completed 7 days by user
     tablesearchsummary = []
     users = User.query.all()    
     for user in users :
         if user.role < 3 :
             completedssbyuser=completed7day.filter(WorkOrder.asid == user.id)
             if completedssbyuser.count() :
-                #calculate POC, Nuvo-5000, Nuvo-6000, Nuvo-7000, Nuvo-8000,Nuvo-9000, Muvo-10000, Pack&Go
+                #calculate POC, Nuvo-5000, Nuvo-6000, Nuvo-7000, Nuvo-8000,Nuvo-9000, Muvo-10000, SEMIL, Pack&Go
                 rows = []
                 rows.append(user.user_name)
                 nNRU = completedssbyuser.filter(WorkOrder.pn.contains("NRU")).filter(WorkOrder.packgo!=True).count()
@@ -109,7 +109,9 @@ def display_workorders():
                 rows.append(nNuvo9)
                 nNuvoa= completedssbyuser.filter(WorkOrder.pn.contains("Nuvo-10")).filter(WorkOrder.packgo!=True).count()
                 rows.append(nNuvoa)
-                nTotal= nNRU + nPoc + nNuvo5 + nNuvo6 + nNuvo7 + nNuvo8 + nNuvo9 + nNuvoa
+                nSemil= completedssbyuser.filter(WorkOrder.pn.contains("SEMIL")).filter(WorkOrder.packgo!=True).count()
+                rows.append(nSemil)
+                nTotal= nNRU + nPoc + nNuvo5 + nNuvo6 + nNuvo7 + nNuvo8 + nNuvo9 + nNuvoa + nSemil
                 rows.append(nTotal)
                 nInsOS = completedssbyuser.filter(WorkOrder.osinstall != '').count()
                 rows.append(nInsOS)
@@ -209,7 +211,9 @@ def query():
                         rows.append(nNuvo9)
                         nNuvoa= completedssbyuser.filter(WorkOrder.pn.contains("Nuvo-10")).filter(WorkOrder.packgo!=True).count()
                         rows.append(nNuvoa)
-                        nTotal= nNRU + nPoc + nNuvo5 + nNuvo6 + nNuvo7 + nNuvo8 + nNuvo9 + nNuvoa
+                        nSemil= completedssbyuser.filter(WorkOrder.pn.contains("SEMIL")).filter(WorkOrder.packgo!=True).count()
+                        rows.append(nSemil)
+                        nTotal= nNRU + nPoc + nNuvo5 + nNuvo6 + nNuvo7 + nNuvo8 + nNuvo9 + nNuvoa + nSemil
                         rows.append(nTotal)
                         nInsOS = completedssbyuser.filter(WorkOrder.osinstall != '').count()
                         rows.append(nInsOS)
@@ -325,7 +329,9 @@ def report():
                 rows.append(nNuvo9)
                 nNuvoa= completedssbyuser.filter(WorkOrder.pn.contains("Nuvo-10")).filter(WorkOrder.packgo!=True).count()
                 rows.append(nNuvoa)
-                nTotal= nNRU + nPoc + nNuvo5 + nNuvo6 + nNuvo7 + nNuvo8 + nNuvo9 + nNuvoa
+                nSemil= completedssbyuser.filter(WorkOrder.pn.contains("SEMIL")).filter(WorkOrder.packgo!=True).count()
+                rows.append(nSemil)
+                nTotal= nNRU + nPoc + nNuvo5 + nNuvo6 + nNuvo7 + nNuvo8 + nNuvo9 + nNuvoa + nSemil
                 rows.append(nTotal)
                 nInsOS = completedssbyuser.filter(WorkOrder.osinstall != '').count()
                 rows.append(nInsOS)
@@ -356,7 +362,9 @@ def report():
               rows.append(nNuvo9)
               nNuvoa= completed1week.filter(WorkOrder.pn.contains("Nuvo-10")).filter(WorkOrder.packgo!=True).count()
               rows.append(nNuvoa)
-              nTotal= nNRU + nPoc + nNuvo5 + nNuvo6 + nNuvo7 + nNuvo8 + nNuvo9 + nNuvoa
+              nSemil= completed1week.filter(WorkOrder.pn.contains("SEMIL")).filter(WorkOrder.packgo!=True).count()
+              rows.append(nSemil)
+              nTotal= nNRU + nPoc + nNuvo5 + nNuvo6 + nNuvo7 + nNuvo8 + nNuvo9 + nNuvoa + nSemil
               rows.append(nTotal)
               nInsOS = completed1week.filter(WorkOrder.osinstall != '').count()
               rows.append(nInsOS)
@@ -388,7 +396,9 @@ def report():
               rows.append(nNuvo9)
               nNuvoa= completed2weeks.filter(WorkOrder.pn.contains("Nuvo-10")).filter(WorkOrder.packgo!=True).count()
               rows.append(nNuvoa)
-              nTotal= nNRU + nPoc + nNuvo5 + nNuvo6 + nNuvo7 + nNuvo8 + nNuvo9 + nNuvoa
+              nSemil= completed2weeks.filter(WorkOrder.pn.contains("SEMIL")).filter(WorkOrder.packgo!=True).count()
+              rows.append(nSemil)
+              nTotal= nNRU + nPoc + nNuvo5 + nNuvo6 + nNuvo7 + nNuvo8 + nNuvo9 + nNuvoa + nSemil
               rows.append(nTotal)
               nInsOS = completed2weeks.filter(WorkOrder.osinstall != '').count()
               rows.append(nInsOS)
@@ -420,7 +430,9 @@ def report():
               rows.append(nNuvo9)
               nNuvoa= completed4weeks.filter(WorkOrder.pn.contains("Nuvo-10")).filter(WorkOrder.packgo!=True).count()
               rows.append(nNuvoa)
-              nTotal= nNRU + nPoc + nNuvo5 + nNuvo6 + nNuvo7 + nNuvo8 + nNuvo9 + nNuvoa
+              nSemil= completed4weeks.filter(WorkOrder.pn.contains("SEMIL")).filter(WorkOrder.packgo!=True).count()
+              rows.append(nSemil)
+              nTotal= nNRU + nPoc + nNuvo5 + nNuvo6 + nNuvo7 + nNuvo8 + nNuvo9 + nNuvoa + nSemil
               rows.append(nTotal)
               nInsOS = completed4weeks.filter(WorkOrder.osinstall != '').count()
               rows.append(nInsOS)
