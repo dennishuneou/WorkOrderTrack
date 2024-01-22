@@ -24,9 +24,14 @@ def display_workorders():
         todoworkorder1 = WorkOrder.query.filter_by(status=-1,asid=-1)
         todoworkorder2 = WorkOrder.query.filter_by(status=-1,asid=current_user.id)
         todoworkorder  = todoworkorder1.union(todoworkorder2)
+        pendingworkorder1 = WorkOrder.query.filter_by(status=-2,asid=-1)
+        pendingworkorder2 = WorkOrder.query.filter_by(status=-2,asid=current_user.id)
+        pendingworkorder  = pendingworkorder1.union(todoworkorder2)
     else :
         todoworkorder = WorkOrder.query.filter_by(status=-1)  
+        pendingworkorder = WorkOrder.query.filter_by(status=-2)  
     todoworkorder = todoworkorder.order_by(WorkOrder.wo)    
+    pendingworkorder = pendingworkorder.order_by(WorkOrder.wo)    
     if role == 0 :
         query1 = WorkOrder.query.filter_by(asid=current_user.id, status=0)
         query2 =  WorkOrder.query.filter_by(asid=current_user.id, status=1)
@@ -139,7 +144,7 @@ def display_workorders():
         rows.append(get_username(workord.insid))
         rows.append(workord.intime.strftime("%m/%d %H:%M"))
         searchtable.append(rows)
-    return render_template('home.html', todoworkorder= todoworkorder, processing=processing, completed=completed, completedlastwday=completedlastwday,cntToday=cntToday,
+    return render_template('home.html', todoworkorder= todoworkorder, pendingworkorder= pendingworkorder, processing=processing, completed=completed, completedlastwday=completedlastwday,cntToday=cntToday,
                           cnt7day=cnt7day,cnt28day=cnt28day,tablesearchsummary=tablesearchsummary,searchtable=searchtable,userrole=role)
 
 @main.route('/query', methods=['GET', 'POST'])
@@ -501,6 +506,26 @@ def EditOneComputer(id):
         flash('Update successful')
         return redirect(url_for('main.display_workorders'))
     return render_template('edit_OneComputer.html', form=form, id=id, userrole=role) 
+
+@main.route('/DeactiveOneComputer/<id>', methods=['GET', 'POST'])
+@login_required
+def DeactiveOneComputer(id): 
+    workorder = WorkOrder.query.get(id)
+    workorder.status=-2
+    db.session.commit()
+    
+    flash('DeactiveOneComputer successfully')
+    return redirect(url_for('main.display_workorders'))
+
+@main.route('/RestoreOneComputer/<id>', methods=['GET', 'POST'])
+@login_required
+def RestoreOneComputer(id): 
+    workorder = WorkOrder.query.get(id)
+    workorder.status=-1
+    db.session.commit()
+    
+    flash('RestoreOneComputer successfully')
+    return redirect(url_for('main.display_workorders'))
 
 @main.route('/UploadReport/<id>', methods=['GET', 'POST'])
 @login_required

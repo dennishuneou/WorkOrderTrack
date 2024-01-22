@@ -224,6 +224,9 @@
                <a class="nav-link " id="home-tab" data-toggle="tab" href="#ToDo" role="tab" aria-controls="home" aria-selected="false">To Do</a>
             </li>
             <li class="nav-item">
+                <a class="nav-link " id="home-tab" data-toggle="tab" href="#Pending" role="tab" aria-controls="home" aria-selected="false">Pending</a>
+            </li>
+            <li class="nav-item">
                <a class="nav-link active" id="profile-tab" data-toggle="tab" href="#Processing" role="tab" aria-controls="profile" aria-selected="true">Processing</a>
             </li>
             <li class="nav-item">
@@ -256,6 +259,7 @@
                                 {% if userrole > 0 %}
                                 <th> Delete</th>
                                 <th> Edit</th>
+                                <th> Deactive</th>
                                 {% endif %}
                             </tr>
                         </thead>
@@ -295,6 +299,13 @@
                                     <i class="fa fa-pencil" aria-hidden="true"></i>
                                 </a>
                             </td>
+                            <td>       
+                                <a class="btn btn-light btn-sm"
+                                href= "{{ url_for('main.DeactiveOneComputer',id=workorder.id)}}"
+                                role="button">
+                                    <i class="fa fa-arrow-down" aria-hidden="true"></i>
+                                </a>
+                            </td>
                             {% endif %}
                         </tr>
                         {% endfor %}
@@ -302,6 +313,71 @@
                     </table>
                 </div>
             </div>
+            <div class="tab-pane fade " id="Pending" role="tabpanel" aria-labelledby="home-tab">
+                <div class="col my-2">
+                     <h6 class="font-weight-bold">To Do WorkOrder</h6>
+                </div>
+                <div class="table-responsive">
+                    <table data-search="true" data-toggle="table" class="table table-striped table-hover">
+                        <thead class="thead-light">
+                            <tr style="background-color: #e3f2fd;">
+                                <th> ID</th>
+                                <th data-sortable="true"> WorkOrder</th>
+                                <th data-sortable="true"> Customer</th>
+                                <th data-sortable="true"> Product Number</th>
+                                <th data-sortable="true"> Chassis SN</th>
+                                <th data-sortable="true"> Created at</th>
+                                <th> Take</th>
+                                <th> Assigned</th>
+                                {% if userrole > 0 %}
+                                <th> Delete</th>
+                                <th> Retore</th>
+                                {% endif %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for workorder in pendingworkorder %}
+                        <tr>
+                            <td> {{ workorder.id }}</td>
+                            <td> {{ workorder.wo }}</td>
+                            <td> {{ workorder.customers }}</td>
+                            <td> {{ workorder.pn }}</td>
+                            <td> {{ workorder.csn }}</td>
+                            <td> {{ workorder.cstime.strftime('%m/%d %H:%M') }}</td>
+                            <td>
+                                <a class="btn btn-light btn-sm"
+                                href= "{{ url_for('main.TakeOneComputer',id=workorder.id)}}"
+                                role="button">
+                                    <i class="fa fa-arrow-right" aria-hidden="true"></i>
+                                </a>
+                            </td>
+                            {% if workorder.asid == -1 %}
+                            <td> Not yet </td>
+                            {% else %}
+                            <td>{{ workorder.asid|usersname }} </td>
+                            {% endif %}
+                            {% if userrole > 0 %}
+                            <td>       
+                                <a class="btn btn-light btn-sm"
+                                href= "{{ url_for('main.DeleteOneComputer',id=workorder.id)}}"
+                                role="button">
+                                    <i class="fa fa-trash" aria-hidden="true"></i>
+                                </a>
+                            </td>
+                            <td>       
+                                <a class="btn btn-light btn-sm"
+                                href= "{{ url_for('main.RestoreOneComputer',id=workorder.id)}}"
+                                role="button">
+                                    <i class="fa fa-pencil" aria-hidden="true"></i>
+                                </a>
+                            </td>
+                            {% endif %}
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>    
         <div class="tab-pane fade active show" id="Processing" role="tabpanel" aria-labelledby="home-tab">
             <div class="col my-2">
                 <h6 class="font-weight-bold">Processing WorkOrder</h6>
