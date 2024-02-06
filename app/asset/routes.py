@@ -38,15 +38,16 @@ def uploadmore():
     for sid in z:
         print(sid)
         workorder = WorkOrder.query.get(sid)
-        workorder.astime=datetime.datetime.now()
-        workorder.status = 1
-        transaction = Production(wo=workorder.wo, pn=workorder.pn, csn=workorder.csn, msn="N/A", cpu="N/A",mem1="", mem2="", mem3="", mem4="", gpu1="", gpu2="", 
-        sata1="", sata2="",sata3="", sata4="", m21="", m22="", wifi="", fg5g="",can="",other="",note="",report="")
-        existproduct = Production.query.filter_by(wo=workorder.wo,csn=workorder.csn)
-        if existproduct.count() :
-            db.session.delete(existproduct[0])
-        db.session.add(transaction)
-        db.session.commit()
+        if(workorder.packgo == True):
+            workorder.astime=datetime.datetime.now()
+            workorder.status = 1
+            transaction = Production(wo=workorder.wo, pn=workorder.pn, csn=workorder.csn, msn="N/A", cpu="N/A",mem1="", mem2="", mem3="", mem4="", gpu1="", gpu2="", 
+            sata1="", sata2="",sata3="", sata4="", m21="", m22="", wifi="", fg5g="",can="",other="",note="",report="")
+            existproduct = Production.query.filter_by(wo=workorder.wo,csn=workorder.csn)
+            if existproduct.count() :
+                db.session.delete(existproduct[0])
+            db.session.add(transaction)
+            db.session.commit()
     return redirect(url_for('main.display_workorders'))
 
 @main.route('/inspectmore', methods=['GET', 'POST'])
@@ -59,11 +60,12 @@ def inspectmore():
     for sid in z:
         print(sid)
         workorder = WorkOrder.query.get(sid)
-        workorder.intime=datetime.datetime.now()
-        if workorder.status == 1:
+        if(workorder.packgo == True):
+            workorder.intime=datetime.datetime.now()
+            if workorder.status == 1:
                 workorder.status = 2
                 workorder.insid = current_user.id
-        db.session.commit()
+            db.session.commit()
     return redirect(url_for('main.display_workorders'))    
 
 @main.route('/')
