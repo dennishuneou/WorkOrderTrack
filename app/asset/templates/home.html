@@ -244,10 +244,12 @@
                 <div class="col my-2">
                      <h6 class="font-weight-bold">To Do WorkOrder</h6>
                 </div>
+                <button onclick="TakeSelected()">Take more</button>  
                 <div class="table-responsive">
                     <table data-search="true" data-toggle="table" class="table table-striped table-hover">
                         <thead class="thead-light">
                             <tr style="background-color: #e3f2fd;">
+                                <th data-checkbox="true">CHK</th>
                                 <th> ID</th>
                                 <th data-sortable="true"> WorkOrder</th>
                                 <th data-sortable="true"> Customer</th>
@@ -263,9 +265,38 @@
                                 {% endif %}
                             </tr>
                         </thead>
+                        <script type="text/javascript">
+                            function TakeSelected() {
+                                //Reference the Table.
+                                var grid = document.getElementById("ToDo");
+                         
+                                //Reference the CheckBoxes in Table.
+                                var checkBoxes = grid.getElementsByTagName("input");
+                                var message = "";
+                                var cnt=0;
+                                //Loop through the CheckBoxes.
+                                for (var i = 2; i < checkBoxes.length; i++) {
+                                    if (checkBoxes[i].checked) {
+                                        var row = checkBoxes[i].parentNode.parentNode.parentNode;
+                                        message += row.cells[1].innerHTML;
+                                        message += ' ';
+                                        cnt=cnt +1;
+                                    }
+                                }
+                         
+                                //Display selected Row data in Alert Box.
+                                fetch("{{ url_for('main.takemore')}}", {
+                                                method: "POST",
+                                                headers: { "Content-type": "application/json" },
+                                                body: JSON.stringify({ message})
+                                       });
+                                if(cnt!=0) location.reload();       
+                            }
+                        </script>
                         <tbody>
                         {% for workorder in todoworkorder %}
                         <tr>
+                            <td></td>
                             <td> {{ workorder.id }}</td>
                             <td> {{ workorder.wo }}</td>
                             <td> {{ workorder.customers }}</td>
@@ -382,11 +413,13 @@
             <div class="col my-2">
                 <h6 class="font-weight-bold">Processing WorkOrder</h6>
             </div>
-        
+            <button onclick="UploadSelected()">Upload more</button>  
+            <button onclick="InspectSelected()">Inspect more</button> 
             <div class="table-responsive">
                 <table data-search="true" data-toggle="table" class="table table-striped table-hover">
                     <thead class="thead-light">
                         <tr style="background-color: #e3f2fd;">
+                            <th data-checkbox="true"></th>
                             <th> ID</th>
                             <th data-sortable="true"> WorkOrder</th>
                             <th data-sortable="true"> Customer</th>
@@ -406,6 +439,7 @@
                     <tbody>
                     {% for each in processing %}
                     <tr>
+                        <td> </td>
                         <td> {{ each.id }}</td>
                         <td> {{ each.wo }}</td>
                         <td> {{ each.customers }}</td>
@@ -463,6 +497,60 @@
                     </tr>
                     {% endfor %}
                     </tbody>
+                    <script type="text/javascript">
+                        function UploadSelected() {
+                            //Reference the Table.
+                            var grid = document.getElementById("Processing");
+                     
+                            //Reference the CheckBoxes in Table.
+                            var checkBoxes = grid.getElementsByTagName("input");
+                            var message = "";
+                            var cnt=0;
+                            //Loop through the CheckBoxes.
+                            for (var i = 2; i < checkBoxes.length; i++) {
+                                if (checkBoxes[i].checked) {
+                                    var row = checkBoxes[i].parentNode.parentNode.parentNode;
+                                    message += row.cells[1].innerHTML;
+                                    message += ' ';
+                                    cnt=cnt +1;
+                                }
+                            }
+                     
+                            //Display selected Row data in Alert Box.
+                            fetch("{{ url_for('main.uploadmore')}}", {
+                                            method: "POST",
+                                            headers: { "Content-type": "application/json" },
+                                            body: JSON.stringify({ message})
+                                   });
+                            if(cnt!=0) location.reload();       
+                        }
+                        function InspectSelected() {
+                            //Reference the Table.
+                            var grid = document.getElementById("Processing");
+                     
+                            //Reference the CheckBoxes in Table.
+                            var checkBoxes = grid.getElementsByTagName("input");
+                            var message = "";
+                            var cnt=0;
+                            //Loop through the CheckBoxes.
+                            for (var i = 2; i < checkBoxes.length; i++) {
+                                if (checkBoxes[i].checked) {
+                                    var row = checkBoxes[i].parentNode.parentNode.parentNode;
+                                    message += row.cells[1].innerHTML;
+                                    message += ' ';
+                                    cnt=cnt +1;
+                                }
+                            }
+                     
+                            //Display selected Row data in Alert Box.
+                            fetch("{{ url_for('main.inspectmore')}}", {
+                                            method: "POST",
+                                            headers: { "Content-type": "application/json" },
+                                            body: JSON.stringify({ message})
+                                   });
+                            if(cnt!=0) location.reload();       
+                        }
+                    </script>
                 </table>
             </div>
         </div>
