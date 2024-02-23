@@ -8,6 +8,7 @@ with flask_app.app_context():
     if not User.query.filter_by(user_name='admin').first():
         User.create_user(user='admin',
                          email='admin@user.com',
-                         password='admin')
+                         password='admin',
+                         role='0' )
     # commit the changes
     db.session.commit()
