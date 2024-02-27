@@ -1,0 +1,4 @@
+2024/2/26
+1. Workorder entry, add cputype, memory size, disk type and size. revise database is required. 
+2. Workorder entry, add fg5ginstall checkbox. revise database is required. 
+  

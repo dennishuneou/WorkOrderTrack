@@ -543,12 +543,16 @@ def EditOneComputer(id):
         workorder.customers=form.customers.data
         workorder.pn=str(form.pn.data)
         workorder.csn=form.csn.data.strip()
+        workorder.cputype = form.cputype.data
+        workorder.memorysize = form.memorysize.data
+        workorder.disksize = form.disksize.data
         workorder.cpuinstall = form.cpuinstall.data
         workorder.memoryinstall = form.memoryinstall.data
         workorder.gpuinstall = form.gpuinstall.data
         workorder.wifiinstall = form.wifiinstall.data
         workorder.mezioinstall = form.mezioinstall.data
         workorder.caninstall = form.caninstall.data
+        workorder.fg5ginstall = form.fg5ginstall.data
         workorder.osinstall = form.osinstall.data
         workorder.packgo = form.packgo.data
         if form.operator.data == None :
@@ -601,7 +605,12 @@ def UploadReport(id):
             db.session.delete(existproduct[0])
         db.session.add(transaction)
         db.session.commit()
-        flash('Upload successful')
+        fstr = "Upload successful! "
+        if workorder.cpuinstall == False :
+            fstr += "PLEASE uninstall CPU. "
+        if workorder.memoryinstall == False :    
+            fstr += "PLEASE uninstall Memory."
+        flash(fstr)
         return redirect(url_for('main.display_workorders'))
     return render_template('uploadreport.html', form=form, id=id,userrole = role)
 
@@ -685,8 +694,8 @@ def add_workorder():
         for x in csn_m:
             if x.strip() != '' :
                 transaction = WorkOrder(wo=form.wo.data, customers=form.customers.data, pn=str(form.pn.data), csn=x.strip(), 
-                cpuinstall=form.cpuinstall.data,memoryinstall=form.memoryinstall.data,gpuinstall=form.gpuinstall.data,
-                wifiinstall=form.wifiinstall.data,mezioinstall=form.mezioinstall.data,caninstall=form.caninstall.data,
+                cputype=form.cputype.data,memorysize=form.memorysize.data,disksize=form.disksize.data,cpuinstall=form.cpuinstall.data,memoryinstall=form.memoryinstall.data,gpuinstall=form.gpuinstall.data,
+                wifiinstall=form.wifiinstall.data,mezioinstall=form.mezioinstall.data,caninstall=form.caninstall.data,fg5ginstall=form.fg5ginstall.data,
                 osinstall=form.osinstall.data,packgo=form.packgo.data,asid=asidset,insid=-1,astime=None,intime=None,tktime=None,csid=current_user.id,cstime=datetime.datetime.now(),status=-1)
                 db.session.add(transaction)
         db.session.commit()

@@ -9,12 +9,16 @@ class WorkOrder(db.Model):
     customers = db.Column(db.String(100), nullable=False)
     pn = db.Column(db.String(100), nullable=False)
     csn = db.Column(db.String(100), nullable=False)
+    cputype =  db.Column(db.String(100), nullable=True)
+    memorysize =  db.Column(db.String(100), nullable=True)
+    disksize =  db.Column(db.String(100), nullable=True)
     cpuinstall = db.Column(db.Boolean, nullable=True)
     memoryinstall = db.Column(db.Boolean, nullable=True)
     gpuinstall = db.Column(db.Boolean, nullable=True)
     wifiinstall = db.Column(db.Boolean, nullable=True)
     caninstall = db.Column(db.Boolean, nullable=True)
     mezioinstall = db.Column(db.Boolean, nullable=True)
+    fg5ginstall = db.Column(db.Boolean, nullable=True)
     osinstall = db.Column(db.String(40), nullable=True)
     packgo = db.Column(db.Boolean, nullable=True)
     asid = db.Column(db.Integer, nullable=True)
@@ -26,17 +30,21 @@ class WorkOrder(db.Model):
     csid=db.Column(db.Integer, nullable=True)
     cstime=db.Column(db.DateTime, nullable=True)
 
-    def __init__(self, wo, customers, pn, csn, cpuinstall, memoryinstall, gpuinstall,  wifiinstall, caninstall, mezioinstall, osinstall, packgo, asid, insid,astime, intime, csid, cstime, tktime, status):
+    def __init__(self, wo, customers, pn, csn, cputype, memorysize, disksize, cpuinstall, memoryinstall, gpuinstall,  wifiinstall, caninstall, mezioinstall, fg5ginstall, osinstall, packgo, asid, insid,astime, intime, csid, cstime, tktime, status):
         self.wo = wo
         self.customers = customers
         self.pn = pn
         self.csn = csn
+        self.cputype = cputype
+        self.memorysize = memorysize
+        self.disksize = disksize
         self.cpuinstall = cpuinstall
         self.memoryinstall = memoryinstall
         self.gpuinstall = gpuinstall
         self.wifiinstall = wifiinstall
         self.caninstall = caninstall
         self.mezioinstall = mezioinstall
+        self.fg5ginstall = fg5ginstall
         self.osinstall = osinstall
         self.packgo = packgo
         self.asid = asid
