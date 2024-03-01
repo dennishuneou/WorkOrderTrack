@@ -1,5 +1,24 @@
 from app import db
 from datetime import datetime
+class PnMap(db.Model):
+    __tablename__ = 'pnmap'
+
+    id = db.Column(db.Integer, primary_key=True)
+    pn = db.Column(db.String(100), nullable=False)
+    biosv = db.Column(db.String(100), nullable=False)
+    prefix = db.Column(db.String(20), nullable=False)
+    net = db.Column(db.Integer, nullable=False)
+    poe = db.Column(db.Integer, nullable=False)
+    ign = db.Column(db.Integer, nullable=False)
+    
+    def __init__(self, pn, biosv,prefix, net, poe, ign):
+        self.pn = pn
+        self.biosv = biosv
+        self.pn = pn
+        self.prefix = prefix
+        self.net = net
+        self.poe = poe
+        self.ign = ign
 
 class WorkOrder(db.Model):
     __tablename__ = 'workorder'

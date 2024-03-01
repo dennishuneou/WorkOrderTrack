@@ -610,6 +610,8 @@ def UploadReport(id):
             fstr += "PLEASE uninstall CPU. "
         if workorder.memoryinstall == False :    
             fstr += "PLEASE uninstall Memory."
+        if "WARNING" in form.note.data :
+            fstr += form.note.data     
         flash(fstr)
         return redirect(url_for('main.display_workorders'))
     return render_template('uploadreport.html', form=form, id=id,userrole = role)

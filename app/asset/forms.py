@@ -4,7 +4,7 @@ from wtforms.validators import DataRequired, Length, InputRequired
 from wtforms.fields.html5 import DateField
 from wtforms.ext.sqlalchemy.fields import QuerySelectField
 from wtforms.widgets import TextArea
-from app.asset.models import WorkOrder, Production
+from app.asset.models import WorkOrder, Production, PnMap
 from app.auth.forms  import get_userrole,get_usersname,get_operateusersname
 
 def wocsn_exists(form, field):
@@ -31,17 +31,33 @@ def memorysize_exists(form, field):
     if form.memoryinstall.data == True :
         if len(form.memorysize.data) == 0 :
             raise ValidationError('Please input Memory size')
-    
+def pn_check(form, field):
+    basicinfo = PnMap.query.filter_by(pn=form.pn.data.strip())
+    if basicinfo.count() == 0 :
+        raise ValidationError("Doesn't find this PN in database.")
+ 
 def report_check(form, field):
+    #get product basic informatoin
+    #Motherboard Serial: BNV7505DN34B1110
+    #Bios Version: Build230523
+    basicinfo = PnMap.query.filter_by(pn=form.pn.data.strip())
+    print(basicinfo.count())
     #get configure information from WorkOrder
     configure = WorkOrder.query.filter_by(wo=form.wo.data, csn=form.csn.data)
     #get contents from report file
     contents=form.report.data.split('\n')
     cputype = ""
     mbsn = ""
+    mbsn_prefix = ""
+    mbsn_sn = ""
+    warning = ""
     cancnt = 0
     wlpcnt = 0
     wancnt = 0
+    totalnetportcnt = 0
+    totalneonetportcnt = 0
+    macerrcnt = 0
+    mbsnerr = 0
     memorysize_r =[]
     diskssdsize_r =[]
     disknvmesize_r=[]
@@ -50,8 +66,26 @@ def report_check(form, field):
         if  "Motherboard Serial" in line :
             #decode motherboard serial number Motherboard Serial: BNV7505DN34B1110
             words = line.split(' ')
-            mbsn = words[2]
+            mbsn = words[2].strip()
+            print(mbsn)
+            print(len(mbsn))
+            if len(mbsn) == 16 :
+                mbsn_prefix = mbsn[0:8]
+                mbsn_sn     = mbsn[8:16]
+            else :
+                mbsnerr = 1     
             #we will parse MB S/N later
+        elif "Bios Version" in line :
+            biosver = line.replace("Bios Version:","").strip()
+        #enp2s0  (MAC: 78:d0:04:33:40:de) (IPv4: 192.168.61.47) (IPv6: fe80::46be:af:bac0:7c13)
+        #docker0  (MAC: 02:42:dd:e3:29:b0) (IPv4: 172.17.0.1)
+        #enp0s31f6  (MAC: 78:d0:04:33:40:dd)
+        elif "MAC:" in line and "docker" not in line:
+            totalnetportcnt = totalnetportcnt + 1
+            if "enp" in line and "78:d0:04" in line :
+                totalneonetportcnt =  totalneonetportcnt + 1
+            elif "enp" in line and "88:88:88:88:87:88" in line :     
+                macerrcnt = macerrcnt + 1
         elif "CPU Type" in line:
             #decode and compare cpu type CPU Type: Intel(R) Core(TM) i5-9500TE CPU @ 2.20GHz
             #CPU Type: AMD Ryzen Embedded V1605B with Radeon Vega Gfx
@@ -248,10 +282,38 @@ def report_check(form, field):
             for dsz in diskssdsize_r:
                 errorstr += dsz
             for dsz in disknvmesize_r:
-                errorstr += dsz     
+                errorstr += dsz
+    #check P/N
+    if basicinfo.count() == 0 : 
+        errorcnt = errorcnt + 1
+        errorstr = errorstr + " P/N not in Database"
+    else :
+        # check mbsn
+        if mbsnerr != 0:
+            errorcnt = errorcnt + 1
+            errorstr = errorstr + " S/N Error" + mbsn
+        elif mbsn_prefix != basicinfo[0].prefix :
+            errorcnt = errorcnt + 1
+            errorstr = errorstr + " Motherboard not match, was" + mbsn_prefix + "Not" + basicinfo[0].prefix
+        if "Build" not in biosver or  biosver not in basicinfo[0].biosv:
+            print(basicinfo[0].biosv)
+            print(biosver)
+            errorcnt = errorcnt + 1
+            errorstr = errorstr + " BIOS version Error"              
+        if macerrcnt != 0 :
+            errorcnt = errorcnt + 1
+            errorstr = errorstr + " Ethernet port MAC address error"
+        if totalneonetportcnt < basicinfo[0].net :
+            errorcnt = errorcnt + 1
+            errorstr = errorstr + " Ethernet ports less"
+        if totalneonetportcnt > basicinfo[0].net :
+            warning = "WARNING: Ethernet ports quantity not match, maybe preinstalled PCIe card, Please double check!"      
+        if totalnetportcnt != (totalneonetportcnt + wlpcnt + wancnt) :     
+            warning = "WARNING: Ethernet ports quantity not match, Please double check!"  
+    form.note.data = warning + form.note.data
     if errorcnt :      
         raise ValidationError(errorstr)
-
+   
 class ReportSearchForm(FlaskForm):
     startdate = DateField('Start Date')
     enddate   = DateField('End Date')
@@ -355,7 +417,7 @@ class ReviewReportFileForm(FlaskForm):
 class AddWorkorderForm(FlaskForm):
     wo = StringField('WorkOrder#', validators=[DataRequired(),Length(max=100)])
     customers = StringField('Customer Name', validators=[DataRequired(),Length(max=100)])
-    pn = StringField('Product Model', validators=[DataRequired(),Length(max=100)])
+    pn = StringField('Product Model', validators=[DataRequired(),pn_check,Length(max=100)])
     csn = StringField('Chassis Serial Number', validators=[DataRequired(),Length(max=600),wocsn_exists], widget=TextArea())
     cputype = StringField('CPU (etc: i9-12900E)',validators=[Length(max=100),cputype_exists])
     memorysize = StringField('Memory(etc: 16GBX2)',validators=[Length(max=100),memorysize_exists])
@@ -383,7 +445,7 @@ class AddWorkorderForm(FlaskForm):
 class EditOneComputerForm(FlaskForm):
     wo = StringField('WorkOrder#', validators=[DataRequired(),Length(max=100)])
     customers = StringField('Customer Name', validators=[DataRequired(),Length(max=100)])
-    pn = StringField('Product Model', validators=[DataRequired(),Length(max=100)])
+    pn = StringField('Product Model', validators=[DataRequired(),pn_check,Length(max=100)])
     csn = StringField('Chassis Serial Number', validators=[DataRequired(),Length(max=100)])
     cputype = StringField('CPU (etc: i9-12900E)',validators=[Length(max=100),cputype_exists])
     memorysize = StringField('Memory(etc: 16GBX2)',validators=[Length(max=100),memorysize_exists])
