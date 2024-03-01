@@ -308,7 +308,7 @@ def report_check(form, field):
             errorstr = errorstr + " Ethernet ports less"
         if totalneonetportcnt > basicinfo[0].net :
             warning = "WARNING: Ethernet ports quantity not match, maybe preinstalled PCIe card, Please double check!"      
-        if totalnetportcnt != (totalneonetportcnt + wlpcnt + wancnt) :     
+        if totalnetportcnt != (totalneonetportcnt + wlpcnt) :     
             warning = "WARNING: Ethernet ports quantity not match, Please double check!"  
     form.note.data = warning + form.note.data
     if errorcnt :      
