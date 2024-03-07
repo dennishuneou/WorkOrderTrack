@@ -33,7 +33,7 @@ def memorysize_exists(form, field):
             raise ValidationError('Please input Memory size')
 def pn_check(form, field):
     basicinfo = PnMap.query.filter_by(pn=form.pn.data.strip())
-    if basicinfo.count() == 0 :
+    if basicinfo.count() == 0 and form.packgo.data == False :
         raise ValidationError("Doesn't find this PN in database.")
  
 def report_check(form, field):
@@ -183,11 +183,11 @@ def report_check(form, field):
         disksizenvme0 = []
         for dsz in disksizestrs :
             if ("SSD" in dsz) :
-               disksizessd.append(dsz)
+               disksizessd.append(dsz.strip())
             elif ("NVME" in dsz) :
-               disksizenvme.append(dsz)
+               disksizenvme.append(dsz.strip())
             else:
-               disksizessd.append(dsz)    
+               disksizessd.append(dsz.strip())    
         for dsz in disksizessd :
             dsz = dsz.replace("SSD","") #SSD256GBX1 -> SS 256GBX1 or SSD256GB -> SS 256GB
             dszs =  dsz.split(' ')
@@ -295,7 +295,7 @@ def report_check(form, field):
         elif mbsn_prefix != basicinfo[0].prefix :
             errorcnt = errorcnt + 1
             errorstr = errorstr + " Motherboard not match, was" + mbsn_prefix + "Not" + basicinfo[0].prefix
-        if "Build" not in biosver or  biosver not in basicinfo[0].biosv:
+        if "BUILD" not in biosver.upper() or  biosver.upper() not in basicinfo[0].biosv.upper():
             print(basicinfo[0].biosv)
             print(biosver)
             errorcnt = errorcnt + 1

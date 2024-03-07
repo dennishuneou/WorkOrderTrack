@@ -606,7 +606,7 @@ def UploadReport(id):
         db.session.add(transaction)
         db.session.commit()
         fstr = "Upload successful! "
-        if workorder.cpuinstall == False :
+        if workorder.cpuinstall == False and ("POC" not in workorder.pn or "NRU" not in workorder.pn):
             fstr += "PLEASE uninstall CPU. "
         if workorder.memoryinstall == False :    
             fstr += "PLEASE uninstall Memory."
