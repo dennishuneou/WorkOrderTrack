@@ -50,9 +50,9 @@ def report_check(form, field):
     configure = WorkOrder.query.filter_by(wo=form.wo.data, csn=form.csn.data)
     if configure[0].packgo :
         return
-    if "NRU" in configure[0].pn or "PCIe" configure[0].pn: 
+    if "NRU" in configure[0].pn or "PCIe" in configure[0].pn: 
         return 
-    if "LTN" in configure[0].pn or "IGT" configure[0].pn: 
+    if "LTN" in configure[0].pn or "IGT" in configure[0].pn: 
         return     
     #get contents from report file
     contents=form.report.data.split('\n')
