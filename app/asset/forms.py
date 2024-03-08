@@ -33,6 +33,10 @@ def memorysize_exists(form, field):
             raise ValidationError('Please input Memory size')
 def pn_check(form, field):
     basicinfo = PnMap.query.filter_by(pn=form.pn.data.strip())
+    if "NRU" in form.pn.data or "PCIe" in form.pn.data:
+        return  
+    if "LTN" in form.pn.data or "IGT" in form.pn.data:
+        return  
     if basicinfo.count() == 0 and form.packgo.data == False :
         raise ValidationError("Doesn't find this PN in database.")
  
