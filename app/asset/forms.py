@@ -44,6 +44,12 @@ def report_check(form, field):
     print(basicinfo.count())
     #get configure information from WorkOrder
     configure = WorkOrder.query.filter_by(wo=form.wo.data, csn=form.csn.data)
+    if configure[0].packgo :
+        return
+    if "NRU" in configure[0].pn or "PCIe" configure[0].pn: 
+        return 
+    if "LTN" in configure[0].pn or "IGT" configure[0].pn: 
+        return     
     #get contents from report file
     contents=form.report.data.split('\n')
     cputype = ""
