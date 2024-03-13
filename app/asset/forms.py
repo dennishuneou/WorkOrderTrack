@@ -100,6 +100,9 @@ def report_check(form, field):
                 totalneonetportcnt =  totalneonetportcnt + 1
             elif "enp" in line and "88:88:88:88:87:88" in line :     
                 macerrcnt = macerrcnt + 1
+            elif "wlp" in line:
+                #compare wifi  
+                wlpcnt = wlpcnt + 1    
         elif "CPU Type" in line:
             #decode and compare cpu type CPU Type: Intel(R) Core(TM) i5-9500TE CPU @ 2.20GHz
             #CPU Type: AMD Ryzen Embedded V1605B with Radeon Vega Gfx
