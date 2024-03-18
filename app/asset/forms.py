@@ -125,10 +125,10 @@ def report_check(form, field):
             words = contents[index].split(' ')
             pos = 0
             for word in words :
-                if ("GB" in word) : 
+                if ("GB" in word and "Size:" in words[pos-2]) : 
                     disknvmesize_r.append(words[pos-1]+"GB")
                     break
-                elif ("TB" in word) : 
+                elif ("TB" in word and "Size:" in words[pos-2]) : 
                     disknvmesize_r.append(words[pos-1]+"TB")
                     break
                 pos = pos + 1        
@@ -138,10 +138,10 @@ def report_check(form, field):
                 words = line.split(' ')
                 pos = 0
                 for word in words :
-                    if ("GB" in word) : 
+                    if ("GB" in word and "Size:" in words[pos-2]) : 
                         diskssdsize_r.append(words[pos-1]+"GB")
                         break
-                    elif ("TB" in word) : 
+                    elif ("TB" in word and "Size:" in words[pos-2] ) : 
                         diskssdsize_r.append(words[pos-1]+"TB")
                         break
                     pos = pos + 1            
