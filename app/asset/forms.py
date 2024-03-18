@@ -100,8 +100,7 @@ def report_check(form, field):
                 totalneonetportcnt =  totalneonetportcnt + 1
             elif "enp" in line and "88:88:88:88:87:88" in line :     
                 macerrcnt = macerrcnt + 1
-            elif "wlp" in line:
-                #compare wifi  
+            elif "wlx" in line or "wlp" in line:
                 wlpcnt = wlpcnt + 1    
         elif "CPU Type" in line:
             #decode and compare cpu type CPU Type: Intel(R) Core(TM) i5-9500TE CPU @ 2.20GHz
