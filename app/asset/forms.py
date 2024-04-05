@@ -158,14 +158,23 @@ def report_check(form, field):
     errorstr = ""
     memorycnted = 0
     if (configure[0].caninstall) and cancnt == 0 :
-        errorcnt = errorcnt + 1
-        errorstr = errorstr + "CAN not found! "
+        if totalnetportcnt > 9 :
+            warning = "WARNING: Too muhc Ethernet ports, Please check manual"     
+        else :     
+            errorcnt = errorcnt + 1
+            errorstr = errorstr + "CAN not found! "
     if (configure[0].wifiinstall) and wlpcnt == 0 :
-        errorcnt = errorcnt + 1
-        errorstr = errorstr + "Wifi module not found! "
+        if totalnetportcnt > 9 :
+            warning = "WARNING: Too muhc Ethernet ports, Please check manual"     
+        else : 
+            errorcnt = errorcnt + 1
+            errorstr = errorstr + "Wifi module not found! "
     if (configure[0].fg5ginstall) and wancnt == 0 :
-        errorcnt = errorcnt + 1
-        errorstr = errorstr + "4G5G module not found! "
+        if totalnetportcnt > 9 :
+            warning = "WARNING: Too muhc Ethernet ports, Please check manual"     
+        else : 
+            errorcnt = errorcnt + 1
+            errorstr = errorstr + "4G5G module not found! "
     if (configure[0].cpuinstall and (cputype.upper().strip() not in configure[0].cputype.upper().strip()))  :
         errorcnt = errorcnt + 1
         errorstr = errorstr + "CPU on Wo is " + configure[0].cputype.upper() + " VS " + cputype.upper()
@@ -311,7 +320,8 @@ def report_check(form, field):
         elif mbsn_prefix != basicinfo[0].prefix :
             errorcnt = errorcnt + 1
             errorstr = errorstr + " Motherboard not match, was" + mbsn_prefix + "Not" + basicinfo[0].prefix
-        if "BUILD" not in biosver.upper() or  biosver.upper() not in basicinfo[0].biosv.upper():
+        #if "BUILD" not in biosver.upper() or  biosver.upper() not in basicinfo[0].biosv.upper():
+        if  biosver.upper() not in basicinfo[0].biosv.upper():
             print(basicinfo[0].biosv)
             print(biosver)
             errorcnt = errorcnt + 1
@@ -326,6 +336,8 @@ def report_check(form, field):
             warning = "WARNING: Ethernet ports quantity not match, maybe preinstalled PCIe card, Please double check!"      
         if totalnetportcnt != (totalneonetportcnt + wlpcnt) :     
             warning = "WARNING: Ethernet ports quantity not match, Please double check!"  
+        if totalnetportcnt > 9 :
+            warning = "WARNING: Too muhc Ethernet ports, Please check manual"         
     form.note.data = warning + form.note.data
     if errorcnt :      
         raise ValidationError(errorstr)
