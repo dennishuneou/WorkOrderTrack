@@ -102,6 +102,10 @@ def report_check(form, field):
                 macerrcnt = macerrcnt + 1
             elif "wlx" in line or "wlp" in line:
                 wlpcnt = wlpcnt + 1    
+            elif "can" in line :
+                cancnt = cancnt + 1    
+            elif "wwan" in line :
+                wancnt = wancnt + 1        
         elif "CPU Type" in line:
             #decode and compare cpu type CPU Type: Intel(R) Core(TM) i5-9500TE CPU @ 2.20GHz
             #CPU Type: AMD Ryzen Embedded V1605B with Radeon Vega Gfx
@@ -118,8 +122,10 @@ def report_check(form, field):
             for word in words :
                 if ("GB" in word) : 
                     memorysize_r.append(words[pos-1])
+                elif ("MB" in word) : 
+                    memorysize_r.append(str(int(int(words[pos-1])/1024)))
                     break
-                pos = pos + 1  
+                pos = pos + 1    
         elif (("/dev/nvme" in line )) and ( ("M.2" in line ) or ("Serial" in line)):
             index = contents.index(line) + 1
             words = contents[index].split(' ')
@@ -134,7 +140,7 @@ def report_check(form, field):
                 pos = pos + 1        
         elif ("/dev/sd" in line) and ( ("SATA" in line) or ("M.2" in line) or ("Serial" in line) ):
             index = contents.index(line) + 1
-            if "boot" not in contents[index] :
+            if "boot" not in contents[index] and "/," not in contents[index]:
                 words = line.split(' ')
                 pos = 0
                 for word in words :
