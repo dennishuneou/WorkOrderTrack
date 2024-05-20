@@ -111,10 +111,18 @@ def report_check(form, field):
             #CPU Type: AMD Ryzen Embedded V1605B with Radeon Vega Gfx
             #For POC, we need't check the CPU type
             if configure[0].cpuinstall and ("POC" in configure[0].pn) == False :
-                words = line.split(' ')
-                for wd in words:
-                    if ('-' in wd):
-                        cputype = wd
+                if "AMD" in line :
+                    if "7713P" in line :
+                        cputype = "7713P"
+                    elif "7003" in line :       
+                        cputype = "7003"
+                    else :
+                        cputype = "na"     
+                else :      
+                    words = line.split(' ')
+                    for wd in words:
+                        if ('-' in wd):
+                            cputype = wd
         elif (("DIMM" in line) or ("Channel" in line )) and (("DDR" in line ) or ("GB" in line)):
             #decode DDR size anmd compare ChannelA-DIMM0 : 8 GB, DDR4, 3200 MT/s,  Samsung, M471A1K43EB1-CWE, 17FF9947
             words = line.split(' ')
