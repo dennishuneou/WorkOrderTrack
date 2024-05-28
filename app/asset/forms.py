@@ -56,7 +56,7 @@ def report_check(form, field):
         return 
     if "LTN" in configure[0].pn or "IGT" in configure[0].pn: 
         return     
-    if "PB-" in configure[0].pn : 
+    if "PB-" in configure[0].pn or "IGT" in configure[0].pn: 
         return         
     #get contents from report file
     contents=form.report.data.split('\n')
@@ -89,6 +89,7 @@ def report_check(form, field):
             else :
                 mbsnerr = 1     
             #we will parse MB S/N later
+            #POC-40+ Bios Version: EHL.05.43.49.0016
         elif "Bios Version" in line :
             biosver = line.replace("Bios Version:","").strip()
         #enp2s0  (MAC: 78:d0:04:33:40:de) (IPv4: 192.168.61.47) (IPv6: fe80::46be:af:bac0:7c13)
@@ -100,7 +101,7 @@ def report_check(form, field):
                 totalneonetportcnt =  totalneonetportcnt + 1
             elif "enp" in line and "88:88:88:88:87:88" in line :     
                 macerrcnt = macerrcnt + 1
-            elif "wlx" in line or "wlp" in line:
+            elif "wlx" in line or "wlp" in line or "wlo" in line:
                 wlpcnt = wlpcnt + 1    
             elif "can" in line :
                 cancnt = cancnt + 1    
