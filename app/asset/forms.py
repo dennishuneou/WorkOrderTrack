@@ -37,7 +37,7 @@ def pn_check(form, field):
         return  
     if "LTN" in form.pn.data or "IGT" in form.pn.data:
         return  
-    if "PB-" in form.pn.data:
+    if "PB-" in form.pn.data or "FLYC" in form.pn.data:
         return  
     if basicinfo.count() == 0 and form.packgo.data == False :
         raise ValidationError("Doesn't find this PN in database.")
@@ -56,7 +56,7 @@ def report_check(form, field):
         return 
     if "LTN" in configure[0].pn or "IGT" in configure[0].pn: 
         return     
-    if "PB-" in configure[0].pn or "IGT" in configure[0].pn: 
+    if "PB-" in configure[0].pn or "FLYC" in configure[0].pn: 
         return         
     #get contents from report file
     contents=form.report.data.split('\n')
