@@ -48,8 +48,9 @@ class WorkOrder(db.Model):
     status =db.Column(db.Integer, nullable=True)
     csid=db.Column(db.Integer, nullable=True)
     cstime=db.Column(db.DateTime, nullable=True)
+    ldtime=db.Column(db.DateTime, nullable=True)
 
-    def __init__(self, wo, customers, pn, csn, cputype, memorysize, disksize, cpuinstall, memoryinstall, gpuinstall,  wifiinstall, caninstall, mezioinstall, fg5ginstall, osinstall, packgo, asid, insid,astime, intime, csid, cstime, tktime, status):
+    def __init__(self, wo, customers, pn, csn, cputype, memorysize, disksize, cpuinstall, memoryinstall, gpuinstall,  wifiinstall, caninstall, mezioinstall, fg5ginstall, osinstall, packgo, asid, insid,astime, intime, csid, cstime, tktime, ldtime, status):
         self.wo = wo
         self.customers = customers
         self.pn = pn
@@ -73,6 +74,7 @@ class WorkOrder(db.Model):
         self.intime = intime
         self.csid = csid
         self.cstime = cstime
+        self.ldtime = ldtime
         self.status = status
 
     def __repr__(self):

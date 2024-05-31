@@ -459,6 +459,7 @@ class ReviewReportFileForm(FlaskForm):
 
 class AddWorkorderForm(FlaskForm):
     wo = StringField('WorkOrder#', validators=[DataRequired(),Length(max=100)])
+    ldtime= DateField('Lead Time')
     customers = StringField('Customer Name', validators=[DataRequired(),Length(max=100)])
     pn = StringField('Product Model', validators=[DataRequired(),pn_check,Length(max=100)])
     csn = StringField('Chassis Serial Number', validators=[DataRequired(),Length(max=600),wocsn_exists], widget=TextArea())
@@ -487,6 +488,7 @@ class AddWorkorderForm(FlaskForm):
 
 class EditOneComputerForm(FlaskForm):
     wo = StringField('WorkOrder#', validators=[DataRequired(),Length(max=100)])
+    ldtime= DateField('Lead Time')
     customers = StringField('Customer Name', validators=[DataRequired(),Length(max=100)])
     pn = StringField('Product Model', validators=[DataRequired(),pn_check,Length(max=100)])
     csn = StringField('Chassis Serial Number', validators=[DataRequired(),Length(max=100)])
