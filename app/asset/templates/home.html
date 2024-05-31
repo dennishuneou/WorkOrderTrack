@@ -345,7 +345,10 @@
                         {% for workorder in todoworkorder %}
                         <tr>
                             <td></td>
-                            <td> {{ workorder.ldtime.strftime('%m/%d') }}</td>
+                            <td> {% if workorder.ldtime != None %} 
+                                   {{ workorder.ldtime.strftime('%m/%d') }}
+                                 {% endif %}
+                            </td>
                             <td> {{ workorder.wo }}</td>
                             <td> {{ workorder.customers }}</td>
                             <td> {{ workorder.pn }}</td>
@@ -417,7 +420,10 @@
                         <tbody>
                         {% for workorder in pendingworkorder %}
                         <tr>
-                            <td> {{ workorder.ldtime.strftime('%m/%d') }}</td>
+                            <td> {% if workorder.ldtime != None %} 
+                                {{ workorder.ldtime.strftime('%m/%d') }}
+                              {% endif %}
+                            </td>
                             <td> {{ workorder.wo }}</td>
                             <td> {{ workorder.customers }}</td>
                             <td> {{ workorder.pn }}</td>
@@ -490,7 +496,10 @@
                     {% for each in processing %}
                     <tr>
                         <td> </td>
-                        <td> {{ each.ldtime.strftime('%m/%d') }}</td>
+                        <td> {% if each.ldtime != None %} 
+                                {{ each.ldtime.strftime('%m/%d') }}
+                             {% endif %}
+                        </td>
                         <td> {{ each.wo }}</td>
                         <td> {{ each.customers }}</td>
                         <td> {{ each.pn }}</td>
@@ -628,7 +637,10 @@
                     <tbody>
                     {% for each in completed %}
                     <tr>
-                        <td> {{ each.ldtime.strftime('%m/%d') }}</td>
+                        <td> {% if each.ldtime != None %} 
+                            {{ each.ldtime.strftime('%m/%d') }}
+                         {% endif %}
+                        </td>
                         <td> {{ each.wo }}</td>
                         <td> {{ each.customers }}</td>
                         <td> {{ each.pn }}</td>
