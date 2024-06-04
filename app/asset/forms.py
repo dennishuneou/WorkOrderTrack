@@ -352,7 +352,7 @@ def report_check(form, field):
         if totalnetportcnt != (totalneonetportcnt + wlpcnt) :     
             warning = "WARNING: Ethernet ports quantity not match, Please double check!"  
         if totalnetportcnt > 9 :
-            warning = "WARNING: Too muhc Ethernet ports, Please check manual"         
+            warning = "WARNING: Too much Ethernet ports or over 10 ports, Please check manually"         
     form.note.data = warning + form.note.data
     if errorcnt :      
         raise ValidationError(errorstr)

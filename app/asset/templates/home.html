@@ -298,6 +298,7 @@
                         <thead class="thead-light">
                             <tr style="background-color: #e3f2fd;">
                                 <th data-checkbox="true">CHK</th>
+                                <th data-sortable="true"> ID</th>
                                 <th data-sortable="true"> Leadtime</th>
                                 <th data-sortable="true"> WorkOrder</th>
                                 <th data-sortable="true"> Customer</th>
@@ -345,6 +346,7 @@
                         {% for workorder in todoworkorder %}
                         <tr>
                             <td></td>
+                            <td> {{ workorder.id }}</td>
                             <td> {% if workorder.ldtime != None %} 
                                    {{ workorder.ldtime.strftime('%m/%d') }}
                                  {% endif %}
@@ -403,6 +405,7 @@
                     <table data-search="true" data-toggle="table" class="table table-striped table-hover">
                         <thead class="thead-light">
                             <tr style="background-color: #e3f2fd;">
+                                <th data-sortable="true"> ID</th>
                                 <th data-sortable="true"> Leadtime</th>
                                 <th data-sortable="true"> WorkOrder</th>
                                 <th data-sortable="true"> Customer</th>
@@ -420,6 +423,7 @@
                         <tbody>
                         {% for workorder in pendingworkorder %}
                         <tr>
+                            <td> {{ workorder.id }}</td>
                             <td> {% if workorder.ldtime != None %} 
                                 {{ workorder.ldtime.strftime('%m/%d') }}
                               {% endif %}
@@ -476,6 +480,7 @@
                     <thead class="thead-light">
                         <tr style="background-color: #e3f2fd;">
                             <th data-checkbox="true"></th>
+                            <th data-sortable="true"> ID</th>
                             <th data-sortable="true"> Leadtime</th>
                             <th data-sortable="true"> WorkOrder</th>
                             <th data-sortable="true"> Customer</th>
@@ -496,6 +501,7 @@
                     {% for each in processing %}
                     <tr>
                         <td> </td>
+                        <td> {{ each.id }}</td>
                         <td> {% if each.ldtime != None %} 
                                 {{ each.ldtime.strftime('%m/%d') }}
                              {% endif %}
