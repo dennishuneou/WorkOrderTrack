@@ -129,9 +129,9 @@ def report_check(form, field):
             words = line.split(' ')
             pos = 0
             for word in words :
-                if ("GB" in word) : 
+                if ("GB" in word) and words[pos-1].isdigit(): 
                     memorysize_r.append(words[pos-1])
-                elif ("MB" in word) : 
+                elif ("MB" in word) and words[pos-1].isdigit(): 
                     memorysize_r.append(str(int(int(words[pos-1])/1024)))
                     break
                 pos = pos + 1    
