@@ -222,6 +222,8 @@ def display_workorders():
                 nPackgo= completedssbyuser.filter(WorkOrder.packgo==True).count()
                 rows.append(nPackgo)
                 tablesearchsummary.append(rows)
+    completedlastwday = completedlastwday.filter(WorkOrder.packgo!=True).order_by(WorkOrder.asid)             
+   
     searchtable = []  
     seq = 0;              
     for workord in completed7day.filter(WorkOrder.packgo!=True).order_by(WorkOrder.asid):
