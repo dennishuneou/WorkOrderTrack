@@ -353,7 +353,7 @@
                             </td>
                             <td> {{ workorder.wo }}</td>
                             <td> {{ workorder.customers }}</td>
-                            <td> {{ workorder.pn }}</td>
+                            <td> <a href= "{{ url_for('main.CheckWorkOrder',id=workorder.id)}}"> {{ workorder.pn }} </a></td>
                             <td> {{ workorder.csn }}</td>
                             <td> {{ workorder.cstime.strftime('%m/%d %H:%M') }}</td>
                             <td>

@@ -7,6 +7,12 @@ from wtforms.widgets import TextArea
 from app.asset.models import WorkOrder, Production, PnMap
 from app.auth.forms  import get_userrole,get_usersname,get_operateusersname
 
+def get_biosversion(psn):
+    biosv = PnMap.query.filter_by(pn=psn)
+    if biosv.count() :
+        return biosv[0].biosv
+    else :
+        return ''
 def wocsn_exists(form, field):
     csn_m=form.csn.data.split('\n')
     duplicated=0
@@ -513,3 +519,26 @@ class EditOneComputerForm(FlaskForm):
     cstime=HiddenField('Creating Time')
     status= HiddenField('Status')
     submit = SubmitField('Update')
+
+class ReviewOneComputerForm(FlaskForm):
+
+    wo = StringField('WorkOrder#', validators=[DataRequired(),Length(max=100)],render_kw={'readonly': True})
+    ldtime= DateField('Lead Time',render_kw={'readonly': True})
+    customers = StringField('Customer Name', validators=[DataRequired(),Length(max=100)],render_kw={'readonly': True})
+    pn = StringField('Product Model', validators=[DataRequired(),pn_check,Length(max=100)],render_kw={'readonly': True})
+    csn = StringField('Chassis Serial Number', validators=[DataRequired(),Length(max=100)],render_kw={'readonly': True})
+    cputype = StringField('CPU (etc: i9-12900E)',validators=[Length(max=100),cputype_exists],render_kw={'readonly': True})
+    memorysize = StringField('Memory(etc: 16GBX2)',validators=[Length(max=100),memorysize_exists],render_kw={'readonly': True})
+    disksize = StringField('Disk(etc: SSD256GBx1 NVME1TBx1)',render_kw={'readonly': True})
+    cpuinstall = BooleanField('CPU Installation',render_kw={'readonly': True})
+    memoryinstall = BooleanField('Memory Installation',render_kw={'readonly': True})
+    gpuinstall = BooleanField('GPU Installation',render_kw={'readonly': True})
+    wifiinstall = BooleanField('Wifi Installation',render_kw={'readonly': True})
+    caninstall = BooleanField('CAN Installation',render_kw={'readonly': True})
+    mezioinstall = BooleanField('MezIO Installation',render_kw={'readonly': True})
+    fg5ginstall = BooleanField('4G5G Installation',render_kw={'readonly': True})
+    osinstall = StringField('Installation OS Name', validators=[Length(max=100)],render_kw={'readonly': True})
+    packgo = BooleanField('Pack & Go',render_kw={'readonly': True})
+    operator = QuerySelectField('Operator Name', query_factory=get_operateusersname,allow_blank=True,render_kw={'readonly': True})
+    biosver = StringField('BIOS Version',render_kw={'readonly': True})
+    submit = SubmitField('Return')

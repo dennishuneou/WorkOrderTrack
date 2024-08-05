@@ -1,9 +1,10 @@
 from flask_login import login_required
-from app.asset.forms import AddWorkorderForm, UploadReportForm, ReviewReportForm, ReviewReportFileForm,EditOneComputerForm,ReportSearchForm,QueryForm,ViewReportForm
+from app.asset.forms import AddWorkorderForm, UploadReportForm, ReviewReportForm, ReviewReportFileForm,EditOneComputerForm,ReportSearchForm,QueryForm,ViewReportForm,ReviewOneComputerForm
 from app.asset import main
 from app.asset.models import WorkOrder, Production
 from flask import render_template, flash, request, redirect, url_for
 from app import db
+from app.asset.forms import get_biosversion
 #Dennis
 #workorder status, unassigned -1, processing 0, waiting for inspection 1 finished 2.
 from flask_login import current_user
@@ -747,5 +748,16 @@ def add_workorder():
         return redirect(url_for('main.display_workorders'))
     return render_template('add_workorder.html', form=form, userrole = role)
 
+@main.route('/CheckWorkOrder/<id>', methods=['GET', 'POST'])
+@login_required
+def CheckWorkOrder(id): 
+    workorder = WorkOrder.query.get(id)
+    form = ReviewOneComputerForm(obj=workorder)
+    biosver = get_biosversion(workorder.pn)
+    form.biosver.data = biosver
+    role = get_userrole(current_user.id)
+    if form.validate_on_submit():
+        return redirect(url_for('main.display_workorders'))
+    return render_template('CheckWorkOrder.html', form=form, id=id, userrole = role, biosver=biosver) 
 
 
