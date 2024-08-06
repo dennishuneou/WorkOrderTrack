@@ -13,7 +13,7 @@ def username_exists(form, field):
         raise ValidationError('User_name already exists')
 
 def get_usersname():
-    return User.query.all()
+    return User.query.all().filter(User.status > 0)
 def get_operateusersname():
     return User.query.filter(User.role < 3)
 def get_username(userid):

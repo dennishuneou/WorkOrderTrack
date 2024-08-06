@@ -756,14 +756,23 @@ def CheckWorkOrder(id):
     biosver = get_biosversion(workorder.pn)
     sopver  = get_sopversion(workorder.pn)
     form.biosver.data = biosver
+    form.sopver.data = sopver
     role = get_userrole(current_user.id)
     if form.validate_on_submit():
         return redirect(url_for('main.display_workorders'))
     return render_template('CheckWorkOrder.html', form=form, id=id, userrole = role, biosver=biosver) 
-
+def getcustomizedstr(item):
+    customizedstr ="" 
+    if item & 1 :
+       customizedstr = customizedstr + " BIOS"
+    if item & 2 :
+       customizedstr = customizedstr + " SOP"     
+    if item & 4 :
+       customizedstr = customizedstr + " Chassis"   
+    return customizedstr
 @main.route('/customized', methods=['GET', 'POST'])
 @login_required
 def customized(): 
     customizedmodels = PnMap.query.filter(PnMap.customized!=0)
     role = get_userrole(current_user.id)
-    return render_template('Customized.html', customizedmodels=customizedmodels, userrole = role) 
+    return render_template('Customized.html', customizedmodels=customizedmodels, userrole = role,getcustomizedstr=getcustomizedstr) 

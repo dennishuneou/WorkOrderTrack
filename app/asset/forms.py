@@ -19,7 +19,7 @@ def get_sopversion(psn):
     if sopv.count() :
         return sopv[0].sop
     else :
-        return ''        
+        return "Not found"        
 def wocsn_exists(form, field):
     csn_m=form.csn.data.split('\n')
     duplicated=0
