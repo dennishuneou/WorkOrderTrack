@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="container">
+      <div class="row">
+        <div class="col col-md-16 my-4">
+        <div class="tab-content" id="myTabContent">
+             <div class="table-responsive">
+                    <table data-search="true" data-toggle="table" class="table table-striped table-hover">
+                        <thead class="thead-light">
+                            <tr style="background-color: #e3f2fd;">
+                                <th data-checkbox="true"> Production</th>
+                                <th data-sortable="true"> BIOS Version</th>
+                                <th data-sortable="true"> MB Prefix</th>
+                                <th data-sortable="true"> SOP</th>
+                                <th data-sortable="true"> Customized</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for customzieditem in customizedmodels %}
+                        <tr>
+                            <td></td>
+                            <td> {{ customzieditem.pn }}</td>
+                            <td> {{ customzieditem.biosv }}</td>
+                            <td> {{ customzieditem.prefix }}</td>
+                            <td> {{ customzieditem.sop }}</td>
+                            <td> {{ customzieditem.customized }}</td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+              </div>
+        </div>       
+        </div>
+    </div>
+</div>      
+{% endblock %}

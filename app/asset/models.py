@@ -10,8 +10,12 @@ class PnMap(db.Model):
     net = db.Column(db.Integer, nullable=False)
     poe = db.Column(db.Integer, nullable=False)
     ign = db.Column(db.Integer, nullable=False)
+    sop = db.Column(db.String(100), nullable=True)
+    packpoints = db.Column(db.Integer, nullable=True)
+    buildpoints = db.Column(db.Integer, nullable=True)
+    customized  = db.Column(db.Integer, nullable=True)
     
-    def __init__(self, pn, biosv,prefix, net, poe, ign):
+    def __init__(self, pn, biosv,prefix, net, poe, ign, sop, packpoints, buildpoints, customized):
         self.pn = pn
         self.biosv = biosv
         self.pn = pn
@@ -19,6 +23,11 @@ class PnMap(db.Model):
         self.net = net
         self.poe = poe
         self.ign = ign
+        self.sop = sop
+        self.packpoints = packpoints
+        self.buildpoints = buildpoints
+        self.customized = customized
+        
 
 class WorkOrder(db.Model):
     __tablename__ = 'workorder'

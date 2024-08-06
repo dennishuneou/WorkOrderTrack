@@ -1,10 +1,10 @@
 from flask_login import login_required
 from app.asset.forms import AddWorkorderForm, UploadReportForm, ReviewReportForm, ReviewReportFileForm,EditOneComputerForm,ReportSearchForm,QueryForm,ViewReportForm,ReviewOneComputerForm
 from app.asset import main
-from app.asset.models import WorkOrder, Production
+from app.asset.models import WorkOrder, Production, PnMap
 from flask import render_template, flash, request, redirect, url_for
 from app import db
-from app.asset.forms import get_biosversion get_sopversion
+from app.asset.forms import get_biosversion, get_sopversion
 #Dennis
 #workorder status, unassigned -1, processing 0, waiting for inspection 1 finished 2.
 from flask_login import current_user
@@ -761,4 +761,9 @@ def CheckWorkOrder(id):
         return redirect(url_for('main.display_workorders'))
     return render_template('CheckWorkOrder.html', form=form, id=id, userrole = role, biosver=biosver) 
 
-
+@main.route('/customized', methods=['GET', 'POST'])
+@login_required
+def customized(): 
+    customizedmodels = PnMap.query.filter(customized!=0)
+    role = get_userrole(current_user.id)
+    return render_template('Customized.html', customizedmodels=customizedmodels, userrole = role) 
