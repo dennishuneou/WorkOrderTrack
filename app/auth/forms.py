@@ -15,7 +15,7 @@ def username_exists(form, field):
 def get_usersname():
     return User.query.all().filter(User.status > 0)
 def get_operateusersname():
-    return User.query.filter(User.role < 3)
+    return User.query.filter(User.role < 3).filter(User.status > 0)
 def get_username(userid):
     users = User.query.filter_by(id=userid)
     if users.count() :
