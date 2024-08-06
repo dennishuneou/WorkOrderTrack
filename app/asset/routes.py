@@ -764,6 +764,6 @@ def CheckWorkOrder(id):
 @main.route('/customized', methods=['GET', 'POST'])
 @login_required
 def customized(): 
-    customizedmodels = PnMap.query.filter(customized!=0)
+    customizedmodels = PnMap.query.filter(PnMap.customized!=0)
     role = get_userrole(current_user.id)
     return render_template('Customized.html', customizedmodels=customizedmodels, userrole = role) 
