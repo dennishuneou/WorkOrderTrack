@@ -6,6 +6,7 @@ from wtforms.ext.sqlalchemy.fields import QuerySelectField
 from wtforms.widgets import TextArea
 from app.asset.models import WorkOrder, Production, PnMap
 from app.auth.forms  import get_userrole,get_usersname,get_operateusersname
+from datetime import datetime
 
 def get_biosversion(psn):
     biosv = PnMap.query.filter_by(pn=psn)
@@ -98,6 +99,10 @@ def report_check(form, field):
             #POC-40+ Bios Version: EHL.05.43.49.0016
         elif "Bios Version" in line :
             biosver = line.replace("Bios Version:","").strip()
+        elif "Bios Release Date" in line :
+            biosdate = line.replace("Bios Release Date:","").strip()
+            biosdate_obj = datetime.strptime(biosdate,'%m/%d/%Y')
+            biosdate = biosdate_obj.strftime("%y%m%d")   
         #enp2s0  (MAC: 78:d0:04:33:40:de) (IPv4: 192.168.61.47) (IPv6: fe80::46be:af:bac0:7c13)
         #docker0  (MAC: 02:42:dd:e3:29:b0) (IPv4: 172.17.0.1)
         #enp0s31f6  (MAC: 78:d0:04:33:40:dd)
@@ -342,9 +347,7 @@ def report_check(form, field):
             errorcnt = errorcnt + 1
             errorstr = errorstr + " Motherboard not match, was" + mbsn_prefix + "Not" + basicinfo[0].prefix
         #if "BUILD" not in biosver.upper() or  biosver.upper() not in basicinfo[0].biosv.upper():
-        if  biosver.upper() not in basicinfo[0].biosv.upper():
-            print(basicinfo[0].biosv)
-            print(biosver)
+        if  biosver.upper() not in basicinfo[0].biosv.upper() and biosdate not in basicinfo[0].biosv.upper():
             errorcnt = errorcnt + 1
             errorstr = errorstr + " BIOS version Error"              
         if macerrcnt != 0 :
@@ -539,6 +542,6 @@ class ReviewOneComputerForm(FlaskForm):
     fg5ginstall = BooleanField('4G5G Installation',render_kw={'readonly': True})
     osinstall = StringField('Installation OS Name', validators=[Length(max=100)],render_kw={'readonly': True})
     packgo = BooleanField('Pack & Go',render_kw={'readonly': True})
-    operator = QuerySelectField('Operator Name', query_factory=get_operateusersname,allow_blank=True,render_kw={'readonly': True})
+    #operator = QuerySelectField('Operator Name', query_factory=get_operateusersname,allow_blank=True,render_kw={'readonly': True})
     biosver = StringField('BIOS Version',render_kw={'readonly': True})
     submit = SubmitField('Return')
