@@ -4,7 +4,7 @@ from app.asset import main
 from app.asset.models import WorkOrder, Production
 from flask import render_template, flash, request, redirect, url_for
 from app import db
-from app.asset.forms import get_biosversion
+from app.asset.forms import get_biosversion get_sopversion
 #Dennis
 #workorder status, unassigned -1, processing 0, waiting for inspection 1 finished 2.
 from flask_login import current_user
@@ -754,6 +754,7 @@ def CheckWorkOrder(id):
     workorder = WorkOrder.query.get(id)
     form = ReviewOneComputerForm(obj=workorder)
     biosver = get_biosversion(workorder.pn)
+    sopver  = get_sopversion(workorder.pn)
     form.biosver.data = biosver
     role = get_userrole(current_user.id)
     if form.validate_on_submit():

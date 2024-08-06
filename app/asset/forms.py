@@ -14,6 +14,12 @@ def get_biosversion(psn):
         return biosv[0].biosv
     else :
         return ''
+def get_sopversion(psn):
+    sopv = PnMap.query.filter_by(pn=psn)
+    if sopv.count() :
+        return sopv[0].sop
+    else :
+        return ''        
 def wocsn_exists(form, field):
     csn_m=form.csn.data.split('\n')
     duplicated=0
@@ -544,4 +550,5 @@ class ReviewOneComputerForm(FlaskForm):
     packgo = BooleanField('Pack & Go',render_kw={'readonly': True})
     #operator = QuerySelectField('Operator Name', query_factory=get_operateusersname,allow_blank=True,render_kw={'readonly': True})
     biosver = StringField('BIOS Version',render_kw={'readonly': True})
+    sopver  = StringField('SOP Version',render_kw={'readonly': True})
     submit = SubmitField('Return')
