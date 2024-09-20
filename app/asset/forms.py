@@ -349,7 +349,7 @@ def report_check(form, field):
         if mbsnerr != 0:
             errorcnt = errorcnt + 1
             errorstr = errorstr + " S/N Error" + mbsn
-        elif mbsn_prefix != basicinfo[0].prefix :
+        elif mbsn_prefix not in basicinfo[0].prefix :
             errorcnt = errorcnt + 1
             errorstr = errorstr + " Motherboard not match, was" + mbsn_prefix + "Not" + basicinfo[0].prefix
         #if "BUILD" not in biosver.upper() or  biosver.upper() not in basicinfo[0].biosv.upper():
