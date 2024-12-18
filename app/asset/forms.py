@@ -244,7 +244,8 @@ def report_check(form, field):
             elif ("NVME" in dsz) :
                disksizenvme.append(dsz.strip())
             else:
-               disksizessd.append(dsz.strip())    
+                if(dsz.strip()): 
+                  disksizessd.append(dsz.strip())    
         for dsz in disksizessd :
             dsz = dsz.replace("SSD","") #SSD256GBX1 -> SS 256GBX1 or SSD256GB -> SS 256GB
             dszs =  dsz.split(' ')
