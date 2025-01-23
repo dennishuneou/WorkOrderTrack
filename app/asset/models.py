@@ -15,8 +15,8 @@ class PnMap(db.Model):
     buildpoints = db.Column(db.Integer, nullable=True)
     customized  = db.Column(db.Integer, nullable=True)
     testonlypoints = db.Column(db.Integer, nullable=True)
-
-    def __init__(self, pn, biosv,prefix, net, poe, ign, sop, unitsinabox, buildpoints, customized, testonlypoints):
+    gpu  = db.Column(db.Integer, nullable=True)
+    def __init__(self, pn, biosv,prefix, net, poe, ign, sop, unitsinabox, buildpoints, customized, testonlypoints,gpu):
         self.pn = pn
         self.biosv = biosv
         self.pn = pn
@@ -29,7 +29,7 @@ class PnMap(db.Model):
         self.buildpoints = buildpoints
         self.customized = customized
         self.testonlypoints = testonlypoints
-        
+        self.gpu = gpu
 
 class WorkOrder(db.Model):
     __tablename__ = 'workorder'
