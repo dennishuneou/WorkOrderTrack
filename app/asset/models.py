@@ -11,11 +11,12 @@ class PnMap(db.Model):
     poe = db.Column(db.Integer, nullable=False)
     ign = db.Column(db.Integer, nullable=False)
     sop = db.Column(db.String(100), nullable=True)
-    packpoints = db.Column(db.Integer, nullable=True)
+    unitsinabox = db.Column(db.Integer, nullable=True)
     buildpoints = db.Column(db.Integer, nullable=True)
     customized  = db.Column(db.Integer, nullable=True)
-    
-    def __init__(self, pn, biosv,prefix, net, poe, ign, sop, packpoints, buildpoints, customized):
+    testonlypoints = db.Column(db.Integer, nullable=True)
+
+    def __init__(self, pn, biosv,prefix, net, poe, ign, sop, unitsinabox, buildpoints, customized, testonlypoints):
         self.pn = pn
         self.biosv = biosv
         self.pn = pn
@@ -24,9 +25,10 @@ class PnMap(db.Model):
         self.poe = poe
         self.ign = ign
         self.sop = sop
-        self.packpoints = packpoints
+        self.unitsinabox = unitsinabox
         self.buildpoints = buildpoints
         self.customized = customized
+        self.testonlypoints = testonlypoints
         
 
 class WorkOrder(db.Model):
@@ -58,14 +60,26 @@ class WorkOrder(db.Model):
     csid=db.Column(db.Integer, nullable=True)
     cstime=db.Column(db.DateTime, nullable=True)
     ldtime=db.Column(db.DateTime, nullable=True)
+    gpu=db.Column(db.String(100), nullable=True)
+    withwifi=db.Column(db.Boolean, nullable=True)
+    withcan=db.Column(db.Boolean, nullable=True)
+    withfg5g=db.Column(db.Boolean, nullable=True)
+    ospreinstalled=db.Column(db.Boolean, nullable=True)
+    diskpreinstalled=db.Column(db.Boolean, nullable=True)
 
-    def __init__(self, wo, customers, pn, csn, cputype, memorysize, disksize, cpuinstall, memoryinstall, gpuinstall,  wifiinstall, caninstall, mezioinstall, fg5ginstall, osinstall, packgo, asid, insid,astime, intime, csid, cstime, tktime, ldtime, status):
+    def __init__(self, wo, customers, pn, csn, cputype, memorysize, gpu, withwifi, withcan,withfg5g, ospreinstalled, diskpreinstalled, disksize, cpuinstall, memoryinstall, gpuinstall,  wifiinstall, caninstall, mezioinstall, fg5ginstall, osinstall, packgo, asid, insid,astime, intime, csid, cstime, tktime, ldtime, status):
         self.wo = wo
         self.customers = customers
         self.pn = pn
         self.csn = csn
         self.cputype = cputype
         self.memorysize = memorysize
+        self.gpu = gpu
+        self.withwifi = withwifi
+        self.withcan = withcan
+        self.withfg5g = withfg5g
+        self.ospreinstalled = ospreinstalled
+        self.diskpreinstalled = diskpreinstalled
         self.disksize = disksize
         self.cpuinstall = cpuinstall
         self.memoryinstall = memoryinstall
@@ -85,7 +99,7 @@ class WorkOrder(db.Model):
         self.cstime = cstime
         self.ldtime = ldtime
         self.status = status
-
+        
     def __repr__(self):
         return '{} by {}'.format(self.wo)
 

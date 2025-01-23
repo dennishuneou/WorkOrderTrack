@@ -598,6 +598,12 @@ def EditOneComputer(id):
         workorder.osinstall = form.osinstall.data
         workorder.packgo = form.packgo.data
         workorder.ldtime = form.ldtime.data
+        workorder.gpu=form.gpu.data
+        workorder.withwifi=form.withwifi.data
+        workorder.withcan=form.withcan.data
+        workorder.withfg5g=form.withfg5g.data
+        workorder.ospreinstalled=form.ospreinstalled.data
+        workorder.diskpreinstalled=form.diskpreinstalled.data
         if form.operator.data == None :
             asidset =-1
         else :
@@ -750,6 +756,7 @@ def add_workorder():
                 transaction = WorkOrder(wo=form.wo.data, customers=form.customers.data, pn=str(form.pn.data), csn=x.strip(), 
                 cputype=form.cputype.data,memorysize=form.memorysize.data,disksize=form.disksize.data,cpuinstall=form.cpuinstall.data,memoryinstall=form.memoryinstall.data,gpuinstall=form.gpuinstall.data,
                 wifiinstall=form.wifiinstall.data,mezioinstall=form.mezioinstall.data,caninstall=form.caninstall.data,fg5ginstall=form.fg5ginstall.data,
+                gpu=form.gpu.data,withwifi=form.withwifi.data,withcan=form.withcan.data,withfg5g=form.withfg5g.data,ospreinstalled=form.ospreinstalled.data,diskpreinstalled=form.diskpreinstalled.data,
                 osinstall=form.osinstall.data,packgo=form.packgo.data,asid=asidset,insid=-1,astime=None,intime=None,tktime=None,csid=current_user.id,cstime=datetime.datetime.now(),ldtime=form.ldtime.data,status=-1)
                 db.session.add(transaction)
         db.session.commit()
