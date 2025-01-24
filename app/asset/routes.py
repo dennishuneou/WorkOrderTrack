@@ -123,16 +123,15 @@ def CalculateScore(completed):
                 lastwo = unit.wo
                 cntinwo= 0.0
                 maxunitinabox = 25
-                print(unit.wo)
         # Will not count RMA case        
         if "RNTA" not in unit.wo:
             cntinwo      = cntinwo + 1.0
-            if unit.packgo == True :
-                continue 
             unitscoreinfo  = basicscoreinfo.filter_by(pn=unit.pn)
             unitbuild    = 6
-            unittestonly = 3
+            unittestonly = 3    
             unitgpu      = 0    
+            if unit.packgo == True :
+                continue
             if unitscoreinfo.count() :
                 unittestonly = unitscoreinfo[0].testonlypoints
                 unitbuild    = unitscoreinfo[0].buildpoints
@@ -146,21 +145,24 @@ def CalculateScore(completed):
                    or "PCIe-NX154" in unit.pn or "PCIe-NX156" in unit.pn : 
                 unitbuild    = 6
                 unittestonly = 3
+                maxunitinabox= 4 
                 # NRU-51V/51V+ 52S/52S+  7/3
             elif "NRU-51V" in unit.pn or "NRU-52S" in unit.pn :
                 unitbuild    = 7
                 unittestonly = 3
+                maxunitinabox= 4 
                 # NRU-110V/120S/220S     8/4
             elif "NRU-110V" in unit.pn or "NRU-120S" in unit.pn\
                     or "NRU-220S" in unit.pn :
                 unitbuild    = 8
                 unittestonly = 4
+                maxunitinabox= 4 
                 # NRU-222S/230V/240AWP   8/5
             elif "NRU-222S" in unit.pn or "NRU-230V" in unit.pn\
                     or "NRU-240S" in unit.pn :
                 unitbuild    = 8
                 unittestonly = 5
-
+                maxunitinabox= 4 
             if testonly(unit) :
                 BuildScore = BuildScore + unittestonly
                 #check disk installation     
@@ -193,7 +195,7 @@ def CalculateScore(completed):
     if cntinwo!= 0 :
         PackScore = PackScore + math.ceil( cntinwo / maxunitinabox)*2
     #calculate pack score by workorder
-    return BuildScore
+    return (BuildScore+PackScore)
 
 @main.route('/takemore', methods=['GET', 'POST'])
 @login_required
