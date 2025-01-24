@@ -487,6 +487,7 @@ class AddWorkorderForm(FlaskForm):
     withcan  = BooleanField('Including CAN')
     withfg5g = BooleanField('Including 4G/5G Module')
     ospreinstalled = BooleanField('OS Preinstalled')
+    osactivation = BooleanField('OS Activation')
     diskpreinstalled = BooleanField('Disk Preinstalled')
 
     disksize = StringField('Disk(etc: SSD256GBx1 NVME1TBx1)')
@@ -524,6 +525,7 @@ class EditOneComputerForm(FlaskForm):
     withcan  = BooleanField('Including CAN')
     withfg5g = BooleanField('Including 4G/5G Module')
     ospreinstalled = BooleanField('OS Preinstalled')
+    osactivation = BooleanField('OS Activation')
     diskpreinstalled = BooleanField('Disk Preinstalled')
 
     disksize = StringField('Disk(etc: SSD256GBx1 NVME1TBx1)')
@@ -561,6 +563,7 @@ class ReviewOneComputerForm(FlaskForm):
     withcan  = BooleanField('Including CAN')
     withfg5g = BooleanField('Including 4G/5G Module')
     ospreinstalled = BooleanField('OS Preinstalled')
+    osactivation = BooleanField('OS Activation')
     diskpreinstalled = BooleanField('Disk Preinstalled')
 
     disksize = StringField('Disk(etc: SSD256GBx1 NVME1TBx1)',render_kw={'readonly': True})

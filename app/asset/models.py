@@ -16,7 +16,8 @@ class PnMap(db.Model):
     customized  = db.Column(db.Integer, nullable=True)
     testonlypoints = db.Column(db.Integer, nullable=True)
     gpu  = db.Column(db.Integer, nullable=True)
-    def __init__(self, pn, biosv,prefix, net, poe, ign, sop, unitsinabox, buildpoints, customized, testonlypoints,gpu):
+    extra  = db.Column(db.REAL, nullable=True)
+    def __init__(self, pn, biosv,prefix, net, poe, ign, sop, unitsinabox, buildpoints, customized, testonlypoints,gpu,extra):
         self.pn = pn
         self.biosv = biosv
         self.pn = pn
@@ -30,7 +31,7 @@ class PnMap(db.Model):
         self.customized = customized
         self.testonlypoints = testonlypoints
         self.gpu = gpu
-
+        self.extra = extra
 class WorkOrder(db.Model):
     __tablename__ = 'workorder'
 
@@ -66,8 +67,11 @@ class WorkOrder(db.Model):
     withfg5g=db.Column(db.Boolean, nullable=True)
     ospreinstalled=db.Column(db.Boolean, nullable=True)
     diskpreinstalled=db.Column(db.Boolean, nullable=True)
+    osactivation=db.Column(db.Boolean, nullable=True)
 
-    def __init__(self, wo, customers, pn, csn, cputype, memorysize, gpu, withwifi, withcan,withfg5g, ospreinstalled, diskpreinstalled, disksize, cpuinstall, memoryinstall, gpuinstall,  wifiinstall, caninstall, mezioinstall, fg5ginstall, osinstall, packgo, asid, insid,astime, intime, csid, cstime, tktime, ldtime, status):
+    def __init__(self, wo, customers, pn, csn, cputype, memorysize, gpu, withwifi, withcan,withfg5g, ospreinstalled, diskpreinstalled,\
+                disksize, cpuinstall, memoryinstall, gpuinstall,  wifiinstall, caninstall, mezioinstall, fg5ginstall, osinstall, packgo,\
+                asid, insid,astime, intime, csid, cstime, tktime, ldtime, status,osactivation):
         self.wo = wo
         self.customers = customers
         self.pn = pn
@@ -99,6 +103,7 @@ class WorkOrder(db.Model):
         self.cstime = cstime
         self.ldtime = ldtime
         self.status = status
+        self.osactivation = osactivation
         
     def __repr__(self):
         return '{} by {}'.format(self.wo)

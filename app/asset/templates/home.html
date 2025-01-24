@@ -12,8 +12,11 @@
                 <div class="col text-left">
                     <h3 class="text-c-green mb-0">  <span class="text-muted">Today</span> </h3>
                 </div>
+                <div class="col text-left">
+                    <h3 class="text-c-green mb-0">{{ cntToday[0] }} </h3>
+                </div>
                 <div class="col text-right">
-                    <h3 class="text-c-green mb-0">  {{ cntToday[0] }}</h3>
+                    <h3 class="text-c-green mb-0">  {{ cntToday[5] }}</h3>
                 </div>
             </div>
         </div>
@@ -98,8 +101,11 @@
                     <div class="col text-left">
                         <h3 class="text-c-green mb-0">  <span class="text-muted">7-Days</span> </h3>
                     </div>
+                    <div class="col text-left">
+                        <h3 class="text-c-green mb-0"> {{ cnt7day[0] }} </h3>
+                    </div>
                     <div class="col text-right">
-                        <h3 class="text-c-green mb-0">  {{ cnt7day[0] }}</h3>
+                        <h3 class="text-c-green mb-0">  {{ cnt7day[5] }}</h3>
                     </div>
                 </div>
             </div>
@@ -184,8 +190,11 @@
                         <div class="col text-left">
                             <h3 class="text-c-green mb-0">  <span class="text-muted">28-Days</span> </h3>
                         </div>
+                        <div class="col text-left">
+                            <h3 class="text-c-green mb-0">{{ cnt28day[0] }} </h3>
+                        </div>
                         <div class="col text-right">
-                            <h3 class="text-c-green mb-0">  {{ cnt28day[0] }}</h3>
+                            <h3 class="text-c-green mb-0">  {{ cnt28day[5] }}</h3>
                         </div>
                     </div>
                 </div>
@@ -696,6 +705,7 @@
                             <th> Ins GPU</th>
                             <th> Ins Module</th>
                             <th> Pack&Go</th>
+                            <th> Score</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -716,6 +726,7 @@
                         <td> {{ rows[12] }}</td>
                         <td> {{ rows[13] }}</td>
                         <td> {{ rows[14] }}</td>
+                        <td> {{ rows[15] }}</td>
                     </tr>
                     {% endfor %}
                     </tbody>
@@ -792,6 +803,7 @@
                             <th> Ins GPU</th>
                             <th> Ins Module</th>
                             <th> Pack&Go</th>
+                            <th> Score</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -812,6 +824,7 @@
                         <td> {{ rows[12] }}</td>
                         <td> {{ rows[13] }}</td>
                         <td> {{ rows[14] }}</td>
+                        <td> {{ rows[15] }}</td>
                     </tr>
                     {% endfor %}
                     </tbody>
@@ -833,6 +846,7 @@
                             <th data-sortable="true"> Built at </th>
                             <th data-sortable="true"> Inspect By </th>
                             <th data-sortable="true"> Inspect at </th>
+                            <th data-sortable="true"> BuildScore </th>
                         </tr>
                     </thead>
                     <tbody>
@@ -849,6 +863,7 @@
                         <td> {{ rows[8] }}</td>
                         <td> {{ rows[9] }}</td>
                         <td> {{ rows[10] }}</td>
+                        <td> {{ rows[11] }}</td>
                     </tr>
                     {% endfor %}
                     </tbody>

@@ -12,6 +12,188 @@ import datetime
 from sqlalchemy import func
 from app.auth.forms  import get_userrole, get_usersname, get_useridbyname, get_username
 from app.auth.models import User
+import math
+#cputype            null or CPU type 
+#memorysize         null or memory size
+#disksize           null or disk size
+#cpuinstall         True or False, use for score  
+#memoryinstall      True or False, use for score  
+#gpuinstall         True or False, use for score 
+#wifiinstall        True or False, use for score 
+#caninstall         True or False, use for score 
+#mezioinstall       True or False, use for score 
+#fg5ginstall        True or False, use for score 
+#osinstall          null or OS name, use for score 
+#gpu                True or False or null, use for workorder auto check and score 
+#withwifi           True or False or null, use for workorder auto check  
+#withcan            True or False or null, use for workorder auto check 
+#withfg5g           True or False or null, use for workorder auto check 
+#ospreinstalled     True or False or null
+#diskpreinstalled   True or False or null
+#install cpu,memory or disk\
+def testonly(unit): 
+    if unit.cpuinstall or unit.memoryinstall or (unit.diskpreinstalled == False) :
+        return  False 
+    else :    
+        return  True
+def CalculateUnitBuildScore(unit):
+    BuildScore=0
+    basicscoreinfo = PnMap.query.filter(PnMap.id!=0)
+    # Will not count RMA case        
+    if "RNTA" not in unit.wo:
+        if unit.packgo != True :
+            unitscoreinfo  = basicscoreinfo.filter_by(pn=unit.pn)
+            unitbuild    = 6
+            unittestonly = 3
+            unitgpu      = 0    
+            if unitscoreinfo.count() :
+                unittestonly = unitscoreinfo[0].testonlypoints
+                unitbuild    = unitscoreinfo[0].buildpoints
+                unitgpu      = unitscoreinfo[0].gpu 
+                maxunitinabox= unitscoreinfo[0].unitsinabox  
+                # NRU ? NX ? PCIe ? IGT ? FLYC?
+                # NRU-154/156            6/3
+                # PCIe-NX154/PCIe-NX156  6/3
+            elif "NRU-154" in unit.pn or "NRU-156" in unit.pn\
+                    or "IGT-" in unit.pn or "FLYC" in unit.pn\
+                    or "PCIe-NX154" in unit.pn or "PCIe-NX156" in unit.pn : 
+                unitbuild    = 6
+                unittestonly = 3
+                # NRU-51V/51V+ 52S/52S+  7/3
+            elif "NRU-51V" in unit.pn or "NRU-52S" in unit.pn :
+                unitbuild    = 7
+                unittestonly = 3
+                # NRU-110V/120S/220S     8/4
+            elif "NRU-110V" in unit.pn or "NRU-120S" in unit.pn\
+                    or "NRU-220S" in unit.pn :
+                unitbuild    = 8
+                unittestonly = 4
+                # NRU-222S/230V/240AWP   8/5
+            elif "NRU-222S" in unit.pn or "NRU-230V" in unit.pn\
+                    or "NRU-240S" in unit.pn :
+                unitbuild    = 8
+                unittestonly = 5
+
+            if testonly(unit) :
+                BuildScore = BuildScore + unittestonly
+                #check disk installation     
+                if unit.diskpreinstalled != True and len(unit.memorysize.strip()):
+                    BuildScore = BuildScore + 2 
+            else :
+                BuildScore = BuildScore + unitbuild
+            #check OS installation 
+            if unit.ospreinstalled != True and len(unit.osinstall.strip()):
+                BuildScore = BuildScore + 1
+            #check OS activiation 
+            if unit.osactivation != True and len(unit.osinstall.strip()):
+                BuildScore = BuildScore + 0.5
+            #check Wifi installation 
+            if unit.wifiinstall == True:
+                BuildScore = BuildScore + 0.5
+            #check can installation 
+            if unit.caninstall == True:
+                BuildScore = BuildScore + 0.5
+            #check mezio installation 
+            if unit.mezioinstall == True :
+                BuildScore = BuildScore + 0.25
+            #check fg5g installation 
+            if unit.fg5ginstall == True:
+                BuildScore = BuildScore + 1
+            #check gpu install
+            if unit.gpuinstall == True :
+                BuildScore = BuildScore + unitgpu  
+    return BuildScore
+
+def CalculateScore(completed):
+    BuildScore=0
+    PackScore =0
+    basicscoreinfo = PnMap.query.filter(PnMap.id!=0)
+    completed = completed.order_by(WorkOrder.wo)
+    lastwo = ""
+    cntinwo= 0.0
+    #PCIe card,IGT,FLYC-300
+    maxunitinabox = 25 
+    #calculate build and test score
+    for unit in completed :
+        #not count rma CASE
+        if unit.wo != lastwo :
+            #calculate pack score
+            if cntinwo!= 0 :
+                PackScore = PackScore + math.ceil( cntinwo / maxunitinabox)*2
+                lastwo = unit.wo
+                cntinwo= 0.0
+                maxunitinabox = 25
+                print(unit.wo)
+        # Will not count RMA case        
+        if "RNTA" not in unit.wo:
+            cntinwo      = cntinwo + 1.0
+            if unit.packgo == True :
+                continue 
+            unitscoreinfo  = basicscoreinfo.filter_by(pn=unit.pn)
+            unitbuild    = 6
+            unittestonly = 3
+            unitgpu      = 0    
+            if unitscoreinfo.count() :
+                unittestonly = unitscoreinfo[0].testonlypoints
+                unitbuild    = unitscoreinfo[0].buildpoints
+                unitgpu      = unitscoreinfo[0].gpu 
+                maxunitinabox= unitscoreinfo[0].unitsinabox  
+                # NRU ? NX ? PCIe ? IGT ? FLYC?
+                # NRU-154/156            6/3
+                # PCIe-NX154/PCIe-NX156  6/3
+            elif "NRU-154" in unit.pn or "NRU-156" in unit.pn\
+                   or "IGT-" in unit.pn or "FLYC" in unit.pn\
+                   or "PCIe-NX154" in unit.pn or "PCIe-NX156" in unit.pn : 
+                unitbuild    = 6
+                unittestonly = 3
+                # NRU-51V/51V+ 52S/52S+  7/3
+            elif "NRU-51V" in unit.pn or "NRU-52S" in unit.pn :
+                unitbuild    = 7
+                unittestonly = 3
+                # NRU-110V/120S/220S     8/4
+            elif "NRU-110V" in unit.pn or "NRU-120S" in unit.pn\
+                    or "NRU-220S" in unit.pn :
+                unitbuild    = 8
+                unittestonly = 4
+                # NRU-222S/230V/240AWP   8/5
+            elif "NRU-222S" in unit.pn or "NRU-230V" in unit.pn\
+                    or "NRU-240S" in unit.pn :
+                unitbuild    = 8
+                unittestonly = 5
+
+            if testonly(unit) :
+                BuildScore = BuildScore + unittestonly
+                #check disk installation     
+                if unit.diskpreinstalled != True and len(unit.memorysize.strip()):
+                    BuildScore = BuildScore + 2 
+            else :
+                BuildScore = BuildScore + unitbuild
+            #check OS installation 
+            if unit.ospreinstalled != True and len(unit.osinstall.strip()):
+                BuildScore = BuildScore + 1
+            #check OS activiation 
+            if unit.osactivation != True and len(unit.osinstall.strip()):
+                BuildScore = BuildScore + 0.5
+            #check Wifi installation 
+            if unit.wifiinstall == True:
+                BuildScore = BuildScore + 0.5
+            #check can installation 
+            if unit.caninstall == True:
+                BuildScore = BuildScore + 0.5
+            #check mezio installation 
+            if unit.mezioinstall == True :
+                BuildScore = BuildScore + 0.25
+            #check fg5g installation 
+            if unit.fg5ginstall == True:
+                BuildScore = BuildScore + 1
+            #check gpu install
+            if unit.gpuinstall == True :
+                BuildScore = BuildScore + unitgpu  
+    #last wororder            
+    if cntinwo!= 0 :
+        PackScore = PackScore + math.ceil( cntinwo / maxunitinabox)*2
+    #calculate pack score by workorder
+    return BuildScore
 
 @main.route('/takemore', methods=['GET', 'POST'])
 @login_required
@@ -110,7 +292,7 @@ def display_workorders():
     completed = completed.order_by(WorkOrder.wo)
     completedlastwday = completedlastwday.order_by(WorkOrder.wo)
     #Total
-    cntToday = [0,0,0,0,0]
+    cntToday = [0,0,0,0,0,0]
     cntToday[0] = completed.count()
     #Build, not Pack & Go
     cntToday[1] = cntToday[0] - completed.filter_by(packgo=True).count()
@@ -120,9 +302,10 @@ def display_workorders():
     cntToday[3] = cntToday[1] - completed.filter_by(gpuinstall = False,wifiinstall = False, caninstall = False, mezioinstall = False, packgo=False).count()
     #Gpu, Installed GPU
     cntToday[4] = completed.filter_by(gpuinstall=True).count()
-
+    #Score
+    cntToday[5] = CalculateScore(completed)
     #Total
-    cnt7day = [0,0,0,0,0]
+    cnt7day = [0,0,0,0,0,0]
     cnt7day[0] = completed7day.count()
     #Build, not Pack & Go
     cnt7day[1] = cnt7day[0] - completed7day.filter_by(packgo=True).count()
@@ -132,9 +315,11 @@ def display_workorders():
     cnt7day[3] = cnt7day[1] - completed7day.filter_by(gpuinstall = False,wifiinstall = False, caninstall = False, mezioinstall = False, packgo=False).count()
     #Gpu, Installed GPU
     cnt7day[4] = completed7day.filter_by(gpuinstall=True).count()
+    #Score
+    cnt7day[5] = CalculateScore(completed7day)
 
     #Total
-    cnt28day = [0,0,0,0,0]
+    cnt28day = [0,0,0,0,0,0]
     cnt28day[0] = completed28day.count()
     #Build, not Pack & Go
     cnt28day[1] = cnt28day[0] - completed28day.filter_by(packgo=True).count()
@@ -144,7 +329,8 @@ def display_workorders():
     cnt28day[3] = cnt28day[1] - completed28day.filter_by(gpuinstall = False,wifiinstall = False, caninstall = False, mezioinstall = False, packgo=False).count()
     #Gpu, Installed GPU
     cnt28day[4] = completed28day.filter_by(gpuinstall=True).count()
-    
+    cnt28day[5] = CalculateScore(completed28day)
+
     #Completed last weekday by user
     tablesearchsummary1day = []
     users = User.query.all()    
@@ -183,6 +369,8 @@ def display_workorders():
                 rows.append(nInsModule)
                 nPackgo= completedssbyuser.filter(WorkOrder.packgo==True).count()
                 rows.append(nPackgo)
+                nScore = CalculateScore(completedssbyuser)
+                rows.append(nScore)
                 tablesearchsummary1day.append(rows)
     #Completed 7 days by user
     tablesearchsummary = []
@@ -222,6 +410,8 @@ def display_workorders():
                 rows.append(nInsModule)
                 nPackgo= completedssbyuser.filter(WorkOrder.packgo==True).count()
                 rows.append(nPackgo)
+                nScore = CalculateScore(completedssbyuser)
+                rows.append(nScore)
                 tablesearchsummary.append(rows)
     completedlastwday = completedlastwday.filter(WorkOrder.packgo!=True).order_by(WorkOrder.asid)             
    
@@ -241,6 +431,7 @@ def display_workorders():
         rows.append(workord.astime.strftime("%m/%d %H:%M"))
         rows.append(get_username(workord.insid))
         rows.append(workord.intime.strftime("%m/%d %H:%M"))
+        rows.append(CalculateUnitBuildScore(workord))
         searchtable.append(rows)
     return render_template('home.html', todoworkorder= todoworkorder, pendingworkorder= pendingworkorder, processing=processing, completed=completed, completedlastwday=completedlastwday,cntToday=cntToday,
                           cnt7day=cnt7day,cnt28day=cnt28day,tablesearchsummary=tablesearchsummary,tablesearchsummary1day=tablesearchsummary1day,searchtable=searchtable,userrole=role)
@@ -603,6 +794,7 @@ def EditOneComputer(id):
         workorder.withcan=form.withcan.data
         workorder.withfg5g=form.withfg5g.data
         workorder.ospreinstalled=form.ospreinstalled.data
+        workorder.osactivation=form.osactivation.data
         workorder.diskpreinstalled=form.diskpreinstalled.data
         if form.operator.data == None :
             asidset =-1
@@ -756,7 +948,8 @@ def add_workorder():
                 transaction = WorkOrder(wo=form.wo.data, customers=form.customers.data, pn=str(form.pn.data), csn=x.strip(), 
                 cputype=form.cputype.data,memorysize=form.memorysize.data,disksize=form.disksize.data,cpuinstall=form.cpuinstall.data,memoryinstall=form.memoryinstall.data,gpuinstall=form.gpuinstall.data,
                 wifiinstall=form.wifiinstall.data,mezioinstall=form.mezioinstall.data,caninstall=form.caninstall.data,fg5ginstall=form.fg5ginstall.data,
-                gpu=form.gpu.data,withwifi=form.withwifi.data,withcan=form.withcan.data,withfg5g=form.withfg5g.data,ospreinstalled=form.ospreinstalled.data,diskpreinstalled=form.diskpreinstalled.data,
+                gpu=form.gpu.data,withwifi=form.withwifi.data,withcan=form.withcan.data,withfg5g=form.withfg5g.data,ospreinstalled=form.ospreinstalled.data,
+                osactivation=form.osactivation.data,diskpreinstalled=form.diskpreinstalled.data,
                 osinstall=form.osinstall.data,packgo=form.packgo.data,asid=asidset,insid=-1,astime=None,intime=None,tktime=None,csid=current_user.id,cstime=datetime.datetime.now(),ldtime=form.ldtime.data,status=-1)
                 db.session.add(transaction)
         db.session.commit()
