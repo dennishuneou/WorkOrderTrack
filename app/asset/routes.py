@@ -36,20 +36,22 @@ def testonly(unit):
         return  False 
     else :    
         return  True
-def CalculateUnitBuildScore(unit):
+def CalculateUnitBuildScore(unit,basicscoreinfo):
     BuildScore=0
-    basicscoreinfo = PnMap.query.filter(PnMap.id!=0)
+    #basicscoreinfo = PnMap.query.filter(PnMap.id!=0)
     # Will not count RMA case        
     if "RNTA" not in unit.wo:
         if unit.packgo != True :
             unitscoreinfo  = basicscoreinfo.filter_by(pn=unit.pn)
             unitbuild    = 6
             unittestonly = 3
-            unitgpu      = 0    
+            unitgpu      = 0
+            unitextra = 0    
             if unitscoreinfo.count() :
                 unittestonly = unitscoreinfo[0].testonlypoints
                 unitbuild    = unitscoreinfo[0].buildpoints
-                unitgpu      = unitscoreinfo[0].gpu 
+                unitgpu      = unitscoreinfo[0].gpu
+                unitextra    = unitscoreinfo[0].extra  
                 maxunitinabox= unitscoreinfo[0].unitsinabox  
                 # NRU ? NX ? PCIe ? IGT ? FLYC?
                 # NRU-154/156            6/3
@@ -102,12 +104,13 @@ def CalculateUnitBuildScore(unit):
             #check gpu install
             if unit.gpuinstall == True :
                 BuildScore = BuildScore + unitgpu  
+            BuildScore = BuildScore + unitextra
     return BuildScore
 
-def CalculateScore(completed):
+def CalculateScore(completed,basicscoreinfo):
     BuildScore=0
     PackScore =0
-    basicscoreinfo = PnMap.query.filter(PnMap.id!=0)
+    #basicscoreinfo = PnMap.query.filter(PnMap.id!=0)
     completed = completed.order_by(WorkOrder.wo)
     lastwo = ""
     cntinwo= 0.0
@@ -125,44 +128,49 @@ def CalculateScore(completed):
                 maxunitinabox = 25
         # Will not count RMA case        
         if "RNTA" not in unit.wo:
-            cntinwo      = cntinwo + 1.0
-            unitscoreinfo  = basicscoreinfo.filter_by(pn=unit.pn)
-            unitbuild    = 6
-            unittestonly = 3    
-            unitgpu      = 0    
-            if unit.packgo == True :
-                continue
-            if unitscoreinfo.count() :
-                unittestonly = unitscoreinfo[0].testonlypoints
-                unitbuild    = unitscoreinfo[0].buildpoints
-                unitgpu      = unitscoreinfo[0].gpu 
-                maxunitinabox= unitscoreinfo[0].unitsinabox  
+            #first unit in current wo
+            if cntinwo == 0:
+               unitscoreinfo  = basicscoreinfo.filter_by(pn=unit.pn)
+               unitbuild = 6
+               unittestonly = 3
+               unitgpu = 0
+               unitextra=0
+            cntinwo = cntinwo + 1
+            if unit.packgo == True:
+               continue
+            if cntinwo == 1:
+               if unitscoreinfo.count() :
+                 unittestonly = unitscoreinfo[0].testonlypoints
+                 unitbuild    = unitscoreinfo[0].buildpoints
+                 unitgpu      = unitscoreinfo[0].gpu
+                 unitextra    = unitscoreinfo[0].extra 
+                 maxunitinabox= unitscoreinfo[0].unitsinabox  
                 # NRU ? NX ? PCIe ? IGT ? FLYC?
                 # NRU-154/156            6/3
                 # PCIe-NX154/PCIe-NX156  6/3
-            elif "NRU-154" in unit.pn or "NRU-156" in unit.pn\
+               elif "NRU-154" in unit.pn or "NRU-156" in unit.pn\
                    or "IGT-" in unit.pn or "FLYC" in unit.pn\
                    or "PCIe-NX154" in unit.pn or "PCIe-NX156" in unit.pn : 
-                unitbuild    = 6
-                unittestonly = 3
-                maxunitinabox= 4 
+                 unitbuild    = 6
+                 unittestonly = 3
+                 maxunitinabox= 4 
                 # NRU-51V/51V+ 52S/52S+  7/3
-            elif "NRU-51V" in unit.pn or "NRU-52S" in unit.pn :
-                unitbuild    = 7
-                unittestonly = 3
-                maxunitinabox= 4 
+               elif "NRU-51V" in unit.pn or "NRU-52S" in unit.pn :
+                 unitbuild    = 7
+                 unittestonly = 3
+                 maxunitinabox= 4 
                 # NRU-110V/120S/220S     8/4
-            elif "NRU-110V" in unit.pn or "NRU-120S" in unit.pn\
+               elif "NRU-110V" in unit.pn or "NRU-120S" in unit.pn\
                     or "NRU-220S" in unit.pn :
-                unitbuild    = 8
-                unittestonly = 4
-                maxunitinabox= 4 
+                 unitbuild    = 8
+                 unittestonly = 4
+                 maxunitinabox= 4 
                 # NRU-222S/230V/240AWP   8/5
-            elif "NRU-222S" in unit.pn or "NRU-230V" in unit.pn\
+               elif "NRU-222S" in unit.pn or "NRU-230V" in unit.pn\
                     or "NRU-240S" in unit.pn :
-                unitbuild    = 8
-                unittestonly = 5
-                maxunitinabox= 4 
+                 unitbuild    = 8
+                 unittestonly = 5
+                 maxunitinabox= 4 
             if testonly(unit) :
                 BuildScore = BuildScore + unittestonly
                 #check disk installation     
@@ -191,6 +199,7 @@ def CalculateScore(completed):
             #check gpu install
             if unit.gpuinstall == True :
                 BuildScore = BuildScore + unitgpu  
+            BuildScore = BuildScore + unitextra
     #last wororder            
     if cntinwo!= 0 :
         PackScore = PackScore + math.ceil( cntinwo / maxunitinabox)*2
@@ -257,6 +266,7 @@ def inspectmore():
 @login_required
 def display_workorders():
     role = get_userrole(current_user.id)
+    basicscoreinfo = PnMap.query.filter(PnMap.id!=0)
     if  datetime.datetime.today().weekday() == 0:
         delta = 3
     else :
@@ -305,7 +315,7 @@ def display_workorders():
     #Gpu, Installed GPU
     cntToday[4] = completed.filter_by(gpuinstall=True).count()
     #Score
-    cntToday[5] = CalculateScore(completed)
+    cntToday[5] = CalculateScore(completed.order_by(WorkOrder.wo),basicscoreinfo)
     #Total
     cnt7day = [0,0,0,0,0,0]
     cnt7day[0] = completed7day.count()
@@ -318,7 +328,7 @@ def display_workorders():
     #Gpu, Installed GPU
     cnt7day[4] = completed7day.filter_by(gpuinstall=True).count()
     #Score
-    cnt7day[5] = CalculateScore(completed7day)
+    cnt7day[5] = CalculateScore(completed7day.order_by(WorkOrder.wo),basicscoreinfo)
 
     #Total
     cnt28day = [0,0,0,0,0,0]
@@ -331,7 +341,7 @@ def display_workorders():
     cnt28day[3] = cnt28day[1] - completed28day.filter_by(gpuinstall = False,wifiinstall = False, caninstall = False, mezioinstall = False, packgo=False).count()
     #Gpu, Installed GPU
     cnt28day[4] = completed28day.filter_by(gpuinstall=True).count()
-    cnt28day[5] = CalculateScore(completed28day)
+    cnt28day[5] = CalculateScore(completed28day.order_by(WorkOrder.wo),basicscoreinfo)
 
     #Completed last weekday by user
     tablesearchsummary1day = []
@@ -371,7 +381,7 @@ def display_workorders():
                 rows.append(nInsModule)
                 nPackgo= completedssbyuser.filter(WorkOrder.packgo==True).count()
                 rows.append(nPackgo)
-                nScore = CalculateScore(completedssbyuser)
+                nScore = CalculateScore(completedssbyuser.order_by(WorkOrder.wo),basicscoreinfo)
                 rows.append(nScore)
                 tablesearchsummary1day.append(rows)
     #Completed 7 days by user
@@ -412,13 +422,13 @@ def display_workorders():
                 rows.append(nInsModule)
                 nPackgo= completedssbyuser.filter(WorkOrder.packgo==True).count()
                 rows.append(nPackgo)
-                nScore = CalculateScore(completedssbyuser)
+                nScore = CalculateScore(completedssbyuser.order_by(WorkOrder.wo),basicscoreinfo)
                 rows.append(nScore)
                 tablesearchsummary.append(rows)
     completedlastwday = completedlastwday.filter(WorkOrder.packgo!=True).order_by(WorkOrder.asid)             
    
     searchtable = []  
-    seq = 0;              
+    seq = 0;
     for workord in completed7day.filter(WorkOrder.packgo!=True).order_by(WorkOrder.asid):
         rows = []
         seq = seq + 1
@@ -433,7 +443,7 @@ def display_workorders():
         rows.append(workord.astime.strftime("%m/%d %H:%M"))
         rows.append(get_username(workord.insid))
         rows.append(workord.intime.strftime("%m/%d %H:%M"))
-        rows.append(CalculateUnitBuildScore(workord))
+        rows.append(CalculateUnitBuildScore(workord,basicscoreinfo))
         searchtable.append(rows)
     return render_template('home.html', todoworkorder= todoworkorder, pendingworkorder= pendingworkorder, processing=processing, completed=completed, completedlastwday=completedlastwday,cntToday=cntToday,
                           cnt7day=cnt7day,cnt28day=cnt28day,tablesearchsummary=tablesearchsummary,tablesearchsummary1day=tablesearchsummary1day,searchtable=searchtable,userrole=role)
