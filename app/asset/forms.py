@@ -189,19 +189,19 @@ def report_check(form, field):
     errorcnt = 0
     errorstr = ""
     memorycnted = 0
-    if (configure[0].caninstall) and cancnt == 0 :
+    if (configure[0].caninstall  or configure[0].withcan) and cancnt == 0 :
         if totalnetportcnt > 9 :
             warning = "WARNING: Too much Ethernet ports, Please check manual"     
         else :     
             errorcnt = errorcnt + 1
             errorstr = errorstr + "CAN not found! "
-    if (configure[0].wifiinstall) and wlpcnt == 0 :
+    if (configure[0].wifiinstall or configure[0].withwifi) and wlpcnt == 0 :
         if totalnetportcnt > 9 :
             warning = "WARNING: Too much Ethernet ports, Please check manual"     
         else : 
             errorcnt = errorcnt + 1
             errorstr = errorstr + "Wifi module not found! "
-    if (configure[0].fg5ginstall) and wancnt == 0 :
+    if (configure[0].fg5ginstall or configure[0].withfg5g) and wancnt == 0 :
         if totalnetportcnt > 9 :
             warning = "WARNING: Too much Ethernet ports, Please check manual"     
         else : 
@@ -210,7 +210,7 @@ def report_check(form, field):
     if (configure[0].cpuinstall and (cputype.upper().strip() not in configure[0].cputype.upper().strip()))  :
         errorcnt = errorcnt + 1
         errorstr = errorstr + "CPU on Wo is " + configure[0].cputype.upper() + " VS " + cputype.upper()
-    if  configure[0].memoryinstall  :
+    if  configure[0].memoryinstall  or not configure[0].memorysize:
         #parse memory in the workorder 16GBx2
         memorystr = configure[0].memorysize.upper()
         if ("X" in memorystr) :
@@ -478,7 +478,7 @@ class AddWorkorderForm(FlaskForm):
     ldtime= DateField('Lead Time')
     customers = StringField('Customer Name', validators=[DataRequired(),Length(max=100)])
     pn = StringField('Product Model', validators=[DataRequired(),pn_check,Length(max=100)])
-    csn = StringField('Chassis Serial Number', validators=[DataRequired(),Length(max=600),wocsn_exists], widget=TextArea())
+    csn = StringField('Chassis Serial Number', validators=[DataRequired(),Length(max=2000),wocsn_exists], widget=TextArea())
     cputype = StringField('CPU (etc: i9-12900E)',validators=[Length(max=100),cputype_exists])
     memorysize = StringField('Memory(etc: 16GBX2)',validators=[Length(max=100),memorysize_exists])
     

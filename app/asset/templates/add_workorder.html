@@ -4,7 +4,10 @@
 {% block content %}
     <div class="container">
         <h4 style="margin-left: 45px"> Create New WorkOrder </h4>
-        <hr>
+        <form method="POST" action="" enctype="multipart/form-data">
+            <input type="file" name="file" accept=".doc,.docx">
+            <input type="submit" name="readdocfile" value="Upload">
+        </form>
           {{ form.hidden_tag() }}
           {{ render_form(form) }}
     </div>

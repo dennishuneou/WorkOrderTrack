@@ -13,6 +13,11 @@ from sqlalchemy import func
 from app.auth.forms  import get_userrole, get_usersname, get_useridbyname, get_username
 from app.auth.models import User
 import math
+from werkzeug.utils import secure_filename
+from docx import Document
+import os,docx
+UPLOAD_FOLDER = 'uploads'
+ALLOWED_EXTENSION = {'doc','docx'}
 #cputype            null or CPU type 
 #memorysize         null or memory size
 #disksize           null or disk size
@@ -470,6 +475,7 @@ def query():
     #Search by time, operator name, wo, customer name, pn, csn.
     # user can check the detail of WO and report
     # Name, Customers, WO#, PN, CSN, 
+    basicscoreinfo = PnMap.query.filter(PnMap.id!=0)
     searchtable = []
     tablesearchsummary = []
     if searched == 1 :
@@ -529,6 +535,8 @@ def query():
                         rows.append(nInsModule)
                         nPackgo= completedssbyuser.filter(WorkOrder.packgo==True).count()
                         rows.append(nPackgo)
+                        nScore = CalculateScore(completedssbyuser.order_by(WorkOrder.wo),basicscoreinfo)
+                        rows.append(nScore)
                         tablesearchsummary.append(rows)
         for workord in completedss :
             rows = []
@@ -543,6 +551,7 @@ def query():
             rows.append(workord.astime.strftime("%m/%d %H:%M"))
             rows.append(get_username(workord.insid))
             rows.append(workord.intime.strftime("%m/%d %H:%M"))
+            rows.append(CalculateUnitBuildScore(workord,basicscoreinfo))
             searchtable.append(rows)
     return render_template('query.html', form=form, userrole=role, searched=searched,tablesearchsummary=tablesearchsummary,searchtable=searchtable)
 
@@ -551,6 +560,7 @@ def query():
 def report():
     form = ReportSearchForm()
     searched = 0
+    basicscoreinfo = PnMap.query.filter(PnMap.id!=0)
     if request.method == "POST":
         #Prepare the search results between start date and end date
         if form.enddate.data != None and form.startdate.data != None:
@@ -566,7 +576,7 @@ def report():
     completed7day = WorkOrder.query.filter((func.DATE(WorkOrder.intime)) >= (func.DATE(datetime.datetime.today())-7),WorkOrder.status == 2)
     completed28day = WorkOrder.query.filter((func.DATE(WorkOrder.intime)) >= (func.DATE(datetime.datetime.today())-28),WorkOrder.status == 2)
     #Total
-    cntToday = [0,0,0,0,0]
+    cntToday = [0,0,0,0,0,0]
     cntToday[0] = completed.count()
     #Build, not Pack & Go
     cntToday[1] = cntToday[0] - completed.filter_by(packgo=True).count()
@@ -576,9 +586,11 @@ def report():
     cntToday[3] = cntToday[1] - completed.filter_by(gpuinstall = False,wifiinstall = False, caninstall = False, mezioinstall = False, packgo=False).count()
     #Gpu, Installed GPU
     cntToday[4] = completed.filter_by(gpuinstall=True).count()
+    #Score
+    cntToday[5] = CalculateScore(completed.order_by(WorkOrder.wo),basicscoreinfo)
 
     #Total
-    cnt7day = [0,0,0,0,0]
+    cnt7day = [0,0,0,0,0,0]
     cnt7day[0] = completed7day.count()
     #Build, not Pack & Go
     cnt7day[1] = cnt7day[0] - completed7day.filter_by(packgo=True).count()
@@ -588,9 +600,11 @@ def report():
     cnt7day[3] = cnt7day[1] - completed7day.filter_by(gpuinstall = False,wifiinstall = False, caninstall = False, mezioinstall = False, packgo=False).count()
     #Gpu, Installed GPU
     cnt7day[4] = completed7day.filter_by(gpuinstall=True).count()
+    #Score
+    cnt7day[5] = CalculateScore(completed7day.order_by(WorkOrder.wo),basicscoreinfo)
 
     #Total
-    cnt28day = [0,0,0,0,0]
+    cnt28day = [0,0,0,0,0,0]
     cnt28day[0] = completed28day.count()
     #Build, not Pack & Go
     cnt28day[1] = cnt28day[0] - completed28day.filter_by(packgo=True).count()
@@ -600,6 +614,9 @@ def report():
     cnt28day[3] = cnt28day[1] - completed28day.filter_by(gpuinstall = False,wifiinstall = False, caninstall = False, mezioinstall = False, packgo=False).count()
     #Gpu, Installed GPU
     cnt28day[4] = completed28day.filter_by(gpuinstall=True).count()
+    #Score
+    cnt28day[5] = CalculateScore(completed28day.order_by(WorkOrder.wo),basicscoreinfo)
+
     #Last 2 wwek, 4 week performance
     # Operator name,  POC, Nuvo-5000, Nuvo-6000, Nuvo-7000, Nuvo-8000,Nuvo-9000, Muvo-10000, Pack&Go
     users = User.query.all()
@@ -647,6 +664,8 @@ def report():
                 rows.append(nInsModule)
                 nPackgo= completedssbyuser.filter(WorkOrder.packgo==True).count()
                 rows.append(nPackgo)
+                nScore = CalculateScore(completedssbyuser.order_by(WorkOrder.wo),basicscoreinfo)
+                rows.append(nScore)
                 tablesearch.append(rows)
            if completed1week.count() :
               #calculate POC, Nuvo-5000, Nuvo-6000, Nuvo-7000, Nuvo-8000,Nuvo-9000, Muvo-10000, Pack&Go
@@ -680,6 +699,8 @@ def report():
               rows.append(nInsModule)
               nPackgo= completed1week.filter(WorkOrder.packgo==True).count()
               rows.append(nPackgo)
+              nScore = CalculateScore(completed1week.order_by(WorkOrder.wo),basicscoreinfo)
+              rows.append(nScore)
               table1week.append(rows)
 
            if completed2weeks.count() :
@@ -714,6 +735,8 @@ def report():
               rows.append(nInsModule)
               nPackgo= completed2weeks.filter(WorkOrder.packgo==True).count()
               rows.append(nPackgo)
+              nScore = CalculateScore(completed2weeks.order_by(WorkOrder.wo),basicscoreinfo)
+              rows.append(nScore)
               table2weeks.append(rows)
 
            if completed4weeks.count() :
@@ -748,6 +771,8 @@ def report():
               rows.append(nInsModule)
               nPackgo= completed4weeks.filter(WorkOrder.packgo==True).count()
               rows.append(nPackgo)
+              nScore = CalculateScore(completed4weeks.order_by(WorkOrder.wo),basicscoreinfo)
+              rows.append(nScore)
               table4weeks.append(rows)
 
     return render_template('report.html', cntToday=cntToday,cnt7day=cnt7day,cnt28day=cnt28day,userrole=role,table1week=table1week,table2weeks=table2weeks,table4weeks=table4weeks,form=form,tablesearch=tablesearch,searched=searched)
@@ -944,29 +969,179 @@ def ReturnOneComputer(id):
     flash('ReturnOneComputer successfully')
     return redirect(url_for('main.display_workorders'))    
 
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.',1)[1].lower() in ALLOWED_EXTENSION 
+
+def get_header_tables(doc):
+    header_tables = []
+    for section in doc.sections:
+        header = section.header
+        for element in header._element.xpath('//w:tbl'):
+            table = docx.table.Table(element, header)
+            header_tables.append(table)
+    return header_tables
+
 @main.route('/register/workorder', methods=['GET', 'POST'])
 @login_required
 def add_workorder():
     form = AddWorkorderForm()
     role = get_userrole(current_user.id)
-    if form.validate_on_submit():
-        if form.operator.data == None :
-            asidset =-1
-        else :
-            asidset = form.operator.data.id   
-        csn_m=form.csn.data.split('\n')
-        for x in csn_m:
-            if x.strip() != '' :
-                transaction = WorkOrder(wo=form.wo.data, customers=form.customers.data, pn=str(form.pn.data), csn=x.strip(), 
-                cputype=form.cputype.data,memorysize=form.memorysize.data,disksize=form.disksize.data,cpuinstall=form.cpuinstall.data,memoryinstall=form.memoryinstall.data,gpuinstall=form.gpuinstall.data,
-                wifiinstall=form.wifiinstall.data,mezioinstall=form.mezioinstall.data,caninstall=form.caninstall.data,fg5ginstall=form.fg5ginstall.data,
-                gpu=form.gpu.data,withwifi=form.withwifi.data,withcan=form.withcan.data,withfg5g=form.withfg5g.data,ospreinstalled=form.ospreinstalled.data,
-                osactivation=form.osactivation.data,diskpreinstalled=form.diskpreinstalled.data,
-                osinstall=form.osinstall.data,packgo=form.packgo.data,asid=asidset,insid=-1,astime=None,intime=None,tktime=None,csid=current_user.id,cstime=datetime.datetime.now(),ldtime=form.ldtime.data,status=-1)
-                db.session.add(transaction)
-        db.session.commit()
-        flash('WorkOrder registered successfully')
-        return redirect(url_for('main.display_workorders'))
+    if request.method == 'POST' :
+        if 'readdocfile' in request.form :
+           if request.form['readdocfile'] == 'Upload' and 'file' in  request.files:
+                file = request.files['file'] 
+                print(file.filename)
+                if file.filename == '' :
+                   return 'No selected file'
+                if file and allowed_file(file.filename):
+                    filename = secure_filename(file.filename)
+                    filepath = os.path.join(UPLOAD_FOLDER,filename)
+                    file.save(filepath)
+                    #Extract text fome the .docx file
+                    doc = Document(filepath)
+                    wocontent = []
+                    linecnt = 0
+                    colcnt = 0
+                    foundPN = False
+                    foundWO = False  
+                    searchend = False 
+                    customer = []
+                    #Get customer information
+                    header_tables = get_header_tables(doc)
+                    for table in header_tables :
+                            if not searchend :
+                                for row in table.rows :
+                                    colcnt = 0
+                                    linecontent = []
+                                    if not searchend :
+                                        for cell in row.cells:
+                                            if not foundWO :
+                                                if colcnt == 0 and 'Customer' in cell.text:
+                                                #find 
+                                                    foundWO = True
+                                                    linecontent.append(cell.text)
+                                            else :       
+                                                linecontent.append(cell.text)
+                                            colcnt = colcnt + 1   
+                                        customer.append(linecontent)
+                                searchend =  foundWO
+                    for row in customer :
+                        if 'NTA Order ID' in row:
+                            form.wo.data = row[1]
+                        else :
+                            for cell in row :
+                                if 'Customer' == cell.strip():    
+                                    form.customers.data = row[1]
+                    searchend = False                                          
+                    #Search content
+                    for table in doc.tables :
+                            if not searchend :
+                                for row in table.rows :
+                                    colcnt = 0
+                                    linecontent = []
+                                    if not searchend :
+                                        for cell in row.cells:
+                                            if not foundPN :
+                                                if colcnt == 0 and 'Product Number' in cell.text:
+                                                #find 
+                                                    foundPN = True
+                                                    linecontent.append(cell.text)
+                                            else :       
+                                                linecontent.append(cell.text)
+                                            if 'End of Part' in cell.text :
+                                                searchend = True
+                                                break; 
+                                            colcnt = colcnt + 1   
+                                        wocontent.append(linecontent)
+                                #print(wocontent)
+                    #['Product Number', 'QTY', 'S/N', 'Notes', 'Check']
+                    form.pn.data = wocontent[1][0]
+                    count = int(wocontent[1][1])
+                    form.csn.data = wocontent[1][2]
+                    form.disksize.data=''
+                    for row in wocontent :
+                        if  'DDR3' in row[0] or 'DDR4' in row[0] or 'DDR5' in row[0]:
+                            ddrcnt = int(row[1]) / count
+                            ddrstr = row[0].split('-')
+                            for ddrsize in ddrstr :
+                                if 'GB' in ddrsize :
+                                    form.memorysize.data = ddrsize + 'x' + str(int(ddrcnt))
+                            if 'installed' not in row[3] :
+                                form.memoryinstall.data = True
+                            else :
+                                form.memoryinstall.data = False
+                        elif 'SSD' in row[0].upper():
+                            ssdcnt = int(row[1]) / count
+                            ssdstr = row[0].split('-')
+                            for ssdsize in ssdstr :
+                                if 'GB' in ssdsize.upper() or 'TB' in ssdsize.upper():
+                                    if 'PCIE' in ssdsize.upper():
+                                        form.disksize.data = form.disksize.data + 'NVME' + ssdsize + 'x' + str(int(ssdcnt))
+                                    else :
+                                        form.disksize.data = form.disksize.data + 'SSD' + ssdsize + 'x' + str(int(ssdcnt))    
+                            if 'installed' not in row[3] :
+                                form.diskpreinstalled.data = False
+                            else :
+                                form.diskpreinstalled.data = True
+                        elif 'RTX' in row[0].upper() or 'GTX' in row[0].upper() :
+                            gpucnt = int(row[1]) / count
+                            gpustr = row[0].split('-')
+                            for gpusize in gpustr :
+                                if 'RTX' in gpusize or 'GTX' in gpusize :
+                                    form.gpu.data = gpusize + 'x' + str(int(gpucnt))
+                            if 'installed' not in row[3] :
+                                form.gpuinstall.data = True
+                            else :
+                                form.gpuinstall.data = False
+                        elif  'CAN' in row[0].upper():
+                            form.withcan.data = True
+                            if 'installed' not in row[3] :
+                                form.caninstall.data = True
+                        elif 'WIFI' in row[0].upper():
+                            form.withwifi.data = True
+                            if 'installed' not in row[3] :
+                                form.wifiinstall.data = True
+                        elif 'MEZIO' in row[0].upper():   
+                            if 'installed' not in row[3] :
+                                form.mezioinstall.data = True
+                        elif  'LTE-7455' in row[0] :   
+                            form.withfg5g.data = True
+                            if 'installed' not in row[3] :
+                                form.fg5ginstall.data = True
+                        elif 'WIN' in row[0].upper() or 'UBUNTU' in row[0].upper() or 'JP' in row[0].upper() \
+                                or 'JETSON' in row[0].upper():
+                            form.osinstall.data = row[0]
+                            if 'installed' not in row[3] :
+                                form.osinstall.data = row[0]
+                            else :
+                                form.ospreinstalled.data = True   
+                        elif 'I7-' in row[0].upper() or 'I9-' in row[0].upper() or 'E22' in row[0].upper() \
+                             or 'I3-' in row[0].upper() or 'I5-' in row[0].upper()  \
+                             or 'AGX' in row[0].upper() or 'ORIN' in row[0].upper() :
+                            form.cputype.data = row[0]
+                            if 'installed' not in row[3] :
+                                form.cpuinstall.data = True
+                            else :
+                                form.cpuinstall.data = False
+                    os.remove(filepath)
+        elif form.validate_on_submit():
+            if form.operator.data == None :
+                asidset =-1
+            else :
+                asidset = form.operator.data.id   
+            csn_m=form.csn.data.split('\n')
+            for x in csn_m:
+                if x.strip() != '' :
+                    transaction = WorkOrder(wo=form.wo.data, customers=form.customers.data, pn=str(form.pn.data), csn=x.strip(), 
+                    cputype=form.cputype.data,memorysize=form.memorysize.data,disksize=form.disksize.data,cpuinstall=form.cpuinstall.data,memoryinstall=form.memoryinstall.data,gpuinstall=form.gpuinstall.data,
+                    wifiinstall=form.wifiinstall.data,mezioinstall=form.mezioinstall.data,caninstall=form.caninstall.data,fg5ginstall=form.fg5ginstall.data,
+                    gpu=form.gpu.data,withwifi=form.withwifi.data,withcan=form.withcan.data,withfg5g=form.withfg5g.data,ospreinstalled=form.ospreinstalled.data,
+                    osactivation=form.osactivation.data,diskpreinstalled=form.diskpreinstalled.data,
+                    osinstall=form.osinstall.data,packgo=form.packgo.data,asid=asidset,insid=-1,astime=None,intime=None,tktime=None,csid=current_user.id,cstime=datetime.datetime.now(),ldtime=form.ldtime.data,status=-1)
+                    db.session.add(transaction)
+            db.session.commit()
+            flash('WorkOrder registered successfully')
+            return redirect(url_for('main.display_workorders'))
     return render_template('add_workorder.html', form=form, userrole = role)
 
 @main.route('/CheckWorkOrder/<id>', methods=['GET', 'POST'])

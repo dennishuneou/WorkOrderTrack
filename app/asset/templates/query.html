@@ -99,6 +99,7 @@
                                 <th> Ins GPU</th>
                                 <th> Ins Module</th>
                                 <th> Pack&Go</th>
+                                <th> Score</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -119,6 +120,7 @@
                                 <td> {{ rows[12] }}</td>
                                 <td> {{ rows[13] }}</td>
                                 <td> {{ rows[14] }}</td>
+                                <td> {{ rows[15] }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -171,6 +173,7 @@
                             <th data-sortable="true"> Built Time</th>
                             <th data-sortable="true"> Inspect By</th>
                             <th data-sortable="true"> Inspect Time</th>
+                            <th data-sortable="true"> Score</th>
                             <th> View Report</th>
                         </tr>
                     </thead>
@@ -188,6 +191,7 @@
                             <td> {{ rows[8] }} </td>
                             <td> {{ rows[9] }} </td>
                             <td> {{ rows[10] }} </td>
+                            <td> {{ rows[11] }} </td>
                             <td>       
                                 <a class="btn btn-light btn-sm"
                                 href= "{{ url_for('main.ViewReport',wo=rows[1],csn=rows[4])}}"

@@ -26,6 +26,9 @@
                 <div class="col text-right">
                     <h3 class="text-c-green mb-0">  {{ cntToday[0] }}</h3>
                 </div>
+                <div class="col text-right">
+                    <h3 class="text-c-green mb-0">  {{ cntToday[5] }}</h3>
+                </div>
             </div>
         </div>
         <div class="card-block">
@@ -96,6 +99,9 @@
                     <div class="col text-right">
                         <h3 class="text-c-green mb-0">  {{ cnt7day[0] }}</h3>
                     </div>
+                    <div class="col text-right">
+                        <h3 class="text-c-green mb-0">  {{ cnt7day[5] }}</h3>
+                    </div>
                 </div>
             </div>
             <div class="card-block">
@@ -165,6 +171,9 @@
                         </div>
                         <div class="col text-right">
                             <h3 class="text-c-green mb-0">  {{ cnt28day[0] }}</h3>
+                        </div>
+                        <div class="col text-right">
+                            <h3 class="text-c-green mb-0">  {{ cnt28day[5] }}</h3>
                         </div>
                     </div>
                 </div>
@@ -265,6 +274,7 @@
                                 <th> Ins GPU</th>
                                 <th> Ins Module</th>
                                 <th> Pack&Go</th>
+                                <th> Score </th>
                             </tr>
                         </thead>
                         <tbody>
@@ -285,6 +295,7 @@
                                 <td> {{ rows[12] }}</td>
                                 <td> {{ rows[13] }}</td>
                                 <td> {{ rows[14] }}</td>
+                                <td> {{ rows[15] }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -314,6 +325,7 @@
                                 <th> Ins GPU</th>
                                 <th> Ins Module</th>
                                 <th> Pack&Go</th>
+                                <th> Score</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -334,6 +346,7 @@
                                 <td> {{ rows[12] }}</td>
                                 <td> {{ rows[13] }}</td>
                                 <td> {{ rows[14] }}</td>
+                                <td> {{ rows[15] }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -363,6 +376,7 @@
                                     <th> Ins GPU</th>
                                     <th> Ins Module</th>
                                     <th> Pack&Go</th>
+                                    <th> Score</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -383,6 +397,7 @@
                                     <td> {{ rows[12] }}</td>
                                     <td> {{ rows[13] }}</td>
                                     <td> {{ rows[14] }}</td>
+                                    <td> {{ rows[15] }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -445,6 +460,7 @@
                             <th> Ins GPU</th>
                             <th> Ins Module</th>
                             <th> Pack&Go</th>
+                            <th> Score</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -465,6 +481,7 @@
                             <td> {{ rows[12] }}</td>
                             <td> {{ rows[13] }}</td>
                             <td> {{ rows[14] }}</td>
+                            <td> {{ rows[15] }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
