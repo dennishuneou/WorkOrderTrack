@@ -210,7 +210,7 @@ def report_check(form, field):
     if (configure[0].cpuinstall and (cputype.upper().strip() not in configure[0].cputype.upper().strip()))  :
         errorcnt = errorcnt + 1
         errorstr = errorstr + "CPU on Wo is " + configure[0].cputype.upper() + " VS " + cputype.upper()
-    if  configure[0].memoryinstall  or not configure[0].memorysize:
+    if  configure[0].memoryinstall  or configure[0].memorysize.strip():
         #parse memory in the workorder 16GBx2
         memorystr = configure[0].memorysize.upper()
         if ("X" in memorystr) :

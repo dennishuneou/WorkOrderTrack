@@ -1075,7 +1075,7 @@ def add_workorder():
                             ssdstr = row[0].split('-')
                             for ssdsize in ssdstr :
                                 if 'GB' in ssdsize.upper() or 'TB' in ssdsize.upper():
-                                    if 'PCIE' in ssdsize.upper():
+                                    if 'PCIE' in row[0].upper():
                                         form.disksize.data = form.disksize.data + 'NVME' + ssdsize + 'x' + str(int(ssdcnt))
                                     else :
                                         form.disksize.data = form.disksize.data + 'SSD' + ssdsize + 'x' + str(int(ssdcnt))    
