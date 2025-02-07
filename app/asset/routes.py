@@ -1076,9 +1076,9 @@ def add_workorder():
                             for ssdsize in ssdstr :
                                 if 'GB' in ssdsize.upper() or 'TB' in ssdsize.upper():
                                     if 'PCIE' in row[0].upper():
-                                        form.disksize.data = form.disksize.data + 'NVME' + ssdsize + 'x' + str(int(ssdcnt))
+                                        form.disksize.data = form.disksize.data + 'NVME' + ssdsize + 'x' + str(int(ssdcnt)) + '  '
                                     else :
-                                        form.disksize.data = form.disksize.data + 'SSD' + ssdsize + 'x' + str(int(ssdcnt))    
+                                        form.disksize.data = form.disksize.data + 'SSD' + ssdsize + 'x' + str(int(ssdcnt)) + '  '    
                             if 'installed' not in row[3] :
                                 form.diskpreinstalled.data = False
                             else :
