@@ -70,7 +70,9 @@ def report_check(form, field):
     if "LTN" in configure[0].pn or "IGT" in configure[0].pn: 
         return     
     if "PB-" in configure[0].pn or "FLYC" in configure[0].pn: 
-        return         
+        return        
+    if len(form.report.data.strip()) == 0 :
+        return
     #get contents from report file
     contents=form.report.data.split('\n')
     cputype = ""
