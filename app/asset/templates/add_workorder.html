@@ -8,7 +8,55 @@
             <input type="file" name="file" accept=".doc,.docx">
             <input type="submit" name="readdocfile" value="Upload">
         </form>
-          {{ form.hidden_tag() }}
-          {{ render_form(form) }}
+        <form method="POST">
+            {{ form.hidden_tag() }}
+            <p>{{ form.wo.label }}</p> 
+            <p> {{ form.wo() }}</p>
+            <p>{{ form.ldtime.label }}</p> 
+            <p> {{ form.ldtime() }}</p>
+            <p>{{ form.customers.label }} </p> 
+            <p> {{ form.customers() }}</p>
+            <p>{{ form.pn.label }}</p>
+            <p>{{form.pn(list="id_datalist")}}</p>
+            <datalist id="id_datalist">
+            {% for entry in products %}
+            <option value= {{entry}}>
+             {% endfor%}
+            </datalist>
+            <p>{{ form.csn.label }} </p> 
+            <p> {{ form.csn() }}</p>
+            <p>{{ form.cputype.label }} </p> 
+            <p> {{ form.cputype() }}</p>
+            <p>{{ form.memorysize.label }} </p> 
+            <p> {{ form.memorysize() }}</p>
+            <p>{{ form.gpu.label }} </p> 
+            <p> {{ form.gpu() }}</p>
+            <p>{{ form.withwifi.label }} {{ form.withwifi() }}
+                {{ form.withcan.label }} {{ form.withcan() }}
+            <p> {{ form.withfg5g.label }} {{ form.withfg5g() }}
+                {{ form.osactivation.label }} {{ form.osactivation() }}
+                {{ form.diskpreinstalled.label }} {{ form.diskpreinstalled() }}</p>
+            <p>{{ form.disksize.label }} </p> 
+            <p> {{ form.disksize() }}</p>
+            <p>{{ form.cpuinstall.label }} 
+               {{ form.cpuinstall() }}</p>
+            <p>{{ form.memoryinstall.label }} 
+               {{ form.memoryinstall() }}</p>
+            <p>{{ form.gpuinstall.label }} 
+               {{ form.gpuinstall() }}</p>
+            <p>{{ form.wifiinstall.label }} 
+               {{ form.wifiinstall() }}</p>
+            <p>{{ form.caninstall.label }} 
+               {{ form.caninstall() }}</p>
+            <p>{{ form.mezioinstall.label }}
+               {{ form.mezioinstall() }}</p>
+            <p>{{ form.fg5ginstall.label }} 
+               {{ form.fg5ginstall() }}</p>
+            <p>{{ form.packgo.label }} 
+               {{ form.packgo() }}</p>
+            <p>{{ form.operator.label }} 
+               {{ form.operator() }}</p>
+                {{ form.submit() }}
+        </form>
     </div>
 {% endblock %}

@@ -1142,7 +1142,15 @@ def add_workorder():
             db.session.commit()
             flash('WorkOrder registered successfully')
             return redirect(url_for('main.display_workorders'))
-    return render_template('add_workorder.html', form=form, userrole = role)
+    productlist = PnMap.query.with_entities(PnMap.pn).all()
+    products = []
+    for x in productlist :
+        pns = f"{x}"
+        pns = pns.replace("('","")
+        pns = pns.replace("',)","")
+        print(pns)
+        products.append(pns)
+    return render_template('add_workorder.html', form=form, userrole = role,products=products)
 
 @main.route('/CheckWorkOrder/<id>', methods=['GET', 'POST'])
 @login_required

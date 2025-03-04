@@ -362,7 +362,7 @@ def report_check(form, field):
         if macerrcnt != 0 :
             errorcnt = errorcnt + 1
             errorstr = errorstr + " Ethernet port MAC address error"
-        if totalneonetportcnt < basicinfo[0].net :
+        if totalneonetportcnt < basicinfo[0].net and totalnetportcnt < 10:
             errorcnt = errorcnt + 1
             errorstr = errorstr + " Ethernet ports less"
         if totalneonetportcnt > basicinfo[0].net :
