@@ -1132,7 +1132,7 @@ def add_workorder():
             csn_m=form.csn.data.split('\n')
             for x in csn_m:
                 if x.strip() != '' :
-                    transaction = WorkOrder(wo=form.wo.data, customers=form.customers.data, pn=str(form.pn.data), csn=x.strip(), 
+                    transaction = WorkOrder(wo=form.wo.data.replace("/","-"), customers=form.customers.data, pn=str(form.pn.data), csn=x.strip(), 
                     cputype=form.cputype.data,memorysize=form.memorysize.data,disksize=form.disksize.data,cpuinstall=form.cpuinstall.data,memoryinstall=form.memoryinstall.data,gpuinstall=form.gpuinstall.data,
                     wifiinstall=form.wifiinstall.data,mezioinstall=form.mezioinstall.data,caninstall=form.caninstall.data,fg5ginstall=form.fg5ginstall.data,
                     gpu=form.gpu.data,withwifi=form.withwifi.data,withcan=form.withcan.data,withfg5g=form.withfg5g.data,ospreinstalled=form.ospreinstalled.data,
