@@ -33,8 +33,10 @@
             <p> {{ form.gpu() }}</p>
             <p>{{ form.withwifi.label }} {{ form.withwifi() }}
                 {{ form.withcan.label }} {{ form.withcan() }}
-            <p> {{ form.withfg5g.label }} {{ form.withfg5g() }}
+                {{ form.withfg5g.label }} {{ form.withfg5g() }}</p>
+            <p>    
                 {{ form.osactivation.label }} {{ form.osactivation() }}
+                {{ form.ospreinstalled.label }} {{ form.ospreinstalled() }}
                 {{ form.diskpreinstalled.label }} {{ form.diskpreinstalled() }}</p>
             <p>{{ form.disksize.label }} </p> 
             <p> {{ form.disksize() }}</p>
