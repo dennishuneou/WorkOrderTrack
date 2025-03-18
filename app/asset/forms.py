@@ -192,19 +192,19 @@ def report_check(form, field):
     errorstr = ""
     memorycnted = 0
     if (configure[0].caninstall  or configure[0].withcan) and cancnt == 0 :
-        if totalnetportcnt > 9 :
+        if totalnetportcnt + cancnt > 9 :
             warning = "WARNING: Too much Ethernet ports, Please check manual"     
         else :     
             errorcnt = errorcnt + 1
             errorstr = errorstr + "CAN not found! "
     if (configure[0].wifiinstall or configure[0].withwifi) and wlpcnt == 0 :
-        if totalnetportcnt > 9 :
+        if totalnetportcnt + cancnt> 9 :
             warning = "WARNING: Too much Ethernet ports, Please check manual"     
         else : 
             errorcnt = errorcnt + 1
             errorstr = errorstr + "Wifi module not found! "
     if (configure[0].fg5ginstall or configure[0].withfg5g) and wancnt == 0 :
-        if totalnetportcnt > 9 :
+        if totalnetportcnt + cancnt> 9 :
             warning = "WARNING: Too much Ethernet ports, Please check manual"     
         else : 
             errorcnt = errorcnt + 1
