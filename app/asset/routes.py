@@ -1070,7 +1070,7 @@ def add_workorder():
                                 form.memoryinstall.data = True
                             else :
                                 form.memoryinstall.data = False
-                        elif 'SSD' in row[0].upper():
+                        elif 'SSD' in row[0].upper() or 'HDD' in row[0].upper():
                             ssdcnt = int(row[1]) / count
                             ssdstr = row[0].split('-')
                             for ssdsize in ssdstr :

@@ -317,6 +317,7 @@ def report_check(form, field):
                     found = True
                     diskssdsize_c [pos] = 0
                     break 
+                pos = pos + 1
             if found == False :
                 diskssdmatched = False
                 break    
@@ -331,6 +332,7 @@ def report_check(form, field):
                     found = True
                     disknvmesize_c [pos] = 0
                     break 
+                pos = pos + 1    
             if found == False :
                 disknvmematched = False
                 break
