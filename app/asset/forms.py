@@ -101,7 +101,7 @@ def report_check(form, field):
             if len(mbsn) == 16 :
                 mbsn_prefix = mbsn[0:8]
                 mbsn_sn     = mbsn[8:16]
-            else :
+            elif "SER" not in configure[0].pn:
                 mbsnerr = 1     
             #we will parse MB S/N later
             #POC-40+ Bios Version: EHL.05.43.49.0016
@@ -118,12 +118,18 @@ def report_check(form, field):
             totalnetportcnt = totalnetportcnt + 1
             if "enp" in line and "78:d0:04" in line :
                 totalneonetportcnt =  totalneonetportcnt + 1
+            elif "enp" in line and "9c:6b:00" in line :
+                totalneonetportcnt =  totalneonetportcnt + 1
+            elif "enx" in line and "MAC:" in line :
+                totalneonetportcnt =  totalneonetportcnt + 1    
             elif "enp" in line and "88:88:88:88:87:88" in line :     
                 macerrcnt = macerrcnt + 1
             elif "wlx" in line or "wlp" in line or "wlo" in line:
                 wlpcnt = wlpcnt + 1    
-            elif "can" in line :
+            elif "can0" in line or "can1" in line or "can2" in line or "can3" in line:
                 cancnt = cancnt + 1    
+            elif "can4" in line or "can5" in line or "can6" in line or "can7" in line:
+                cancnt = cancnt + 1        
             elif "wwan" in line :
                 wancnt = wancnt + 1        
         elif "CPU Type" in line:
@@ -137,7 +143,7 @@ def report_check(form, field):
                     elif "7003" in line :       
                         cputype = "7003"
                     else :
-                        cputype = "na"     
+                        cputype = line.replace("CPU Type:","")    
                 else :      
                     words = line.split(' ')
                     for wd in words:
