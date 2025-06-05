@@ -17,6 +17,7 @@ login_manager.session_protection = 'strong'
 def create_app():    
 
     app = Flask(__name__)
+    app.secret_key = 'Neousys@0709'
     #configuration = os.path.join(os.getcwd(), 'config', config_type+'.py')
     app.config.from_pyfile("config.py")
     bootstrap.init_app(app)

@@ -3,7 +3,7 @@ from app.asset.forms import AddWorkorderForm, UploadReportForm, ReviewReportForm
 from app.asset.forms import AddProductForm,QueryProductsForm,EditProductForm,QueryWorkordersForm
 from app.asset import main
 from app.asset.models import WorkOrder, Production, PnMap
-from flask import render_template, flash, request, redirect, url_for
+from flask import render_template, flash, request, redirect, url_for, session
 from app import db
 from app.asset.forms import get_biosversion, get_sopversion
 
@@ -844,7 +844,7 @@ def EditOneComputer(id):
         db.session.commit()
         flash('Update successful')
         #previous_url = form.previous_url.data 
-        redirect(url_for('main.queryworkorder'))
+        #redirect(url_for('main.queryworkorder'))
         #return redirect(url_for('main.display_workorders'))
     return render_template('edit_OneComputer.html', form=form, id=id, userrole=role) 
 
@@ -1242,6 +1242,8 @@ def EditProduct(id):
     product = PnMap.query.get(id)
     form = EditProductForm(obj=product)
     role = get_userrole(current_user.id)
+    #if request.method == 'GET' :
+    #    session['previous_url'] = request.url
     if form.validate_on_submit():
         # Not update product name
         #product.pn = form.pn.data
@@ -1259,7 +1261,8 @@ def EditProduct(id):
         product.extra = form.extra.data
         db.session.commit()
         flash('Update successful')
-        return redirect(url_for('main.queryproduct'))
+        #return redirect(session.get('previous_url','/'))
+        #return redirect(url_for('main.queryproduct'))
     return render_template('edit_Product.html', form=form, id=id, userrole=role) 
 
 @main.route('/queryworkorder', methods=['GET', 'POST'])
