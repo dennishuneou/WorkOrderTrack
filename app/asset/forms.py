@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, SubmitField, HiddenField, SelectField, ValidationError,BooleanField, DateField
-from wtforms.validators import DataRequired, Length, InputRequired
+from wtforms import StringField, SubmitField, HiddenField, SelectField, ValidationError,BooleanField, DateField,IntegerField, FloatField
+from wtforms.validators import DataRequired, Length, InputRequired, NumberRange
 from wtforms.fields.html5 import DateField
 from wtforms.ext.sqlalchemy.fields import QuerySelectField
 from wtforms.widgets import TextArea
@@ -54,7 +54,10 @@ def pn_check(form, field):
         return  
     if basicinfo.count() == 0 and form.packgo.data == False :
         raise ValidationError("Doesn't find this PN in database.")
- 
+def DuplicateCheck(form, field):
+    basicinfo = PnMap.query.filter_by(pn=form.pn.data.strip())
+    if basicinfo.count() :
+        raise ValidationError("Product Name Duplicate") 
 def report_check(form, field):
     #get product basic informatoin
     #Motherboard Serial: BNV7505DN34B1110
@@ -590,3 +593,54 @@ class ReviewOneComputerForm(FlaskForm):
     biosver = StringField('BIOS Version',render_kw={'readonly': True})
     sopver  = StringField('SOP Version',render_kw={'readonly': True})
     submit = SubmitField('Return')
+
+class AddProductForm(FlaskForm):
+
+    pn = StringField('Product Number', validators=[DataRequired(),DuplicateCheck,Length(max=100)])
+    sop = StringField('SOP Document', validators=[DataRequired(),Length(max=100)])
+    biosv = StringField('BIOS Version(etc:SL13A003.Build240711)', validators=[DataRequired(),Length(max=100)])
+    prefix= StringField('MSN prefix(etc:BSL13010 SL130100)', validators=[DataRequired(),Length(max=20)]) 
+    net = IntegerField('Number of ethernet ports', validators=[DataRequired(),NumberRange(min=1,max=20)]) 
+    poe = IntegerField('Support PoE(etc:1)', validators=[InputRequired(),NumberRange(min=0,max=1)]) 
+    ign = IntegerField('Support IGN(etc:1)', validators=[InputRequired(),NumberRange(min=0,max=1)]) 
+    unitsinabox = IntegerField('Maximum Units in an outer box', validators=[DataRequired(),NumberRange(min=1,max=100)])  
+    buildpoints = IntegerField('Build points', validators=[DataRequired(),NumberRange(min=1,max=100)])   
+    testonlypoints = IntegerField('Test Only points', validators=[InputRequired(),NumberRange(min=1,max=30)])   
+    gpu =  IntegerField('GPU installation points', validators=[InputRequired(),NumberRange(min=0,max=30)])   
+    extra =  FloatField('Extra points', validators=[InputRequired()])   
+    customizedBIOS = BooleanField('Customized BIOS')
+    customizedSOP = BooleanField('Customized SOP')
+    customizedOSImage = BooleanField('Customized OS Image')
+    customizedMechincal = BooleanField('Customized Mechanical')
+    customizedPackage = BooleanField('Customized Package')
+    customizedLabel = BooleanField('Customized Lable')
+    submit    = SubmitField('Add')   
+
+class EditProductForm(FlaskForm):
+    pn = StringField('Product Number', validators=[DataRequired(),Length(max=100)])
+    sop = StringField('SOP Document', validators=[DataRequired(),Length(max=100)])
+    biosv = StringField('BIOS Version(etc:SL13A003.Build240711)', validators=[DataRequired(),Length(max=100)])
+    prefix= StringField('MSN prefix(etc:BSL13010 SL130100)', validators=[DataRequired(),Length(max=20)]) 
+    net = IntegerField('Number of ethernet ports', validators=[DataRequired(),NumberRange(min=1,max=20)]) 
+    #DataRequireed not work with 0
+    poe = IntegerField('Support PoE(etc:1)', validators=[InputRequired(),NumberRange(min=0,max=1)]) 
+    ign = IntegerField('Support IGN(etc:1)', validators=[InputRequired(),NumberRange(min=0,max=1)]) 
+    unitsinabox = IntegerField('Maximum Units in an outer box', validators=[DataRequired(),NumberRange(min=1,max=100)])  
+    buildpoints = IntegerField('Build points', validators=[DataRequired(),NumberRange(min=1,max=100)])   
+    testonlypoints = IntegerField('Test Only points', validators=[DataRequired(),NumberRange(min=1,max=30)])   
+    gpu =  IntegerField('GPU installation points', validators=[InputRequired(),NumberRange(min=0,max=30)])   
+    extra =  IntegerField('Extra points', validators=[InputRequired(),NumberRange(min=0,max=30)])   
+    customized =  IntegerField('Customized ', validators=[InputRequired(),NumberRange(min=0,max=4096)])   
+    submit    = SubmitField('Update')   
+    #customizedBIOS = BooleanField('Customized BIOS')
+    #customizedSOP = BooleanField('Customized SOP')
+    #customizedOSImage = BooleanField('Customized OS Image')
+    #customizedMechincal = BooleanField('Customized Mechanical')
+    #customizedPackage = BooleanField('Customized Package')
+    #customizedLabel = BooleanField('Customized Lable')
+class QueryProductsForm(FlaskForm):
+    pn = StringField('Product Model', validators=[Length(max=100)])
+    submit    = SubmitField('Search')   
+class QueryWorkordersForm(FlaskForm):
+    wo = StringField('WorkOrder', validators=[Length(max=100)])
+    submit    = SubmitField('Search')   

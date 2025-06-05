@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+
+{% macro render_date_field(field) %}
+<div class="form__group">
+    {{ field.label(class_="form__label") }}
+    {{ field(class_="form__field")}}
+
+    {%- for error in field.errors %}
+        <span class="form__error">{{ error }}</span>
+    {% endfor %}
+</div>
+{% endmacro %}
+<style> 
+    .newspaper {
+      column-count: 3;
+      column-gap: 40px;
+      column-rule: 1px solid lightblue;
+    }
+    
+    h2 {
+      column-span: all;
+    }
+    </style>
+{% block content %}
+
+<div class="container">
+    <div class="row">
+        <div class="col-md-12 col-xl-4">
+           <form name="Uploadfile" method="post" novalidate class="formsimple">
+                <div class="form__container">
+                    {{ form.hidden_tag() }}
+                    <div class="form-group col-md-6">    
+                        {{ form.wo.label }} {{ form.wo(size=20, class_="form-control") }}
+                        </div>
+                    </div>
+                    <div>
+                        {{ form.submit(class_="button button--form") }}
+                    </div>
+                </div>
+            </form>    
+        </div>
+    </div>
+ </div>   
+{% if searched ==1 %}
+<div class="container">
+<div class="row">
+    <div class="col col-md-16 my-4">
+        <ul class="nav nav-tabs" id="myTab" role="tablist">
+            <li class="nav-item">
+               <a class="nav-link active" id="home-tab"  data-toggle="tab" href="#Search" role="tab" aria-controls="home" aria-selected="true">Search results</a>
+            </li>
+        </ul>
+    <div class="tab-content" id="myTabContent">
+            <div class="col my-2">
+                <h6 class="font-weight-bold">List of  Search Results</h6>
+                <button id="exporttable" class="btn btn-primary">Export</button>
+            <script> 
+                document.querySelector("#exporttable").addEventListener('click', function(){
+                        var table = $("#reporttable");
+                        if(table && table.length){
+                          $(table).table2excel({
+                            exclude: ".noExl",
+                            name: "Excel Document Name",
+                            filename: "Products" + new Date().toISOString().replace(/[\-\:\.]/g, "") + ".xls",
+                            fileext: ".xls",
+                            exclude_img: true,
+                            exclude_links: true,
+                            exclude_inputs: true,
+                            preserveColors: false
+                          });
+                        }
+                      });
+                    </script>
+            </div>
+            <div class="table-responsive">
+                <table id="reporttable" data-search="true"  data-toggle="table" class="table table-striped table-hover">
+                    <thead class="thead-light">
+                        <tr style="background-color: #e3f2fd;">
+                            <th> ID</th>
+                            <th data-sortable="true"> WO#</th>
+                            <th data-sortable="true"> Customer</th>
+                            <th data-sortable="true"> Product</th>
+                            <th data-sortable="true"> CSN</th>
+                            <th data-sortable="true"> CPU</th>
+                            <th data-sortable="true"> Memory</th>
+                            <th data-sortable="true"> Disk</th>
+                            <th> Edit</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for workorder in workorders %}
+                        <tr>
+                            <td> {{ workorder.id }} </td>
+                            <td> {{ workorder.wo }} </td>
+                            <td> {{ workorder.customers }} </td>
+                            <td> {{ workorder.pn }} </td>
+                            <td> {{ workorder.csn }} </td>
+                            <td> {{ workorder.cputype }} </td>
+                            <td> {{ workorder.memorysize }} </td>
+                            <td> {{ workorder.disksize }} </td>
+                            <td>       
+                                <a class="btn btn-light btn-sm"
+                                href= "{{ url_for('main.EditOneComputer',id=workorder.id)}}"
+                                role="button">
+                                    <i class="fa fa-arrow-right" aria-hidden="true"></i>
+                                </a>
+                            </td> 
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+</div>        
+{% endif %}
+{% endblock %}

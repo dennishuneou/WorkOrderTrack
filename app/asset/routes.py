@@ -1,10 +1,12 @@
 from flask_login import login_required
 from app.asset.forms import AddWorkorderForm, UploadReportForm, ReviewReportForm, ReviewReportFileForm,EditOneComputerForm,ReportSearchForm,QueryForm,ViewReportForm,ReviewOneComputerForm
+from app.asset.forms import AddProductForm,QueryProductsForm,EditProductForm,QueryWorkordersForm
 from app.asset import main
 from app.asset.models import WorkOrder, Production, PnMap
 from flask import render_template, flash, request, redirect, url_for
 from app import db
 from app.asset.forms import get_biosversion, get_sopversion
+
 #Dennis
 #workorder status, unassigned -1, processing 0, waiting for inspection 1 finished 2.
 from flask_login import current_user
@@ -833,16 +835,17 @@ def EditOneComputer(id):
         workorder.ospreinstalled=form.ospreinstalled.data
         workorder.osactivation=form.osactivation.data
         workorder.diskpreinstalled=form.diskpreinstalled.data
-        if form.operator.data == None :
-            asidset =-1
-        else :
+        if form.operator.data != None :
             asidset = form.operator.data.id
-        workorder.asid = asidset    
-        workorder.csid = current_user.id
-        workorder.cstime=datetime.datetime.now()
+            workorder.asid = asidset    
+        #Do not update    
+        #workorder.csid = current_user.id
+        #workorder.cstime=datetime.datetime.now()
         db.session.commit()
         flash('Update successful')
-        return redirect(url_for('main.display_workorders'))
+        #previous_url = form.previous_url.data 
+        redirect(url_for('main.queryworkorder'))
+        #return redirect(url_for('main.display_workorders'))
     return render_template('edit_OneComputer.html', form=form, id=id, userrole=role) 
 
 @main.route('/DeactiveOneComputer/<id>', methods=['GET', 'POST'])
@@ -1180,3 +1183,101 @@ def customized():
     customizedmodels = PnMap.query.filter(PnMap.customized!=0)
     role = get_userrole(current_user.id)
     return render_template('Customized.html', customizedmodels=customizedmodels, userrole = role,getcustomizedstr=getcustomizedstr) 
+
+@main.route('/queryproduct', methods=['GET', 'POST'])
+@login_required
+def queryproduct():
+    form = QueryProductsForm()
+    searched = 0
+    products = PnMap.query.filter(PnMap.id!=0)
+    if request.method == "POST":
+        #Prepare the search results between start date and end date
+        searched = 1
+    role = get_userrole(current_user.id)
+    if role < 2:
+        return redirect(url_for('main.display_workorders'))
+    # Filter by PN
+    searchtable = []
+    if searched == 1 :
+        if form.pn.data.strip() != '' :
+            pn = form.pn.data.strip()
+            products = products.filter(PnMap.pn.contains(pn))
+    return render_template('query_products.html', form=form, userrole=role, searched=searched, products=products)
+
+
+@main.route('/createproduct', methods=['GET', 'POST'])
+@login_required
+def createproduct():
+    form = AddProductForm()
+    role = get_userrole(current_user.id)
+    if form.validate_on_submit():
+        customizedvalue = 0
+        if(form.customizedBIOS.data==True) :
+            customizedvalue = customizedvalue + 1
+        if(form.customizedSOP.data==True) :
+            customizedvalue = customizedvalue + 2
+        if(form.customizedOSImage.data==True) :
+            customizedvalue = customizedvalue + 4
+        if(form.customizedMechincal.data==True) :
+            customizedvalue = customizedvalue + 8    
+        if(form.customizedPackage.data==True) :
+            customizedvalue = customizedvalue + 16    
+        if(form.customizedLabel.data==True) :
+            customizedvalue = customizedvalue + 32    
+
+        transaction = PnMap(pn = form.pn.data.strip(), biosv = form.biosv.data, prefix = form.prefix.data, 
+                            net = form.net.data, poe = form.poe.data, ign = form.ign.data, 
+                            sop = form.sop.data, unitsinabox = form.unitsinabox.data, 
+                            buildpoints = form.buildpoints.data, customized=customizedvalue, 
+                            testonlypoints=form.testonlypoints.data,gpu=form.gpu.data,extra=form.extra.data)
+        db.session.add(transaction)
+        db.session.commit()
+        flash('Create Product Successfully')
+        return redirect(url_for('main.createproduct'))
+    return render_template('create_OneProduct.html', form=form, id=id, userrole=role) 
+
+@main.route('/EditProduct/<id>', methods=['GET', 'POST'])
+@login_required
+def EditProduct(id): 
+    product = PnMap.query.get(id)
+    form = EditProductForm(obj=product)
+    role = get_userrole(current_user.id)
+    if form.validate_on_submit():
+        # Not update product name
+        #product.pn = form.pn.data
+        product.biosv = form.biosv.data
+        product.prefix = form.prefix.data
+        product.net = form.net.data
+        product.poe = form.poe.data
+        product.ign = form.ign.data
+        product.sop = form.sop.data
+        product.unitsinabox = form.unitsinabox.data
+        product.buildpoints = form.buildpoints.data
+        product.customized = form.customized.data
+        product.testonlypoints = form.testonlypoints.data
+        product.gpu = form.gpu.data
+        product.extra = form.extra.data
+        db.session.commit()
+        flash('Update successful')
+        return redirect(url_for('main.queryproduct'))
+    return render_template('edit_Product.html', form=form, id=id, userrole=role) 
+
+@main.route('/queryworkorder', methods=['GET', 'POST'])
+@login_required
+def queryworkorder():
+    form = QueryWorkordersForm()
+    searched = 0
+    workorders = WorkOrder.query.filter(WorkOrder.id!=0)
+    if request.method == "POST":
+        #Prepare the search results between start date and end date
+        searched = 1
+    role = get_userrole(current_user.id)
+    if role < 2:
+        return redirect(url_for('main.queryworkorder'))
+    # Filter by PN
+    searchtable = []
+    if searched == 1 :
+        if form.wo.data.strip() != '' :
+            wo = form.wo.data.strip()
+            workorders = workorders.filter(WorkOrder.wo.contains(wo))
+    return render_template('query_workorders.html', form=form, userrole=role, searched=searched, workorders=workorders)
