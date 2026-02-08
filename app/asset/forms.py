@@ -4,7 +4,7 @@ from wtforms.validators import DataRequired, Length, InputRequired, NumberRange
 from wtforms.fields.html5 import DateField
 from wtforms.ext.sqlalchemy.fields import QuerySelectField
 from wtforms.widgets import TextArea
-from app.asset.models import WorkOrder, Production, PnMap
+from app.asset.models import WorkOrder, Production, PnMap, PackageBox
 from app.auth.forms  import get_userrole,get_usersname,get_operateusersname
 from datetime import datetime
 
@@ -614,6 +614,16 @@ class AddProductForm(FlaskForm):
     customizedMechincal = BooleanField('Customized Mechanical')
     customizedPackage = BooleanField('Customized Package')
     customizedLabel = BooleanField('Customized Lable')
+
+    abbreviation = StringField('Abbreviation', validators=[Length(max=32)])
+    category = StringField('Category NRU,PB,COMPUTER, CARD', validators=[InputRequired(),Length(max=16)])
+    height = FloatField('Height(inches)', validators=[InputRequired()])
+    width = FloatField('Width(inches)', validators=[InputRequired()])
+    thickness = FloatField('Thickness(inches)', validators=[InputRequired()])
+    weight = FloatField('Weight(pounds)', validators=[InputRequired()])
+    inneraccessory = StringField('Inner Accessory', validators=[Length(max=256)])
+    notes = StringField('Notes', validators=[Length(max=256)], widget=TextArea())
+
     submit    = SubmitField('Add')   
 
 class EditProductForm(FlaskForm):
@@ -630,7 +640,17 @@ class EditProductForm(FlaskForm):
     testonlypoints = IntegerField('Test Only points', validators=[DataRequired(),NumberRange(min=1,max=30)])   
     gpu =  IntegerField('GPU installation points', validators=[InputRequired(),NumberRange(min=0,max=30)])   
     extra =  IntegerField('Extra points', validators=[InputRequired(),NumberRange(min=0,max=30)])   
-    customized =  IntegerField('Customized ', validators=[InputRequired(),NumberRange(min=0,max=4096)])   
+    customized =  IntegerField('Customized ', validators=[InputRequired(),NumberRange(min=0,max=4096)])
+
+    abbreviation = StringField('Abbreviation', validators=[Length(max=32)])
+    category = StringField('Category NRU,PB,COMPUTER, CARD', validators=[InputRequired(),Length(max=16)])
+    height = FloatField('Height(inches)', validators=[InputRequired()])
+    width = FloatField('Width(inches)', validators=[InputRequired()])
+    thickness = FloatField('Thickness(inches)', validators=[InputRequired()])
+    weight = FloatField('Weight(pounds)', validators=[InputRequired()])
+    inneraccessory = StringField('Inner Accessory', validators=[Length(max=256)])
+    notes = StringField('Notes', validators=[Length(max=256)], widget=TextArea())
+
     submit    = SubmitField('Update')   
     #customizedBIOS = BooleanField('Customized BIOS')
     #customizedSOP = BooleanField('Customized SOP')
@@ -644,3 +664,41 @@ class QueryProductsForm(FlaskForm):
 class QueryWorkordersForm(FlaskForm):
     wo = StringField('WorkOrder', validators=[Length(max=100)])
     submit    = SubmitField('Search')   
+
+class PackingCalculateForm(FlaskForm):
+    
+    computer = QuerySelectField('Computer',lambda: PnMap.query.filter(category=='COMPUTER'|category=='NRU').all(),allow_blank=True)
+    qty_computer = IntegerField('Computer Quantity', validators=[InputRequired(),NumberRange(min=0,max=1000)]) 
+    
+    dinrail = QuerySelectField('DIN RAIL',lambda: PnMap.query.filter_by(category='DINRAIL').all(),allow_blank=True)
+    qty_dinrail = IntegerField('DIN RAIL Quantity', validators=[InputRequired(),NumberRange(min=0,max=1000)]) 
+    
+    dmpbr = QuerySelectField('DumpingBracket',lambda: PnMap.query.filter_by(category='DUMPINGBRACKET').all(),allow_blank=True)
+    qty_dmpbr = IntegerField('DMPBR Quantity', validators=[InputRequired(),NumberRange(min=0,max=1000)]) 
+    
+    fankit = QuerySelectField('FANkit',lambda: PnMap.query.filter_by(category='FANKIT').all(),allow_blank=True)
+    qty_fankit = IntegerField('FANkit Quantity', validators=[InputRequired(),NumberRange(min=0,max=1000)]) 
+    
+    wallmount = QuerySelectField('Wallmount',lambda: PnMap.query.filter_by(category='WALLMOUNT').all(),allow_blank=True)
+    qty_wallmount = IntegerField('Wallmount Quantity', validators=[InputRequired(),NumberRange(min=0,max=1000)]) 
+    
+    card1 = QuerySelectField('PCIe Card 1',lambda: PnMap.query.filter_by(category='CARD').all(),allow_blank=True)
+    qty_card1 = IntegerField('PCIe Card 1 Quantity', validators=[InputRequired(),NumberRange(min=0,max=1000)]) 
+    
+    card2 = QuerySelectField('PCIe Card 2',lambda: PnMap.query.filter_by(category='CARD').all(),allow_blank=True)
+    qty_card2 = IntegerField('PCIe Card 2 Quantity', validators=[InputRequired(),NumberRange(min=0,max=1000)]) 
+    
+    gpu = QuerySelectField('GPU',lambda: PnMap.query.filter_by(category='GPU').all(),allow_blank=True)
+    qty_gpu = IntegerField('GPU Quantity', validators=[InputRequired(),NumberRange(min=0,max=2000)]) 
+    
+    poweradapter = QuerySelectField('Power Adaptor',lambda: PnMap.query.filter_by(category='POWERADAPTOR').all(),allow_blank=True)
+    qty_poweradaptor = IntegerField('Power Adaptor Quantity', validators=[InputRequired(),NumberRange(min=0,max=2000)]) 
+    
+    cablekit1 = QuerySelectField('CableKit1',lambda: PnMap.query.filter_by(category='CABLEKIT').all(),allow_blank=True)
+    qty_cablekit1 = IntegerField('Cablekit1 Quantity', validators=[InputRequired(),NumberRange(min=0,max=2000)]) 
+    
+    cablekit2 = QuerySelectField('CableKit2',lambda: PnMap.query.filter_by(category='CABLEKIT').all(),allow_blank=True)
+    qty_cablekit2 = IntegerField('Cablekit2 Quantity', validators=[InputRequired(),NumberRange(min=0,max=2000)]) 
+    
+    submit = SubmitField('Calculate')
+       

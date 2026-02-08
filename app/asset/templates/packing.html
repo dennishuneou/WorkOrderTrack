@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% from 'bootstrap/form.html' import render_form %}
+
+
+{% block content %}
+    <div class="container">
+        <h4 style="margin-left: 45px"> Packing Calculator </h4>
+        <hr>
+          {{ form.hidden_tag() }}
+          {{ render_form(form) }}
+        {% if searched ==1 %}  
+        <h2 class="mb-4">Result Output</h2>
+        <!-- Rectangle with border, padding, and rounded corners -->
+        <div class="border border-dark rounded p-3 bg-light shadow-sm" style="max-width: 500px;">
+            <p class="mb-0 text-dark" style="white-space: pre-line;">{{ totalpercentage }}</p> 
+             {% for eachline in solution %}
+            <p class="mb-0 text-dark" style="white-space: pre-line;">{{ eachline }}</p>
+            {% endfor %}
+        </div>  
+        <!-- Rectangle with border, padding, and rounded corners -->
+        <div class="border border-dark rounded p-3 bg-light shadow-sm" style="max-width: 500px;">
+             {% for eachline in details %}
+            <p class="mb-0 text-dark" style="white-space: pre-line;">{{ eachline }}</p>
+            {% endfor %}
+        </div>  
+        {% endif %}
+    </div>
+{% endblock %}

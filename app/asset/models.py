@@ -1,5 +1,38 @@
 from app import db
 from datetime import datetime
+#Add models here
+## BOX, limitweight
+
+class PackageBox(db.Model):
+    __tablename__ = 'packagebox'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    abbreviation = db.Column(db.String(32), nullable=True)
+    height = db.Column(db.REAL, nullable=False)
+    width = db.Column(db.REAL, nullable=False)
+    thickness = db.Column(db.REAL, nullable=False)
+    weight = db.Column(db.REAL, nullable=False)
+    limitweight = db.Column(db.REAL, nullable=True)
+    status = db.Column(db.Integer, nullable=True) # 0 not available, 1 general available, 2 special available
+    purpose = db.Column(db.String(100), nullable=True) # for specical purpose, such as SEMIL-2047GC, Nuvo-9650AWP
+
+    def __init__(self, name, abbreviation, height, width, thickness, weight, limitweight, status, purpose):
+        self.name = name
+        self.abbreviation = abbreviation
+        self.height = height
+        self.width = width
+        self.thickness = thickness
+        self.weight = weight    
+        self.limitweight = limitweight
+        self.status = status
+        self.purpose = purpose
+
+    def __repr__(self):
+        return '{} by {}'.format(self.name)
+
+#Product add category: NRU, COMPUTER, SEMIL, PB, CARD, GPU, POWERADAPTER, CABLEKIT, DINRAIL, FANKIT, WALLMOUNT, DUMPINGBRACKET
+#Product add abbreviation, category, height, width, thickness, weight, inneraccessory,notes
 class PnMap(db.Model):
     __tablename__ = 'pnmap'
 
@@ -17,7 +50,17 @@ class PnMap(db.Model):
     testonlypoints = db.Column(db.Integer, nullable=True)
     gpu  = db.Column(db.Integer, nullable=True)
     extra  = db.Column(db.REAL, nullable=True)
-    def __init__(self, pn, biosv,prefix, net, poe, ign, sop, unitsinabox, buildpoints, customized, testonlypoints,gpu,extra):
+
+    abbreviation = db.Column(db.String(32), nullable=True)
+    category = db.Column(db.String(16), nullable=True)
+    height = db.Column(db.REAL, nullable=True)
+    width = db.Column(db.REAL, nullable=True)
+    thickness = db.Column(db.REAL, nullable=True)
+    weight = db.Column(db.REAL, nullable=True)
+    inneraccessory = db.Column(db.String(256), nullable=True)
+    notes = db.Column(db.String(256), nullable=True)
+
+    def __init__(self, pn, biosv,prefix, net, poe, ign, sop, unitsinabox, buildpoints, customized, testonlypoints,gpu,extra,abbreviation, category, height, width, thickness, weight, inneraccessory, notes):
         self.pn = pn
         self.biosv = biosv
         self.pn = pn
@@ -32,6 +75,15 @@ class PnMap(db.Model):
         self.testonlypoints = testonlypoints
         self.gpu = gpu
         self.extra = extra
+        self.abbreviation = abbreviation
+        self.category = category
+        self.height = height
+        self.width = width
+        self.thickness = thickness
+        self.weight = weight
+        self.inneraccessory = inneraccessory
+        self.notes = notes
+        
 class WorkOrder(db.Model):
     __tablename__ = 'workorder'
 
