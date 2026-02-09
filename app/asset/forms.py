@@ -667,38 +667,38 @@ class QueryWorkordersForm(FlaskForm):
 
 class PackingCalculateForm(FlaskForm):
     
-    computer = QuerySelectField('Computer',lambda: PnMap.query.filter(category=='COMPUTER'|category=='NRU').all(),allow_blank=True)
-    qty_computer = IntegerField('Computer Quantity', validators=[InputRequired(),NumberRange(min=0,max=1000)]) 
+    computer = QuerySelectField('Computer',query_factory =lambda: PnMap.query.filter_by(category='COMPUTER').all(), get_label='pn', allow_blank=True)
+    qty_computer = IntegerField('Computer Quantity', validators=[InputRequired(),NumberRange(min=0,max=1000)],default=1) 
     
-    dinrail = QuerySelectField('DIN RAIL',lambda: PnMap.query.filter_by(category='DINRAIL').all(),allow_blank=True)
-    qty_dinrail = IntegerField('DIN RAIL Quantity', validators=[InputRequired(),NumberRange(min=0,max=1000)]) 
+    dinrail = QuerySelectField('DIN RAIL',query_factory =lambda: PnMap.query.filter_by(category='DINRAIL').all(), get_label='pn', allow_blank=True)
+    qty_dinrail = IntegerField('DIN RAIL Quantity', validators=[InputRequired(),NumberRange(min=0,max=1000)],default=0) 
     
-    dmpbr = QuerySelectField('DumpingBracket',lambda: PnMap.query.filter_by(category='DUMPINGBRACKET').all(),allow_blank=True)
-    qty_dmpbr = IntegerField('DMPBR Quantity', validators=[InputRequired(),NumberRange(min=0,max=1000)]) 
+    dmpbr = QuerySelectField('DumpingBracket',query_factory =lambda: PnMap.query.filter_by(category='DUMPINGBRACKET').all(), get_label='pn', allow_blank=True)
+    qty_dmpbr = IntegerField('DMPBR Quantity', validators=[InputRequired(),NumberRange(min=0,max=1000)],default=0) 
     
-    fankit = QuerySelectField('FANkit',lambda: PnMap.query.filter_by(category='FANKIT').all(),allow_blank=True)
-    qty_fankit = IntegerField('FANkit Quantity', validators=[InputRequired(),NumberRange(min=0,max=1000)]) 
+    fankit = QuerySelectField('FANkit',query_factory =lambda: PnMap.query.filter_by(category='FANKIT').all(), get_label='pn', allow_blank=True)
+    qty_fankit = IntegerField('FANkit Quantity', validators=[InputRequired(),NumberRange(min=0,max=1000)],default=0) 
     
-    wallmount = QuerySelectField('Wallmount',lambda: PnMap.query.filter_by(category='WALLMOUNT').all(),allow_blank=True)
-    qty_wallmount = IntegerField('Wallmount Quantity', validators=[InputRequired(),NumberRange(min=0,max=1000)]) 
+    wallmount = QuerySelectField('Wallmount',query_factory =lambda: PnMap.query.filter_by(category='WALLMOUNT').all(), get_label='pn', allow_blank=True)
+    qty_wallmount = IntegerField('Wallmount Quantity', validators=[InputRequired(),NumberRange(min=0,max=1000)],default=0) 
     
-    card1 = QuerySelectField('PCIe Card 1',lambda: PnMap.query.filter_by(category='CARD').all(),allow_blank=True)
-    qty_card1 = IntegerField('PCIe Card 1 Quantity', validators=[InputRequired(),NumberRange(min=0,max=1000)]) 
+    card1 = QuerySelectField('PCIe Card 1',query_factory =lambda: PnMap.query.filter_by(category='CARD').all(), get_label='pn', allow_blank=True)
+    qty_card1 = IntegerField('PCIe Card 1 Quantity', validators=[InputRequired(),NumberRange(min=0,max=1000)],default=0) 
     
-    card2 = QuerySelectField('PCIe Card 2',lambda: PnMap.query.filter_by(category='CARD').all(),allow_blank=True)
-    qty_card2 = IntegerField('PCIe Card 2 Quantity', validators=[InputRequired(),NumberRange(min=0,max=1000)]) 
+    card2 = QuerySelectField('PCIe Card 2',query_factory =lambda: PnMap.query.filter_by(category='CARD').all(), get_label='pn', allow_blank=True)
+    qty_card2 = IntegerField('PCIe Card 2 Quantity', validators=[InputRequired(),NumberRange(min=0,max=1000)],default=0) 
     
-    gpu = QuerySelectField('GPU',lambda: PnMap.query.filter_by(category='GPU').all(),allow_blank=True)
-    qty_gpu = IntegerField('GPU Quantity', validators=[InputRequired(),NumberRange(min=0,max=2000)]) 
+    gpu = QuerySelectField('GPU',query_factory =lambda: PnMap.query.filter_by(category='GPU').all(), get_label='pn', allow_blank=True)
+    qty_gpu = IntegerField('GPU Quantity', validators=[InputRequired(),NumberRange(min=0,max=2000)],default=0) 
     
-    poweradapter = QuerySelectField('Power Adaptor',lambda: PnMap.query.filter_by(category='POWERADAPTOR').all(),allow_blank=True)
-    qty_poweradaptor = IntegerField('Power Adaptor Quantity', validators=[InputRequired(),NumberRange(min=0,max=2000)]) 
+    poweradapter = QuerySelectField('Power Adaptor',query_factory =lambda: PnMap.query.filter_by(category='POWERADAPTOR').all(), get_label='pn', allow_blank=True)
+    qty_poweradaptor = IntegerField('Power Adaptor Quantity', validators=[InputRequired(),NumberRange(min=0,max=2000)],default=0) 
     
-    cablekit1 = QuerySelectField('CableKit1',lambda: PnMap.query.filter_by(category='CABLEKIT').all(),allow_blank=True)
-    qty_cablekit1 = IntegerField('Cablekit1 Quantity', validators=[InputRequired(),NumberRange(min=0,max=2000)]) 
+    cablekit1 = QuerySelectField('CableKit1',query_factory =lambda: PnMap.query.filter_by(category='CABLEKIT').all(), get_label='pn', allow_blank=True)
+    qty_cablekit1 = IntegerField('Cablekit1 Quantity', validators=[InputRequired(),NumberRange(min=0,max=2000)],default=0) 
     
-    cablekit2 = QuerySelectField('CableKit2',lambda: PnMap.query.filter_by(category='CABLEKIT').all(),allow_blank=True)
-    qty_cablekit2 = IntegerField('Cablekit2 Quantity', validators=[InputRequired(),NumberRange(min=0,max=2000)]) 
+    cablekit2 = QuerySelectField('CableKit2',query_factory =lambda: PnMap.query.filter_by(category='CABLEKIT').all(), get_label='pn', allow_blank=True)
+    qty_cablekit2 = IntegerField('Cablekit2 Quantity', validators=[InputRequired(),NumberRange(min=0,max=2000)],default=0) 
     
     submit = SubmitField('Calculate')
        

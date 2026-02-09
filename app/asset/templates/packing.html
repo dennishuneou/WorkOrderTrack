@@ -6,14 +6,64 @@
     <div class="container">
         <h4 style="margin-left: 45px"> Packing Calculator </h4>
         <hr>
-          {{ form.hidden_tag() }}
-          {{ render_form(form) }}
+        <form method="POST">
+          {{ form.hidden_tag() }}    
+        <div>
+          {{ form.computer.label }} {{ form.computer() }} <!-- This generates the <select> dropdown -->
+          {{ form.qty_computer.label }} {{ form.qty_computer() }} <!-- This generates the <select> dropdown -->  
+        </div>
+        <div>
+          {{ form.dinrail.label }} {{ form.dinrail() }} <!-- This generates the <select> dropdown -->
+          {{ form.qty_dinrail.label }} {{ form.qty_dinrail() }} <!-- This generates the <select> dropdown -->  
+        </div>
+        <div>
+          {{ form.dmpbr.label }} {{ form.dmpbr() }} <!-- This generates the <select> dropdown -->
+          {{ form.qty_dmpbr.label }} {{ form.qty_dmpbr() }} <!-- This generates the <select> dropdown -->  
+        </div>
+        <div>
+          {{ form.fankit.label }} {{ form.fankit() }} <!-- This generates the <select> dropdown -->
+          {{ form.qty_fankit.label }} {{ form.qty_fankit() }} <!-- This generates the <select> dropdown -->  
+        </div>
+        <div>
+          {{ form.wallmount.label }} {{ form.wallmount() }} <!-- This generates the <select> dropdown -->
+          {{ form.qty_wallmount.label }} {{ form.qty_wallmount() }} <!-- This generates the <select> dropdown -->  
+        </div>
+        <div>
+          {{ form.card1.label }} {{ form.card1() }} <!-- This generates the <select> dropdown -->
+          {{ form.qty_card1.label }} {{ form.qty_card1() }} <!-- This generates the <select> dropdown -->  
+        </div>
+        <div>
+          {{ form.card2.label }} {{ form.card2() }} <!-- This generates the <select> dropdown -->
+          {{ form.qty_card2.label }} {{ form.qty_card2() }} <!-- This generates the <select> dropdown -->  
+        </div>
+        <div>
+          {{ form.gpu.label }} {{ form.gpu() }} <!-- This generates the <select> dropdown -->
+          {{ form.qty_gpu.label }} {{ form.qty_gpu() }} <!-- This generates the <select> dropdown -->  
+        </div>
+        <div>
+          {{ form.poweradapter.label }} {{ form.poweradapter() }} <!-- This generates the <select> dropdown -->
+          {{ form.qty_poweradaptor.label }} {{ form.qty_poweradaptor() }} <!-- This generates the <select> dropdown -->  
+        </div>
+        <div>
+          {{ form.cablekit1.label }} {{ form.cablekit1() }} <!-- This generates the <select> dropdown -->
+          {{ form.qty_cablekit1.label }} {{ form.qty_cablekit1() }} <!-- This generates the <select> dropdown -->  
+        </div>
+        <div>
+          {{ form.cablekit2.label }} {{ form.cablekit2() }} <!-- This generates the <select> dropdown -->
+          {{ form.qty_cablekit2.label }} {{ form.qty_cablekit2() }} <!-- This generates the <select> dropdown -->  
+        </div>
+        
+         <div>
+          {{ form.submit(class="btn btn-success") }}<!-- This generates the <select> dropdown -->
+        </div>
+        </form>
+        
         {% if searched ==1 %}  
         <h2 class="mb-4">Result Output</h2>
         <!-- Rectangle with border, padding, and rounded corners -->
         <div class="border border-dark rounded p-3 bg-light shadow-sm" style="max-width: 500px;">
-            <p class="mb-0 text-dark" style="white-space: pre-line;">{{ totalpercentage }}</p> 
-             {% for eachline in solution %}
+            <p class="mb-0 text-dark" style="white-space: pre-line;">{{ totalpercentage*100 }} /100</p> 
+             {% for eachline in solutions %}
             <p class="mb-0 text-dark" style="white-space: pre-line;">{{ eachline }}</p>
             {% endfor %}
         </div>  

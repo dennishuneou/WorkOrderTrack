@@ -253,7 +253,7 @@ def classifier(platforms, packages):
                     break
 
             bestOption = max(packagePercentage, key=packagePercentage.get)
-            if(packagePercentage[bestOption]==0): break
+           
             totalpercentage = totalpercentage + packagePercentage[bestOption]
             solution.append(f"{bestOption} | Packed: {(packagePercentage[bestOption]*100):.2f}%")
             details.append(f"Details")
