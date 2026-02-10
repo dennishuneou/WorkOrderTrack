@@ -616,7 +616,7 @@ class AddProductForm(FlaskForm):
     customizedLabel = BooleanField('Customized Lable')
 
     abbreviation = StringField('Abbreviation', validators=[Length(max=32)])
-    options = [('NRU','NRU'),('COMPUTER','COMPUTER'),('CARD','CARD'),('CAMERA','CAMERA'),('PB','PB-UNIT'),('POWERADAPTOR','POWER ADAPTOR'),('DINRAIL','DINRAIL'),('WALLMOUNT','WALLMOUNT'),('DMPBRT','DMPBRT'),('GPU','GPU')]
+    options = [('NRU','NRU'),('COMPUTER','COMPUTER'),('CARD','CARD'),('CAMERA','CAMERA'),('PB','PB-UNIT'),('POWERADAPTOR','POWER ADAPTOR'),('DINRAIL','DINRAIL'),('WALLMOUNT','WALLMOUNT'),('DUMPINGBRACKET','DUMPINGBRACKET'),('GPU','GPU')]
     category = SelectField('Category', choices= options,validators=[InputRequired(),Length(max=16)])
     height = FloatField('Height(inches)', validators=[InputRequired()])
     width = FloatField('Width(inches)', validators=[InputRequired()])
