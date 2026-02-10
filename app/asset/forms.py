@@ -600,7 +600,7 @@ class AddProductForm(FlaskForm):
     sop = StringField('SOP Document', validators=[DataRequired(),Length(max=100)])
     biosv = StringField('BIOS Version(etc:SL13A003.Build240711)', validators=[DataRequired(),Length(max=100)])
     prefix= StringField('MSN prefix(etc:BSL13010 SL130100)', validators=[DataRequired(),Length(max=20)]) 
-    net = IntegerField('Number of ethernet ports', validators=[DataRequired(),NumberRange(min=0,max=20)]) 
+    net = IntegerField('Number of ethernet ports', validators=[InputRequired(),NumberRange(min=0,max=20)]) 
     poe = IntegerField('Support PoE(etc:1)', validators=[InputRequired(),NumberRange(min=0,max=1)]) 
     ign = IntegerField('Support IGN(etc:1)', validators=[InputRequired(),NumberRange(min=0,max=1)]) 
     unitsinabox = IntegerField('Maximum Units in an outer box', validators=[DataRequired(),NumberRange(min=1,max=100)])  
@@ -632,7 +632,7 @@ class EditProductForm(FlaskForm):
     sop = StringField('SOP Document', validators=[DataRequired(),Length(max=100)])
     biosv = StringField('BIOS Version(etc:SL13A003.Build240711)', validators=[DataRequired(),Length(max=100)])
     prefix= StringField('MSN prefix(etc:BSL13010 SL130100)', validators=[DataRequired(),Length(max=20)]) 
-    net = IntegerField('Number of ethernet ports', validators=[DataRequired(),NumberRange(min=0,max=20)]) 
+    net = IntegerField('Number of ethernet ports', validators=[InputRequired(),NumberRange(min=0,max=20)]) 
     #DataRequireed not work with 0
     poe = IntegerField('Support PoE(etc:1)', validators=[InputRequired(),NumberRange(min=0,max=1)]) 
     ign = IntegerField('Support IGN(etc:1)', validators=[InputRequired(),NumberRange(min=0,max=1)]) 
