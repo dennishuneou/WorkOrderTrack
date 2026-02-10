@@ -616,7 +616,8 @@ class AddProductForm(FlaskForm):
     customizedLabel = BooleanField('Customized Lable')
 
     abbreviation = StringField('Abbreviation', validators=[Length(max=32)])
-    category = StringField('Category NRU,PB,COMPUTER, CARD', validators=[InputRequired(),Length(max=16)])
+    options = [('NRU','NRU'),('COMPUTER','COMPUTER'),('CARD','CARD'),('CAMERA','CAMERA'),('PB','PB-UNIT'),('POWERADAPTOR','POWER ADAPTOR'),('DINRAIL','DINRAIL'),('WALLMOUNT','WALLMOUNT'),('DMPBRT','DMPBRT'),('GPU','GPU')]
+    category = SelectField('Category', choices= options,validators=[InputRequired(),Length(max=16)])
     height = FloatField('Height(inches)', validators=[InputRequired()])
     width = FloatField('Width(inches)', validators=[InputRequired()])
     thickness = FloatField('Thickness(inches)', validators=[InputRequired()])
@@ -667,7 +668,7 @@ class QueryWorkordersForm(FlaskForm):
 
 class PackingCalculateForm(FlaskForm):
     
-    computer = QuerySelectField('Computer',query_factory =lambda: PnMap.query.filter_by(category='COMPUTER').all(), get_label='pn', allow_blank=True)
+    computer = QuerySelectField('Computer',query_factory =lambda: PnMap.query.filter_by(category='COMPUTER').all()+PnMap.query.filter_by(category='PB').all()+PnMap.query.filter_by(category='NRU').all()+PnMap.query.filter_by(category='SEMIL').all(), get_label='pn', allow_blank=True)
     qty_computer = IntegerField('Computer Quantity', validators=[InputRequired(),NumberRange(min=0,max=1000)],default=1) 
     
     dinrail = QuerySelectField('DIN RAIL',query_factory =lambda: PnMap.query.filter_by(category='DINRAIL').all(), get_label='pn', allow_blank=True)
@@ -691,7 +692,7 @@ class PackingCalculateForm(FlaskForm):
     gpu = QuerySelectField('GPU',query_factory =lambda: PnMap.query.filter_by(category='GPU').all(), get_label='pn', allow_blank=True)
     qty_gpu = IntegerField('GPU Quantity', validators=[InputRequired(),NumberRange(min=0,max=2000)],default=0) 
     
-    poweradapter = QuerySelectField('Power Adaptor',query_factory =lambda: PnMap.query.filter_by(category='POWERADAPTOR').all(), get_label='pn', allow_blank=True)
+    poweradaptor = QuerySelectField('Power Adaptor',query_factory =lambda: PnMap.query.filter_by(category='POWERADAPTOR').all(), get_label='pn', allow_blank=True)
     qty_poweradaptor = IntegerField('Power Adaptor Quantity', validators=[InputRequired(),NumberRange(min=0,max=2000)],default=0) 
     
     cablekit1 = QuerySelectField('CableKit1',query_factory =lambda: PnMap.query.filter_by(category='CABLEKIT').all(), get_label='pn', allow_blank=True)
@@ -700,5 +701,8 @@ class PackingCalculateForm(FlaskForm):
     cablekit2 = QuerySelectField('CableKit2',query_factory =lambda: PnMap.query.filter_by(category='CABLEKIT').all(), get_label='pn', allow_blank=True)
     qty_cablekit2 = IntegerField('Cablekit2 Quantity', validators=[InputRequired(),NumberRange(min=0,max=2000)],default=0) 
     
+    camera = QuerySelectField('Camera',query_factory =lambda: PnMap.query.filter_by(category='CAMERA').all(), get_label='pn', allow_blank=True)
+    qty_camera = IntegerField('Camera Quantity', validators=[InputRequired(),NumberRange(min=0,max=2000)],default=0)
+
     submit = SubmitField('Calculate')
        

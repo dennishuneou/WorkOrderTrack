@@ -1323,155 +1323,186 @@ def packingcalculator():
         card1_qty = 0
         card2_qty = 0
         gpu_qty = 0
-        poweradapter_qty = 0
+        poweradaptor_qty = 0
         cablekit1_qty = 0
         cablekit2_qty = 0
         dinrail_qty = 0
         dmpbr_qty = 0
         fankit_qty = 0
         wallmount_qty = 0
-
-        computer_name = form.computer.data.pn
-        computer_qty = form.qty_computer.data
-        print(computer_qty)
+        camera_qty = 0
+        computer_qty = 0
+        if form.computer.data != None :
+           computer_name = form.computer.data.pn
+           computer_qty = form.qty_computer.data
         inneraccessory_name = ''
         if computer_qty != 0 : #preinstalled computer
             computer = PnMap.query.filter_by(pn=computer_name).first()
             computer_weight = computer.weight
-            if form.dinrail.data == True : 
-                dinrail_name = form.dinrail.data
+            if form.dinrail.data != None and form.qty_dinrail.data!=0: 
+                dinrail_name = form.dinrail.data.pn
                 dinrail_qty  = form.qty_dinrail.data
-                inneraccessory_name = inneraccessory_name + 'DINRAIL'
-                computer_weight += PnMap.query.filter_by(pn=dinrail_name).first().weight # Add 0.5lbs for DIN RAIL
-                dinrail_qty = dinrail_qty - computer_qty
-            if form.dmpbr.data == True : 
-                dmpbr_name = form.dmpbr.data
+                if 'DINRAIL' in computer.inneraccessory:
+                   inneraccessory_name = inneraccessory_name + '|DINRL'
+                   computer_weight += PnMap.query.filter_by(pn=dinrail_name).first().weight # Add 0.5lbs for DIN RAIL
+                   dinrail_qty = dinrail_qty - computer_qty
+            if form.dmpbr.data != None and form.qty_dmpbr.data!=0: 
+                dmpbr_name = form.dmpbr.data.pn
                 dmpbr_qty  = form.qty_dmpbr.data
-                inneraccessory_name = inneraccessory_name + 'DMPBR'
+                inneraccessory_name = inneraccessory_name + '|DMPBR'
                 computer_weight +=  PnMap.query.filter_by(pn=dmpbr_name).first().weight # Add 2lbs for Dumping Bracket
                 dmpbr_qty = dmpbr_qty - computer_qty
-            if form.fankit.data == True : 
-                fankit_name = form.fankit.data
+            if form.fankit.data != None and form.qty_fankit.data!=0: 
+                fankit_name = form.fankit.data.pn
                 fankit_qty  = form.qty_fankit.data
-                inneraccessory_name = inneraccessory_name + 'FANKIT'
+                inneraccessory_name = inneraccessory_name + '|FKIT'
                 computer_weight +=  PnMap.query.filter_by(pn=fankit_name).first().weight# Add 0.6lbs for FAN kit
                 fankit_qty = fankit_qty - computer_qty
-            if form.wallmount.data == True : 
-                wallmount_name = form.wallmount.data
+            if form.wallmount.data != None and form.qty_wallmount.data !=0: 
+                wallmount_name = form.wallmount.data.pn
                 wallmount_qty  = form.qty_wallmount.data
-                inneraccessory_name = inneraccessory_name + 'WALLMOUNT'
+                inneraccessory_name = inneraccessory_name + '|WMNT'
                 computer_weight += PnMap.query.filter_by(pn=wallmount_name).first().weight # Add 0.3lbs for Wall Mount
                 wallmount_qty = wallmount_qty - computer_qty
-            if form.card1.data != None : 
-                card1_name = form.card1.data
+            if form.card1.data != None and form.qty_card1.data!=0: 
+                card1_name = form.card1.data.pn
                 card1_qty  = form.qty_card1.data
-                inneraccessory_name = inneraccessory_name + form.card1.data
+                inneraccessory_name = inneraccessory_name + '|' + form.card1.data.pn 
                 computer_weight +=  PnMap.query.filter_by(pn=card1_name).first().weight # Add 0.5lbs for PCIe card
                 card1_qty = card1_qty - computer_qty
-            if form.card2.data != None : 
-                card2_name = form.card2.data
+            if form.card2.data != None and form.qty_card2.data!=0: 
+                card2_name = form.card2.data.pn
                 card2_qty  = form.qty_card2.data
-                inneraccessory_name = inneraccessory_name + form.card2.data
+                inneraccessory_name = inneraccessory_name + '|' + form.card2.data.pn 
                 computer_weight +=  PnMap.query.filter_by(pn=card2_name).first().weight # Add 0.5lbs for PCIe card
                 card2_qty = card2_qty - computer_qty
-            if form.gpu.data != None : 
-                gpu_name = form.gpu.data
+            if form.gpu.data != None and form.qty_gpu != 0: 
+                gpu_name = form.gpu.data.pn
                 gpu_qty  = form.qty_gpu.data
-                inneraccessory_name = inneraccessory_name + form.gpu.data
+                inneraccessory_name = inneraccessory_name + '|' + form.gpu.data.pn
                 computer_weight +=  PnMap.query.filter_by(pn=gpu_name).first().weight*(gpu_qty/computer_qty) # Add 0.5lbs for PCIe card
                 gpu_qty = gpu_qty - (gpu_qty/computer_qty)*computer_qty
-            if form.poweradapter.data != None :
-                poweradapter_name = form.poweradapter.data
-                poweradapter_qty  = form.qty_poweradaptor.data
-                abbreviation_name = PnMap.query.filter_by(pn=poweradapter_name).first().abbreviation
-                if abbreviation_name in computer.inneraccessories :
-                    inneraccessory_name = inneraccessory_name + poweradapter_name
-                    computer_weight +=  PnMap.query.filter_by(pn=poweradapter_name).first().weight # Add weight for power adapter
-                    poweradapter_qty = poweradapter_qty - computer_qty
+            if form.poweradaptor.data != None and form.qty_poweradaptor.data !=0 :
+                poweradaptor_name = form.poweradaptor.data.pn
+                poweradaptor_qty  = form.qty_poweradaptor.data
+                abbreviation_name = PnMap.query.filter_by(pn=poweradaptor_name).first().abbreviation
+                if abbreviation_name in computer.inneraccessory :
+                    inneraccessory_name = inneraccessory_name + poweradaptor_name
+                    computer_weight +=  PnMap.query.filter_by(pn=poweradaptor_name).first().weight # Add weight for power adapter
+                    poweradaptor_qty = poweradaptor_qty - computer_qty
         else:
-            if form.dinrail.data == True : 
-                dinrail_name = form.dinrail.data
+            if form.dinrail.data != None : 
+                dinrail_name = form.dinrail.data.pn
                 dinrail_qty  = form.qty_dinrail.data  
-            if form.dmpbr.data == True : 
-                dmpbr_name = form.dmpbr.data
+            if form.dmpbr.data != None : 
+                dmpbr_name = form.dmpbr.data.pn
                 dmpbr_qty  = form.qty_dmpbr.data
-            if form.fankit.data == True : 
-                fankit_name = form.fankit.data
+            if form.fankit.data != None : 
+                fankit_name = form.fankit.data.pn
                 fankit_qty  = form.qty_fankit.data
-            if form.wallmount.data == True : 
-                wallmount_name = form.wallmount.data
+            if form.wallmount.data != None : 
+                wallmount_name = form.wallmount.data.pn
                 wallmount_qty  = form.qty_wallmount.data
             if form.card1.data != None : 
-                card1_name = form.card1.data
+                card1_name = form.card1.data.pn
                 card1_qty  = form.qty_card1.data
             if form.card2.data != None : 
-                card2_name = form.card2.data
+                card2_name = form.card2.data.pn
                 card2_qty  = form.qty_card2.data
             if form.gpu.data != None : 
-                gpu_name = form.gpu.data
+                gpu_name = form.gpu.data.pn
                 gpu_qty  = form.qty_gpu.data
-            if form.poweradapter.data != None :
-                poweradapter_name = form.poweradapter.data
-                poweradapter_qty  = form.qty_poweradaptor.data
+            if form.poweradaptor.data != None :
+                poweradaptor_name = form.poweradaptor.data.pn
+                poweradaptor_qty  = form.qty_poweradaptor.data
+        if form.cablekit1.data != None :
+            cablekit1_name = form.cablekit1.data.pn
+            cablekit1_qty  = form.qty_cablekit1.data
+        if form.cablekit2.data != None :
+            cablekit2_name = form.cablekit2.data.pn
+            cablekit2_qty  = form.qty_cablekit2.data
+        if form.camera.data != None :
+            camera_name = form.camera.data.pn
+            camera_qty = fomr.qty_camera.data 
         #create packages    
         # name, w, t, h, weight
         packages =[]
+        print(inneraccessory_name)
         if computer_qty != 0 :
-            name = computer_name + '-' + inneraccessory_name
+            name = computer_name
+            if inneraccessory_name != None:
+                name = name  + inneraccessory_name
             for i in range(computer_qty):
                 package = Package(name, computer.width, computer.thickness, computer.height, computer_weight)
                 packages.append(package)    
         if dinrail_qty > 0 :
-            print(dinrail_qty)
             name = dinrail_name
-            dinrail_package = Accessory.query.filter_by(name=dinrail_name).first()
+            dinrail_package = PnMap.query.filter_by(pn=dinrail_name).first()
             for i in range(1,dinrail_qty+1):
                 package = Package(name, dinrail_package.width, dinrail_package.thickness, dinrail_package.height,dinrail_package.weight)
                 packages.append(package)
         if dmpbr_qty > 0 :
             name = dmpbr_name
-            dmpbr_package = Accessory.query.filter_by(name=dmpbr_name).first()
+            dmpbr_package = PnMap.query.filter_by(pn=dmpbr_name).first()
             for i in range(1,dmpbr_package_qty+1):
                 package = Package(name, dmpbr_package.width, dmpbr_package.thickness, dmpbr_package.height,dmpbr_package.weight)
                 packages.append(package)
         if fankit_qty > 0 :
             name = fankit_name
-            fankit_package = Accessory.query.filter_by(name=fankit_name).first()
+            fankit_package = PnMap.query.filter_by(pn=fankit_name).first()
             package = Package(name, fankit_package.width, fankit_package.thickness, fankit_package.height,fankit_package.weight)
             for i in range(1,fankit_qty+1):
                 package = Package(name, fankit_package.width, fankit_package.thickness, fankit_package.height,fankit_package.weight)
                 packages.append(package)
         if wallmount_qty > 0 :
             name = wallmount_name
-            wallmount_package = Accessory.query.filter_by(name=wallmount_name).first()
+            wallmount_package = PnMap.query.filter_by(pn=wallmount_name).first()
             for i in range(1,wallmount_qty+1):
                 package = Package(name, wallmount_package.width, wallmount_package.thickness, wallmount_package.height,wallmount_package.weight)
                 packages.append(package)
         if card1_qty > 0 :
             name = card1_name
-            card1_package = Accessory.query.filter_by(name=card1_name).first()
+            card1_package = PnMap.query.filter_by(pn=card1_name).first()
             for i in range(1,card1_qty+1):
                 package = Package(name, card1_package.width, card1_package.thickness, card1_package.height,card1_package.weight)
                 packages.append(package)
         if card2_qty > 0 :
             name = card2_name
-            card2_package = Accessory.query.filter_by(name=card2_name).first()
+            card2_package = PnMap.query.filter_by(pn=card2_name).first()
             for i in range(1,card2_qty+1):
                 package = Package(name, card2_package.width, card2_package.thickness, card2_package.height,card2_package.weight)
                 packages.append(package)
         if gpu_qty > 0 :
             name = gpu_name
-            gpu_package = Accessory.query.filter_by(name=gpu_name).first()
+            gpu_package = PnMap.query.filter_by(pn=gpu_name).first()
             for i in range(1,gpu_qty+1):
                 package = Package(name, gpu_package.width, gpu_package.thickness, gpu_package.height,gpu_package.weight)
                 packages.append(package)
-        if poweradapter_qty > 0 :
-            name = poweradapter_name
-            poweradapter_package = Accessory.query.filter_by(name=poweradapter_name).first()
-            for i in range(1,poweradapter_qty+1):
-                package = Package(name, poweradapter_package.width, poweradapter_package.thickness, poweradapter_package.height,poweradapter_package.weight)
+        if cablekit1_qty > 0 :
+            name = cablekit1_name
+            cablekit1_package = PnMap.query.filter_by(pn=cablekit1_name).first()
+            for i in range(1,cablekit1_qty+1):
+                package = Package(name, cablekit1_package.width, cablekit1_package.thickness, cablekit1_package.height,cablekit1_package.weight)
                 packages.append(package)
-        solutions,details,totalpercentage = classifier(platforms, packages)
-    return render_template('packing.html', form=form, searched=searched,solutions=solutions, details=details, totalpercentage=totalpercentage,userrole=userrole)
-  
-  
+        if cablekit2_qty > 0 :
+            name = cablekit2_name
+            cablekit2_package = PnMap.query.filter_by(pn=cablekit2_name).first()
+            for i in range(1,cablekit2_qty+1):
+                package = Package(name, cablekit2_package.width, cablekit2_package.thickness, cablekit2_package.height,cablekit2_package.weight)
+                packages.append(package)
+        if camera_qty > 0 :
+            name = camera_name
+            camera_package = PnMap.query.filter_by(pn=camera_name).first()
+            for i in range(1,camera_qty+1):
+                package = Package(name, camera_package.width, camera_package.thickness, camera_package.height,camera_package.weight)
+                packages.append(package)
+        if poweradaptor_qty > 0 :
+            name = poweradaptor_name
+            poweradaptor_package = PnMap.query.filter_by(pn=poweradaptor_name).first()
+            for i in range(1,poweradaptor_qty+1):
+                package = Package(name, poweradaptor_package.width, poweradaptor_package.thickness, poweradaptor_package.height,poweradaptor_package.weight)
+                packages.append(package)
+        if packages != []:
+           print(packages)
+           solutions,details,totalpercentage = classifier(platforms, packages)
+    return render_template('packing.html', form=form, searched=searched,solutions=solutions, details=details, totalpercentage=totalpercentage,userrole=userrole)  
