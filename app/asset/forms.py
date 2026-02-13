@@ -668,7 +668,7 @@ class QueryWorkordersForm(FlaskForm):
 
 class PackingCalculateForm(FlaskForm):
     
-    computer = QuerySelectField('Computer',query_factory =lambda: PnMap.query.filter_by(category='COMPUTER').all()+PnMap.query.filter_by(category='PB').all()+PnMap.query.filter_by(category='NRU').all()+PnMap.query.filter_by(category='SEMIL').all(), get_label='pn', allow_blank=True)
+    computer = QuerySelectField('Computer',query_factory =lambda: PnMap.query.filter_by(category='COMPUTER').order_by(PnMap.pn).all()+PnMap.query.filter_by(category='PB').order_by(PnMap.pn).all()+PnMap.query.filter_by(category='NRU').order_by(PnMap.pn).all()+PnMap.query.filter_by(category='SEMIL').order_by(PnMap.pn).all(), get_label='pn', allow_blank=True)
     qty_computer = IntegerField('Computer Quantity', validators=[InputRequired(),NumberRange(min=0,max=1000)],default=1) 
     
     dinrail = QuerySelectField('DIN RAIL',query_factory =lambda: PnMap.query.filter_by(category='DINRAIL').all(), get_label='pn', allow_blank=True)

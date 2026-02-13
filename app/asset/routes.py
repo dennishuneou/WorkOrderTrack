@@ -1313,8 +1313,9 @@ def packingcalculator():
         # Get boxes from database
         boxes = PackageBox.query.filter_by(status=1).all() #general use, avaliable
         Boxes = []
+        Boxes_SEMIL = []
+        Boxes_RGS = []
         for box in boxes:
-            print(box.name, box.width, box.thickness, box.height, box.limitweight - box.weight, box.weight)
             Boxes.append(Box('Platform1', box.name, box.width, box.thickness, box.height, box.limitweight - box.weight, box.weight))
        
         platforms = {'Platform1':Boxes}
@@ -1339,6 +1340,14 @@ def packingcalculator():
         if computer_qty != 0 : #preinstalled computer
             computer = PnMap.query.filter_by(pn=computer_name).first()
             computer_weight = computer.weight
+            if 'SEMIL' in computer.abbreviation :
+                boxes = PackageBox.query.filter(PackageBox.purpose.like('%SEMIL%')).all() 
+                for box in boxes:
+                    Boxes_SEMIL.append(Box('Platform1', box.name, box.width, box.thickness, box.height, box.limitweight - box.weight, box.weight))
+            if 'RGS' in computer.abbreviation :
+                boxes = PackageBox.query.filter(PackageBox.purpose.like('%RGS%')).all() 
+                for box in boxes:
+                    Boxes_RGS.append(Box('Platform1', box.name, box.width, box.thickness, box.height, box.limitweight - box.weight, box.weight))
             if form.dinrail.data != None and form.qty_dinrail.data!=0: 
                 dinrail_name = form.dinrail.data.pn
                 dinrail_qty  = form.qty_dinrail.data
@@ -1427,14 +1436,14 @@ def packingcalculator():
         #create packages    
         # name, w, t, h, weight
         packages =[]
-        print(inneraccessory_name)
+        packages_computer =[]
         if computer_qty != 0 :
             name = computer_name
             if inneraccessory_name != None:
                 name = name  + inneraccessory_name
             for i in range(computer_qty):
                 package = Package(name, computer.width, computer.thickness, computer.height, computer_weight)
-                packages.append(package)    
+                packages_computer.append(package)    
         if dinrail_qty > 0 :
             name = dinrail_name
             dinrail_package = PnMap.query.filter_by(pn=dinrail_name).first()
@@ -1502,7 +1511,18 @@ def packingcalculator():
             for i in range(1,poweradaptor_qty+1):
                 package = Package(name, poweradaptor_package.width, poweradaptor_package.thickness, poweradaptor_package.height,poweradaptor_package.weight)
                 packages.append(package)
-        if packages != []:
-           print(packages)
-           solutions,details,totalpercentage = classifier(platforms, packages)
+
+        if Boxes_SEMIL != [] or Boxes_RGS != []:
+           print(Boxes_SEMIL) 
+           print(Boxes_RGS) 
+           platforms1 = {'Platform1':Boxes_SEMIL + Boxes_RGS} 
+           solutions_c,details_c,totalpercentage_c = classifier(platforms1, packages_computer)
+           solutions_a,details_a,totalpercentage_a = classifier(platforms, packages)
+           solutions =  solutions_c + solutions_a
+           details = details_c + details_a
+           totalpercentage = (totalpercentage_c + totalpercentage_a)/2
+        else :
+            packages =  packages +  packages_computer
+            solutions,details,totalpercentage = classifier(platforms, packages)
+
     return render_template('packing.html', form=form, searched=searched,solutions=solutions, details=details, totalpercentage=totalpercentage,userrole=userrole)  
