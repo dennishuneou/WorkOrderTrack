@@ -1432,7 +1432,7 @@ def packingcalculator():
             cablekit2_qty  = form.qty_cablekit2.data
         if form.camera.data != None :
             camera_name = form.camera.data.pn
-            camera_qty = fomr.qty_camera.data 
+            camera_qty = form.qty_camera.data 
         #create packages    
         # name, w, t, h, weight
         packages =[]
