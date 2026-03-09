@@ -174,10 +174,15 @@ def report_check(form, field):
                 elif ("TB" in word and "Size:" in words[pos-2]) : 
                     disknvmesize_r.append(words[pos-1]+"TB")
                     break
-                pos = pos + 1        
+                pos = pos + 1     
+#/dev/sda Phison SSBP064GTMC0-S91 Serial: 16507B0642015 Size: 59.6 GB
+#sda1 (/media/neousys/A2AC-44B2, vfat, 479 MB)
+#sda2 (/media/neousys/e5cf18bd-8282-43aa-97f7-9ea59bcad9f9, ext4, 33.6 GB)
+#sda3 (/boot/efi, vfat, 511 MB)
+#sda4 (/, ext4, 23.5 GB)
         elif ("/dev/sd" in line) and ( ("SATA" in line) or ("M.2" in line) or ("Serial" in line) ):
             index = contents.index(line) + 1
-            if "boot" not in contents[index] and "/," not in contents[index]:
+            if "boot" not in contents[index] or "media" not in contents[index] and "/," not in contents[index]:
                 words = line.split(' ')
                 pos = 0
                 for word in words :
