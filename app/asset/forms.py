@@ -182,7 +182,7 @@ def report_check(form, field):
 #sda4 (/, ext4, 23.5 GB)
         elif ("/dev/sd" in line) and ( ("SATA" in line) or ("M.2" in line) or ("Serial" in line) ):
             index = contents.index(line) + 1
-            if "boot" not in contents[index] or "media" not in contents[index] and "/," not in contents[index]:
+            if "boot" not in contents[index] and "media" not in contents[index] and "/," not in contents[index]:
                 words = line.split(' ')
                 pos = 0
                 for word in words :
