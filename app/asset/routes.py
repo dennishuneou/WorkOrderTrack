@@ -256,13 +256,14 @@ def uploadmore():
 @login_required
 def inspectmore():
     print("inspect more")
+    role = get_userrole(current_user.id)
     x = request.json
     y = x.get("message")
     z = y.split()
     for sid in z:
         print(sid)
         workorder = WorkOrder.query.get(sid)
-        if(workorder.packgo == True):
+        if(workorder.packgo == True or role >= 2):
             workorder.intime=datetime.datetime.now()
             if workorder.status == 1:
                 workorder.status = 2
