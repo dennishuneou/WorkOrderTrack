@@ -51,18 +51,22 @@
                     <li class="nav-item">
                         <a href="{{ url_for('main.display_workorders') }}" class="nav-link"> Home </a>
                     </li> 
-                    {% if userrole > 1 %}
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                             Product Management
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
+                            <li><a class="dropdown-item" href="{{ url_for('main.add_qualitylog') }}">Report Quality Issue</a></li>
+                             {% if userrole > 1 %}
+                            <li><a class="dropdown-item" href="{{ url_for('main.queryqlog') }}">Query Quality Log</a></li> 
                             <li><a class="dropdown-item" href="{{ url_for('main.queryproduct') }}">Query Products</a></li>
                             <li><a class="dropdown-item" href="{{ url_for('main.createproduct') }}">Create New Product</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="{{ url_for('main.queryworkorder') }}">Query WorkOrder</a></li>
+                            {% endif %}
                         </ul>
                     </li>
+                    {% if userrole > 1 %}
                     <li class="nav-item">
                         <a href="{{ url_for('main.query') }}"      class="nav-link">Query</a>
                     </li>

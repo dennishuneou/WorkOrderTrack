@@ -1,8 +1,9 @@
 from flask_login import login_required
 from app.asset.forms import AddWorkorderForm, UploadReportForm, ReviewReportForm, ReviewReportFileForm,EditOneComputerForm,ReportSearchForm,QueryForm,ViewReportForm,ReviewOneComputerForm
 from app.asset.forms import AddProductForm,QueryProductsForm,EditProductForm,QueryWorkordersForm,PackingCalculateForm
+from app.asset.forms import QueryQlogForm,AddQualityLogForm,EditQualityLogForm
 from app.asset import main
-from app.asset.models import WorkOrder, Production, PnMap, PackageBox
+from app.asset.models import WorkOrder, Production, PnMap, PackageBox, QualityLog
 from flask import render_template, flash, request, redirect, url_for, session
 from app import db
 from app.asset.forms import get_biosversion, get_sopversion
@@ -437,7 +438,7 @@ def display_workorders():
     completedlastwday = completedlastwday.filter(WorkOrder.packgo!=True).order_by(WorkOrder.asid)             
    
     searchtable = []  
-    seq = 0;
+    seq = 0
     for workord in completed7day.filter(WorkOrder.packgo!=True).order_by(WorkOrder.asid):
         rows = []
         seq = seq + 1
@@ -1153,7 +1154,6 @@ def add_workorder():
         pns = f"{x}"
         pns = pns.replace("('","")
         pns = pns.replace("',)","")
-        print(pns)
         products.append(pns)
     return render_template('add_workorder.html', form=form, userrole = role,products=products)
 
@@ -1243,6 +1243,7 @@ def createproduct():
 @main.route('/EditProduct/<id>', methods=['GET', 'POST'])
 @login_required
 def EditProduct(id): 
+    id = int(id) # convert string to integer
     product = PnMap.query.get(id)
     form = EditProductForm(obj=product)
     role = get_userrole(current_user.id)
@@ -1527,3 +1528,95 @@ def packingcalculator():
             solutions,details,totalpercentage = classifier(platforms, packages)
 
     return render_template('packing.html', form=form, searched=searched,solutions=solutions, details=details, totalpercentage=totalpercentage,userrole=userrole)  
+
+@main.route('/qualitylog', methods=['GET', 'POST'])
+@login_required
+def add_qualitylog():
+    role = get_userrole(current_user.id)
+    form = AddQualityLogForm()  
+    if form.validate_on_submit():
+        reportname = get_username(current_user.id)
+        reporttime = datetime.datetime.now().strftime("%y/%m/%d %H:%M")
+        processlog = reporttime + " " + reportname + " " + form.reason.data
+        transaction = QualityLog(wo=form.wo.data.replace("/","-"), source= form.source.data, pn=str(form.pn.data), csn=str(form.csn.data), 
+                    defectpart=form.defectpart.data,defectpartsn=form.defectpartsn.data,reason=form.reason.data,
+                    status="New",reportid=current_user.id,reporttime = datetime.datetime.now(),
+                    ownerid = -1,processlog=processlog,conclusion="")
+        db.session.add(transaction)
+        db.session.commit()
+        flash('Create Log successful')
+    return render_template('add_qlog.html', form=form,  userrole=role) 
+
+@main.route('/queryqlog', methods=['GET', 'POST'])
+@login_required
+def queryqlog():
+    form = QueryQlogForm()
+    searched = 0
+    qlogs = []
+    if request.method == "POST":
+        #Prepare the search results between start date and end date
+        if form.enddate.data != None and form.startdate.data != None:
+            if form.enddate.data >= form.startdate.data :
+                qlogs = QualityLog.query.filter(func.DATE(QualityLog.reporttime) >= func.DATE(form.startdate.data))
+                qlogs = qlogs.filter((func.DATE(QualityLog.reporttime)) <= (func.DATE(form.enddate.data )))
+                if(form.status.data != "All"):
+                    qlogs = qlogs.filter_by(status = form.status.data)
+                if(form.source.data != "All"):    
+                    qlogs = qlogs.filter_by(source = form.source.data)
+                qlogs = qlogs.order_by(QualityLog.reporttime)
+                searched = 1
+    role = get_userrole(current_user.id)
+    if role < 2:
+        return redirect(url_for('main.display_workorders'))
+    searchtable = []
+    for qlog in qlogs :
+        rows = []
+        rows.append(qlog.id)
+        rows.append(qlog.status)
+        rows.append(qlog.source)
+        rows.append(qlog.defectpart)
+        rows.append(qlog.defectpartsn)
+        rows.append(qlog.reporttime.strftime("%y/%m/%d %H:%M"))
+        rows.append(get_username(qlog.reportid))
+        rows.append(get_username(qlog.ownerid))
+        rows.append(qlog.reason)
+        rows.append(qlog.conclusion)
+        searchtable.append(rows)
+    return render_template('queryqlog.html', form=form, userrole=role, searched=searched,searchtable=searchtable)
+
+@main.route('/ViewEditQlog/<id>', methods=['GET', 'POST'])
+@login_required
+def ViewEditQlog(id): 
+    print(id)
+    qlog = QualityLog.query.filter_by(id=id)
+    form = EditQualityLogForm(obj=qlog[0])
+    role = get_userrole(current_user.id)
+    #if request.method == 'GET' :
+    #    qlogbackup = qlog[0]
+    if form.validate_on_submit():
+        # Not update product name
+        #product.pn = form.pn.data
+        qlog_org = QualityLog.query.filter_by(id=id)
+        reportname = get_username(current_user.id)
+        reporttime = datetime.datetime.now().strftime("%y/%m/%d %H:%M")
+        processlog = qlog_org[0].processlog
+        if(qlog_org[0].status!=form.status.data.strip()):
+            processlog = processlog + "\n" + reporttime + " " + reportname + " Change status to " + form.status.data
+        if(len(form.newaction.data.strip())):            
+            processlog = qlog_org[0].processlog + "\n" + reporttime + " " + reportname + " " + form.newaction.data
+        qlog_org[0].wo=form.wo.data.replace("/","-")
+        qlog_org[0].source=form.source.data
+        qlog_org[0].pn=str(form.pn.data)
+        qlog_org[0].csn=str(form.csn.data), 
+        qlog_org[0].defectpart=form.defectpart.data
+        qlog_org[0].defectpartsn=form.defectpartsn.data
+        qlog_org[0].reason=form.reason.data
+        qlog_org[0].status=form.status.data
+        qlog_org[0].ownerid=current_user.id #last modified by
+        qlog_org[0].processlog=processlog
+        db.session.commit()
+        flash('Update successful')
+        #return redirect(session.get('previous_url','/'))
+        #return redirect(url_for('main.queryproduct'))
+    return render_template('edit_Qlog.html', form=form, id=id, userrole=role) 
+

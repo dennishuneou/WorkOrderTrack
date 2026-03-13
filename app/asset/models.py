@@ -217,3 +217,41 @@ class Production(db.Model):
 
     def __repr__(self):
         return '{} by {}'.format(self.wo)
+
+
+class QualityLog(db.Model):
+    __tablename__ = 'qlog'
+
+    id = db.Column(db.Integer, primary_key=True)
+    source = db.Column(db.String(100), nullable=False)
+    wo = db.Column(db.String(100), nullable=False)
+    pn = db.Column(db.String(100), nullable=False)
+    csn = db.Column(db.String(100), nullable=False)
+    defectpart =  db.Column(db.String(100), nullable=False)
+    defectpartsn =  db.Column(db.String(100), nullable=False)
+    reason =  db.Column(db.String(300), nullable=False)
+    #New, Processing, Pending, Closed
+    status =  db.Column(db.String(100), nullable=False)
+    reportid = db.Column(db.Integer, nullable=False)
+    reporttime=db.Column(db.DateTime, nullable=False)
+    ownerid=db.Column(db.Integer, nullable=False)
+    processlog=db.Column(db.String(1024), nullable=False)
+    conclusion =  db.Column(db.String(100), nullable=True)
+
+    def __init__(self, source, wo, pn, csn, defectpart, defectpartsn, reason, status, reportid, reporttime, ownerid, processlog,conclusion):
+        self.wo = wo
+        self.source = source
+        self.pn = pn
+        self.csn = csn
+        self.defectpart = defectpart
+        self.defectpartsn = defectpartsn
+        self.reason = reason
+        self.status = status
+        self.reportid = reportid
+        self.reporttime = reporttime
+        self.ownerid = ownerid
+        self.processlog = processlog
+        self.conclusion = conclusion
+     
+    def __repr__(self):
+        return '{} by {}'.format(self.wo)

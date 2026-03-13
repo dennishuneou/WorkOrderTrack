@@ -4,7 +4,7 @@ from wtforms.validators import DataRequired, Length, InputRequired, NumberRange
 from wtforms.fields.html5 import DateField
 from wtforms.ext.sqlalchemy.fields import QuerySelectField
 from wtforms.widgets import TextArea
-from app.asset.models import WorkOrder, Production, PnMap, PackageBox
+from app.asset.models import WorkOrder, Production, PnMap, PackageBox, QualityLog
 from app.auth.forms  import get_userrole,get_usersname,get_operateusersname
 from datetime import datetime
 
@@ -710,4 +710,41 @@ class PackingCalculateForm(FlaskForm):
     qty_camera = IntegerField('Camera Quantity', validators=[InputRequired(),NumberRange(min=0,max=2000)],default=0)
 
     submit = SubmitField('Calculate')
+
+class AddQualityLogForm(FlaskForm):
+    options = [('Production Line','Production Line'),('RMA','RMA'),('IQC','IQC'),('IPQC/FQC','IPQC/FQC')]
+    source = SelectField('Source(Production,RMA,IQC)',  choices= options,validators=[InputRequired(),Length(max=100)])
+    wo = StringField('WO or RMA or Invoice', validators=[DataRequired(),Length(max=100)])
+    pn = StringField('Product Model', validators=[DataRequired(),pn_check,Length(max=100)])
+    csn = StringField('Chassis Serial Number', validators=[DataRequired(),Length(max=100)])
+    options = [('Motherboard','Motherboard'),('Daughterboard','Daughterboard'),('Chassis','Chassis'),('CPU','CPU'),('MEMORY','MEMORY'),('DISK','DISK'),('MODULES','MODULE'),('Package','Package')]
+    defectpart = SelectField('Defect Part', choices= options,validators=[DataRequired(),Length(max=100)])
+    defectpartsn = StringField('Defect Part SN(or NA)', validators=[DataRequired(),Length(max=100)])
+    reason = StringField('Issue Description', validators=[DataRequired(),Length(max=300)],widget=TextArea())
+    submit = SubmitField('Create New Quality Log')
        
+class QueryQlogForm(FlaskForm):
+    startdate = DateField('Start Date')
+    enddate   = DateField('End Date')
+    options = [('All','All'),('Production Line','Production Line'),('RMA','RMA'),('IQC','IQC'),('IPQC/FQC','IPQC/FQC')]
+    source = SelectField('Source',  choices= options,validators=[InputRequired(),Length(max=100)])
+    options = [('All','All'),('New','New'),('Processing','Processing'),('Pending','Pending'),('Closed','Closed')]
+    status = SelectField('Status',  choices= options,validators=[InputRequired(),Length(max=100)])
+    submit    = SubmitField('Search')
+
+class EditQualityLogForm(FlaskForm):
+    options = [('Production Line','Production Line'),('RMA','RMA'),('IQC','IQC'),('IPQC/FQC','IPQC/FQC')]
+    source = SelectField('Source(Production,RMA,IQC)',  choices= options,validators=[InputRequired(),Length(max=100)])
+    wo = StringField('WO or RMA or Invoice', validators=[DataRequired(),Length(max=100)])
+    pn = StringField('Product Model', validators=[DataRequired(),pn_check,Length(max=100)])
+    csn = StringField('Chassis Serial Number', validators=[DataRequired(),Length(max=100)])
+    options = [('Motherboard','Motherboard'),('Daughterboard','Daughterboard'),('Chassis','Chassis'),('CPU','CPU'),('MEMORY','MEMORY'),('DISK','DISK'),('MODULES','MODULE'),('Package','Package')]
+    defectpart = SelectField('Defect Part', choices= options,validators=[DataRequired(),Length(max=100)])
+    defectpartsn = StringField('Defect Part SN(or NA)', validators=[DataRequired(),Length(max=100)])
+    reason = StringField('Issue Description', validators=[DataRequired(),Length(max=300)],widget=TextArea())
+    options = [('New','New'),('Processing','Processing'),('Pending','Pending'),('Closed','Closed')]
+    status = SelectField('Case status(New,Processing,Pending,Closed)', choices= options,validators=[DataRequired(),Length(max=100)])
+    conclusion = StringField('Case Conclusion', validators=[Length(max=100)])
+    processlog = StringField('Process Log', render_kw={'readonly': True},widget=TextArea())
+    newaction = StringField('New Action Log',validators=[Length(max=200)],widget=TextArea())
+    submit = SubmitField('Update Quality Log')
