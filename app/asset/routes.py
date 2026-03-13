@@ -1519,10 +1519,14 @@ def packingcalculator():
            print(Boxes_RGS) 
            platforms1 = {'Platform1':Boxes_SEMIL + Boxes_RGS} 
            solutions_c,details_c,totalpercentage_c = classifier(platforms1, packages_computer)
-           solutions_a,details_a,totalpercentage_a = classifier(platforms, packages)
-           solutions =  solutions_c + solutions_a
-           details = details_c + details_a
-           totalpercentage = (totalpercentage_c + totalpercentage_a)/2
+           if(len(packages)):
+                solutions_a,details_a,totalpercentage_a = classifier(platforms, packages)
+                solutions =  solutions_c + solutions_a
+                details = details_c + details_a
+                totalpercentage = (totalpercentage_c + totalpercentage_a)/2
+           else:
+                solutions =  solutions_c
+                details = details_c
         else :
             packages =  packages +  packages_computer
             solutions,details,totalpercentage = classifier(platforms, packages)
