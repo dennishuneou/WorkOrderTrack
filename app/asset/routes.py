@@ -1515,18 +1515,20 @@ def packingcalculator():
                 packages.append(package)
 
         if Boxes_SEMIL != [] or Boxes_RGS != []:
-           print(Boxes_SEMIL) 
-           print(Boxes_RGS) 
-           platforms1 = {'Platform1':Boxes_SEMIL + Boxes_RGS} 
-           solutions_c,details_c,totalpercentage_c = classifier(platforms1, packages_computer)
-           if(len(packages)):
-                solutions_a,details_a,totalpercentage_a = classifier(platforms, packages)
-                solutions =  solutions_c + solutions_a
-                details = details_c + details_a
-                totalpercentage = (totalpercentage_c + totalpercentage_a)/2
-           else:
-                solutions =  solutions_c
-                details = details_c
+           #platforms1 = {'Platform1':Boxes_SEMIL + Boxes_RGS} 
+            platforms = {'Platform1':Boxes+Boxes_SEMIL + Boxes_RGS}
+           #solutions_c,details_c,totalpercentage_c = classifier(platforms1, packages_computer)
+           #if(len(packages)):
+           #     solutions_a,details_a,totalpercentage_a = classifier(platforms, packages)
+           #     solutions =  solutions_c + solutions_a
+           #     details = details_c + details_a
+           #     totalpercentage = (totalpercentage_c + totalpercentage_a)/2
+           #else:
+           #     solutions =  solutions_c
+           #     details = details_c
+            #Allow for packaging semil computer and cable together
+            packages =  packages +  packages_computer
+            solutions,details,totalpercentage = classifier(platforms, packages)
         else :
             packages =  packages +  packages_computer
             solutions,details,totalpercentage = classifier(platforms, packages)
