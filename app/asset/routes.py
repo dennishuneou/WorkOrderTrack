@@ -1516,7 +1516,7 @@ def packingcalculator():
 
         if Boxes_SEMIL != [] or Boxes_RGS != []:
            #platforms1 = {'Platform1':Boxes_SEMIL + Boxes_RGS} 
-            platforms = {'Platform1':Boxes+Boxes_SEMIL + Boxes_RGS}
+            platforms = {'Platform1':Boxes + Boxes_SEMIL + Boxes_RGS}
            #solutions_c,details_c,totalpercentage_c = classifier(platforms1, packages_computer)
            #if(len(packages)):
            #     solutions_a,details_a,totalpercentage_a = classifier(platforms, packages)
