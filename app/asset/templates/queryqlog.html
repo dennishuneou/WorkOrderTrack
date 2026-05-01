@@ -92,6 +92,8 @@
                             <th> ID</th>
                             <th data-sortable="true"> Status</th>
                             <th data-sortable="true"> Source</th>
+                            <th data-sortable="true"> Product</th>
+                            <th data-sortable="true"> Chassis SN</th>
                             <th data-sortable="true"> Defective Parts</th>
                             <th data-sortable="true"> Parts S/N</th>
                             <th data-sortable="true"> Report at</th>
@@ -115,6 +117,8 @@
                             <td> {{ rows[7] }} </td>
                             <td> {{ rows[8] }} </td>
                             <td> {{ rows[9] }} </td>
+                            <td> {{ rows[10] }} </td>
+                            <td> {{ rows[11] }} </td>
                             <td>       
                                 <a class="btn btn-light btn-sm"
                                 href= "{{ url_for('main.ViewEditQlog',id=rows[0])}}"

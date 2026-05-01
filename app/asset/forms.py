@@ -54,6 +54,16 @@ def pn_check(form, field):
         return  
     if basicinfo.count() == 0 and form.packgo.data == False :
         raise ValidationError("Doesn't find this PN in database.")
+def pn_check0(form, field):
+    basicinfo = PnMap.query.filter_by(pn=form.pn.data.strip())
+    if "PCIe" in form.pn.data:
+        return  
+    if "LTN" in form.pn.data or "IGT" in form.pn.data:
+        return  
+    if "PB-" in form.pn.data:
+        return  
+    if basicinfo.count() == 0 :
+        raise ValidationError("Doesn't find this PN in database.")        
 def pack_pn_check(form, field):
     basicinfo = PnMap.query.filter_by(pn=form.computer.data.strip())
     if basicinfo.count() == 0 :
@@ -724,6 +734,8 @@ class ViewReportForm(FlaskForm):
     other = StringField('Other Module',render_kw={'readonly': True})
     note  = StringField('Notes',widget=TextArea(),render_kw={'readonly': True})
     report = StringField('Report File',widget=TextArea(),render_kw={'style': 'width: 400px','readonly': True})
+    wo_doc_items=StringField('WorkOrder Parts Detail',widget=TextArea(),render_kw={'style': 'width: 400px','readonly': True})
+   
     
 
 class ReviewReportForm(FlaskForm):
@@ -1006,7 +1018,7 @@ class EditQualityLogForm(FlaskForm):
     options = [('Production Line','Production Line'),('RMA','RMA'),('IQC','IQC'),('IPQC/FQC','IPQC/FQC')]
     source = SelectField('Source(Production,RMA,IQC)',  choices= options,validators=[InputRequired(),Length(max=100)])
     wo = StringField('WO or RMA or Invoice', validators=[DataRequired(),Length(max=100)])
-    pn = StringField('Product Model', validators=[DataRequired(),pn_check,Length(max=100)])
+    pn = StringField('Product Model', validators=[DataRequired(),pn_check0,Length(max=100)])
     csn = StringField('Chassis Serial Number', validators=[DataRequired(),Length(max=100)])
     options = [('Motherboard','Motherboard'),('Daughterboard','Daughterboard'),('Chassis','Chassis'),('CPU','CPU'),('MEMORY','MEMORY'),('DISK','DISK'),('MODULES','MODULE'),('Package','Package')]
     defectpart = SelectField('Defect Part', choices= options,validators=[DataRequired(),Length(max=100)])

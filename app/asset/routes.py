@@ -963,7 +963,9 @@ def ReviewReport(id):
 @login_required
 def ViewReport(wo,csn):
         products = Production.query.filter_by(wo=wo,csn=csn)
+        workorder = WorkOrder.query.filter_by(wo=wo,csn=csn)
         form = ViewReportForm(obj=products[0])
+        form.wo_doc_items.data=workorder[0].doc_items
         role = get_userrole(current_user.id)
         return render_template('viewreport.html', form=form, userrole = role)
 
@@ -1625,6 +1627,8 @@ def queryqlog():
         rows.append(qlog.id)
         rows.append(qlog.status)
         rows.append(qlog.source)
+        rows.append(qlog.pn)
+        rows.append(qlog.csn)
         rows.append(qlog.defectpart)
         rows.append(qlog.defectpartsn)
         rows.append(qlog.reporttime.strftime("%y/%m/%d %H:%M"))
@@ -1665,6 +1669,7 @@ def ViewEditQlog(id):
         qlog_org[0].status=form.status.data
         qlog_org[0].ownerid=current_user.id #last modified by
         qlog_org[0].processlog=processlog
+        qlog_org[0].conclusion=form.conclusion.data.strip()
         db.session.commit()
         flash('Update successful')
         #return redirect(session.get('previous_url','/'))
