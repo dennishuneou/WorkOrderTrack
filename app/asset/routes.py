@@ -1366,7 +1366,7 @@ def packingcalculator():
         camera_qty = 0
         computer_qty = 0
         if form.computer.data != None :
-           computer_name = form.computer.data.pn
+           computer_name = form.computer.data
            computer_qty = form.qty_computer.data
         inneraccessory_name = ''
         if computer_qty != 0 : #preinstalled computer
