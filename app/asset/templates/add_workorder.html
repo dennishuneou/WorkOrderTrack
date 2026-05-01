@@ -1,6 +1,19 @@
 {% extends 'base.html' %}
 {% from 'bootstrap/form.html' import render_form %}
 
+{% macro render_manual_field(field) %}
+    <div style="max-width: 500px;"> {# This controls the box width #}
+        {{ field.label(class="form-label") }}
+        {{ field(class="form-control " + ("is-invalid" if field.errors else ""), **kwargs) }}
+        {% if field.errors %}
+            {% for error in field.errors %}
+                <div class="invalid-feedback" style="display:block;">{{ error }}</div>
+            {% endfor %}
+        {% endif %}
+    </div>
+{% endmacro %}
+
+
 {% block content %}
     <div class="container">
         <h4 style="margin-left: 45px"> Create New WorkOrder </h4>
@@ -10,27 +23,20 @@
         </form>
         <form method="POST">
             {{ form.hidden_tag() }}
-            <p>{{ form.wo.label }}</p> 
-            <p> {{ form.wo() }}</p>
-            <p>{{ form.ldtime.label }}</p> 
-            <p> {{ form.ldtime() }}</p>
-            <p>{{ form.customers.label }} </p> 
-            <p> {{ form.customers() }}</p>
-            <p>{{ form.pn.label }}</p>
-            <p>{{form.pn(list="id_datalist")}}</p>
+            <p> {{ render_manual_field(form.wo) }}</p>
+            <p> {{ render_manual_field(form.ldtime) }}</p>
+            <p> {{ render_manual_field(form.customers) }}</p>
+            <p> {{ render_manual_field(form.pn, list="id_datalist") }}</p> 
             <datalist id="id_datalist">
-            {% for entry in products %}
-            <option value= {{entry}}>
-             {% endfor%}
+               {% for entry in products %}
+                  <option value="{{ entry }}">
+               {% endfor %}
             </datalist>
-            <p>{{ form.csn.label }} </p> 
-            <p> {{ form.csn() }}</p>
-            <p>{{ form.cputype.label }} </p> 
-            <p> {{ form.cputype() }}</p>
-            <p>{{ form.memorysize.label }} </p> 
-            <p> {{ form.memorysize() }}</p>
-            <p>{{ form.gpu.label }} </p> 
-            <p> {{ form.gpu() }}</p>
+            <p> {{ render_manual_field(form.csn) }}</p>
+            <p> {{ render_manual_field(form.cputype) }}</p>
+            <p> {{ render_manual_field(form.memorysize) }}</p>
+            <p> {{ render_manual_field(form.gpu) }}</p>
+
             <p>{{ form.withwifi.label }} {{ form.withwifi() }}
                 {{ form.withcan.label }} {{ form.withcan() }}
                 {{ form.withfg5g.label }} {{ form.withfg5g() }}</p>
@@ -58,8 +64,8 @@
                {{ form.fg5ginstall() }}</p>
             <p>{{ form.packgo.label }} 
                {{ form.packgo() }}</p>
-            <p>{{ form.operator.label }} 
-               {{ form.operator() }}</p>
+            <p> {{ render_manual_field(form.operator) }}</p> 
+            <p><input type="text" name="doc_items" value="{{ form.doc_items.data or '' }}" style="width: 400px" placeholder="e.g., GPU-RTX4080|SSD256GB|WIFI"></p> 
                 {{ form.submit() }}
         </form>
     </div>

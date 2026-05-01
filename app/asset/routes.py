@@ -811,6 +811,10 @@ def DeleteOneComputer(id):
 def EditOneComputer(id): 
     workorder = WorkOrder.query.get(id)
     form = EditOneComputerForm(obj=workorder)
+    #Explicitly load doc_items from database (in case obj population fails)
+    if request.method == 'GET':
+        form.doc_items.data = workorder.doc_items or ''
+        print(f"Loading doc_items from DB: {workorder.doc_items}")
     role = get_userrole(current_user.id)
     if form.validate_on_submit():
         print(form.cpuinstall.data)
@@ -838,6 +842,7 @@ def EditOneComputer(id):
         workorder.ospreinstalled=form.ospreinstalled.data
         workorder.osactivation=form.osactivation.data
         workorder.diskpreinstalled=form.diskpreinstalled.data
+        workorder.doc_items=form.doc_items.data
         if form.operator.data != None :
             asidset = form.operator.data.id
             workorder.asid = asidset    
@@ -993,6 +998,11 @@ def add_workorder():
     form = AddWorkorderForm()
     role = get_userrole(current_user.id)
     if request.method == 'POST' :
+        print(f"DEBUG: form.doc_items = {form.doc_items.data}")
+        #Restore doc_items from session if not in form data
+        if not form.doc_items.data and 'doc_items' in session:
+            form.doc_items.data = session['doc_items']
+            print(f"Restored doc_items from session: {form.doc_items.data}")
         if 'readdocfile' in request.form :
            if request.form['readdocfile'] == 'Upload' and 'file' in  request.files:
                 file = request.files['file'] 
@@ -1040,6 +1050,7 @@ def add_workorder():
                                     form.customers.data = row[1]
                     searchend = False                                          
                     #Search content
+                    doc_items_list = []  # Collect items for doc_items field
                     for table in doc.tables :
                             if not searchend :
                                 for row in table.rows :
@@ -1049,7 +1060,7 @@ def add_workorder():
                                         for cell in row.cells:
                                             if not foundPN :
                                                 if colcnt == 0 and 'Product Number' in cell.text:
-                                                #find 
+                                                    #find 
                                                     foundPN = True
                                                     linecontent.append(cell.text)
                                             else :       
@@ -1059,7 +1070,19 @@ def add_workorder():
                                                 break; 
                                             colcnt = colcnt + 1   
                                         wocontent.append(linecontent)
+                                        #Collect item name for doc_items (column 0 = Product Number)
+                                        if len(linecontent) > 0 and linecontent[0].strip() and 'Product Number' not in linecontent[0]:
+                                            item_name = linecontent[0].strip()
+                                            #Add quantity if available (column 1 = QTY)
+                                            if len(linecontent) > 1 and linecontent[1].strip().isdigit():
+                                                item_name = item_name + 'x' + linecontent[1].strip()
+                                            doc_items_list.append(item_name)
                                 #print(wocontent)
+                    #Set doc_items field with items separated by |
+                    doc_items_str = '|'.join(doc_items_list)
+                    form.doc_items.data = doc_items_str
+                    session['doc_items'] = doc_items_str  # Persist in session
+                    print(f"Saved doc_items to session: {doc_items_str}")
                     #['Product Number', 'QTY', 'S/N', 'Notes', 'Check']
                     form.pn.data = wocontent[1][0]
                     count = int(wocontent[1][1])
@@ -1081,7 +1104,7 @@ def add_workorder():
                             ssdstr = row[0].split('-')
                             for ssdsize in ssdstr :
                                 if 'GB' in ssdsize.upper() or 'TB' in ssdsize.upper():
-                                    if 'PCIE' in row[0].upper():
+                                    if 'PCIE' in row[0].upper() or 'P34' in row[0].upper() or 'P44' in row[0].upper():
                                         form.disksize.data = form.disksize.data + 'NVME' + ssdsize + 'x' + str(int(ssdcnt)) + '  '
                                     else :
                                         form.disksize.data = form.disksize.data + 'SSD' + ssdsize + 'x' + str(int(ssdcnt)) + '  '    
@@ -1091,10 +1114,12 @@ def add_workorder():
                                 form.diskpreinstalled.data = True
                         elif 'RTX' in row[0].upper() or 'GTX' in row[0].upper() :
                             gpucnt = int(row[1]) / count
-                            gpustr = row[0].split('-')
-                            for gpusize in gpustr :
-                                if 'RTX' in gpusize or 'GTX' in gpusize :
-                                    form.gpu.data = gpusize + 'x' + str(int(gpucnt))
+                            #gpustr = row[0].split('-')
+                            #for gpusize in gpustr :
+                            #    if 'RTX' in gpusize or 'GTX' in gpusize :
+                            #        form.gpu.data = gpusize + 'x' + str(int(gpucnt))
+                            #keep original GPU card information
+                            form.gpu.data = row[0].strip()+ 'x' + str(int(gpucnt))
                             if 'installed' not in row[3] :
                                 form.gpuinstall.data = True
                             else :
@@ -1131,6 +1156,7 @@ def add_workorder():
                                 form.cpuinstall.data = False
                     os.remove(filepath)
         elif form.validate_on_submit():
+            print(f"DEBUG: doc_items before save: {form.doc_items.data}")
             if form.operator.data == None :
                 asidset =-1
             else :
@@ -1143,8 +1169,12 @@ def add_workorder():
                     wifiinstall=form.wifiinstall.data,mezioinstall=form.mezioinstall.data,caninstall=form.caninstall.data,fg5ginstall=form.fg5ginstall.data,
                     gpu=form.gpu.data,withwifi=form.withwifi.data,withcan=form.withcan.data,withfg5g=form.withfg5g.data,ospreinstalled=form.ospreinstalled.data,
                     osactivation=form.osactivation.data,diskpreinstalled=form.diskpreinstalled.data,
-                    osinstall=form.osinstall.data,packgo=form.packgo.data,asid=asidset,insid=-1,astime=None,intime=None,tktime=None,csid=current_user.id,cstime=datetime.datetime.now(),ldtime=form.ldtime.data,status=-1)
+                    osinstall=form.osinstall.data,packgo=form.packgo.data,asid=asidset,insid=-1,astime=None,intime=None,tktime=None,csid=current_user.id,cstime=datetime.datetime.now(),ldtime=form.ldtime.data,status=-1,
+                    doc_items=form.doc_items.data)
                     db.session.add(transaction)
+            #Clear session after save
+            if 'doc_items' in session:
+                session.pop('doc_items')
             db.session.commit()
             flash('WorkOrder registered successfully')
             return redirect(url_for('main.display_workorders'))
@@ -1532,8 +1562,23 @@ def packingcalculator():
         else :
             packages =  packages +  packages_computer
             solutions,details,totalpercentage = classifier(platforms, packages)
+    # 1. Fetch your objects as you did before
+    raw_products = (
+        PnMap.query.filter_by(category='COMPUTER').order_by(PnMap.pn).all() + 
+        PnMap.query.filter_by(category='PB').order_by(PnMap.pn).all() + 
+        PnMap.query.filter_by(category='NRU').order_by(PnMap.pn).all() + 
+        PnMap.query.filter_by(category='SEMIL').order_by(PnMap.pn).all()
+        )
 
-    return render_template('packing.html', form=form, searched=searched,solutions=solutions, details=details, totalpercentage=totalpercentage,userrole=userrole)  
+    # 2. Extract the 'pn' attribute from each object into a list of strings
+    productlist = [item.pn for item in raw_products]
+    products = []
+    for x in productlist :
+        pns = f"{x}"
+        pns = pns.replace("('","")
+        pns = pns.replace("',)","")
+        products.append(pns)
+    return render_template('packing.html', form=form, products=products, searched=searched,solutions=solutions, details=details, totalpercentage=totalpercentage,userrole=userrole)  
 
 @main.route('/qualitylog', methods=['GET', 'POST'])
 @login_required

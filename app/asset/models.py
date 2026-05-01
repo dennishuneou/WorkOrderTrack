@@ -120,10 +120,11 @@ class WorkOrder(db.Model):
     ospreinstalled=db.Column(db.Boolean, nullable=True)
     diskpreinstalled=db.Column(db.Boolean, nullable=True)
     osactivation=db.Column(db.Boolean, nullable=True)
-
+    doc_items=db.Column(db.String(512), nullable=True)  #Items from work order doc, separated by |
+    
     def __init__(self, wo, customers, pn, csn, cputype, memorysize, gpu, withwifi, withcan,withfg5g, ospreinstalled, diskpreinstalled,\
-                disksize, cpuinstall, memoryinstall, gpuinstall,  wifiinstall, caninstall, mezioinstall, fg5ginstall, osinstall, packgo,\
-                asid, insid,astime, intime, csid, cstime, tktime, ldtime, status,osactivation):
+                 disksize, cpuinstall, memoryinstall, gpuinstall,  wifiinstall, caninstall, mezioinstall, fg5ginstall, osinstall, packgo,\
+                 asid, insid,astime, intime, csid, cstime, tktime, ldtime, status,osactivation,doc_items=None):
         self.wo = wo
         self.customers = customers
         self.pn = pn
@@ -156,7 +157,8 @@ class WorkOrder(db.Model):
         self.ldtime = ldtime
         self.status = status
         self.osactivation = osactivation
-        
+        self.doc_items = doc_items
+         
     def __repr__(self):
         return '{} by {}'.format(self.wo)
 

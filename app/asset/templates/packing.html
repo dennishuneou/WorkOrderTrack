@@ -1,6 +1,16 @@
 {% extends 'base.html' %}
 {% from 'bootstrap/form.html' import render_form %}
-
+{% macro render_manual_field(field) %}
+    <div style="max-width: 500px;"> {# This controls the box width #}
+        {{ field.label(class="form-label") }}
+        {{ field(class="form-control " + ("is-invalid" if field.errors else ""), **kwargs) }}
+        {% if field.errors %}
+            {% for error in field.errors %}
+                <div class="invalid-feedback" style="display:block;">{{ error }}</div>
+            {% endfor %}
+        {% endif %}
+    </div>
+{% endmacro %}
 
 {% block content %}
     <div class="container">
@@ -9,7 +19,13 @@
         <form method="POST">
           {{ form.hidden_tag() }}    
         <div>
-          {{ form.computer.label }} {{ form.computer() }} <!-- This generates the <select> dropdown -->
+          <!-- This generates the <select> dropdown {{ form.computer.label }} {{ form.computer() }}-->
+          <p> {{ render_manual_field(form.computer, list="id_datalist") }}</p> 
+          <datalist id="id_datalist">
+               {% for entry in products %}
+                  <option value="{{ entry }}">
+               {% endfor %}
+          </datalist>
           {{ form.qty_computer.label }} {{ form.qty_computer() }} <!-- This generates the <select> dropdown -->  
         </div>
         <div>

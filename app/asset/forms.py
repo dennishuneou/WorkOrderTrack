@@ -54,6 +54,10 @@ def pn_check(form, field):
         return  
     if basicinfo.count() == 0 and form.packgo.data == False :
         raise ValidationError("Doesn't find this PN in database.")
+def pack_pn_check(form, field):
+    basicinfo = PnMap.query.filter_by(pn=form.computer.data.strip())
+    if basicinfo.count() == 0 :
+        raise ValidationError("Doesn't find this Product in database.")        
 def DuplicateCheck(form, field):
     basicinfo = PnMap.query.filter_by(pn=form.pn.data.strip())
     if basicinfo.count() :
@@ -938,7 +942,8 @@ class QueryWorkordersForm(FlaskForm):
 
 class PackingCalculateForm(FlaskForm):
     
-    computer = QuerySelectField('Computer',query_factory =lambda: PnMap.query.filter_by(category='COMPUTER').order_by(PnMap.pn).all()+PnMap.query.filter_by(category='PB').order_by(PnMap.pn).all()+PnMap.query.filter_by(category='NRU').order_by(PnMap.pn).all()+PnMap.query.filter_by(category='SEMIL').order_by(PnMap.pn).all(), get_label='pn', allow_blank=True)
+    #computer = QuerySelectField('Computer',query_factory =lambda: PnMap.query.filter_by(category='COMPUTER').order_by(PnMap.pn).all()+PnMap.query.filter_by(category='PB').order_by(PnMap.pn).all()+PnMap.query.filter_by(category='NRU').order_by(PnMap.pn).all()+PnMap.query.filter_by(category='SEMIL').order_by(PnMap.pn).all(), get_label='pn', allow_blank=True)
+    computer = StringField('Computer', validators=[DataRequired(),pack_pn_check,Length(max=100)])
     qty_computer = IntegerField('Computer Quantity', validators=[InputRequired(),NumberRange(min=0,max=1000)],default=1) 
     
     dinrail = QuerySelectField('DIN RAIL',query_factory =lambda: PnMap.query.filter_by(category='DINRAIL').all(), get_label='pn', allow_blank=True)
