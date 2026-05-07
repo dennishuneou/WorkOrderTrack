@@ -135,7 +135,7 @@ def report_check(form, field):
         '2484': [{'part_number': 'GC-RTX-3070-2XOC-MSI', 'key_message': 'RTX 3070'}, {'part_number': 'GC-RTX3070-GAMING-OC-GABE', 'key_message': 'RTX 3070'}, {'part_number': 'GC-RTX3070-OC-GABE', 'key_message': 'RTX 3070'}],
         '1EB1': [{'part_number': 'GC-RTX-4000-PNY', 'key_message': 'RTX 4000 (Turing)'}, {'part_number': 'GC-RTX4000-LT', 'key_message': 'RTX 4000 (Turing)'}],
         '2507': [{'part_number': 'GC-RTX3050-OC-MSI', 'key_message': 'RTX 3050'}, {'part_number': 'GC-RTX3050-PNY', 'key_message': 'RTX 3050'}],
-        '2941': [{'part_number': 'GC-RTX-5080-NVD', 'key_message': 'RTX 5080'}, {'part_number': 'GC-RTX5080-OC-MSI', 'key_message': 'RTX 5080'}, {'part_number': 'GC-RTX5080-OC-PLUS-MSI', 'key_message': 'RTX 5080'}],
+        '2C02': [{'part_number': 'GC-RTX-5080-NVD', 'key_message': 'RTX 5080'}, {'part_number': 'GC-RTX5080-OC-MSI', 'key_message': 'RTX 5080'}, {'part_number': 'GC-RTX5080-OC-PLUS-MSI', 'key_message': 'RTX 5080'}],
         '2870': [{'part_number': 'GC-RTX2000Ada-Nvidia', 'key_message': 'RTX 2000 Ada'}, {'part_number': 'GC-RTX2000Ada-Nvidia-601', 'key_message': 'RTX 2000 Ada'}, {'part_number': 'GC-RTX2000Ada-PNY', 'key_message': 'RTX 2000 Ada'}, {'part_number': 'GC-RTX2000EAda-PNY', 'key_message': 'RTX 2000E Ada'}],
         '2786': [{'part_number': 'GC-RTX4070-OC-MSI', 'key_message': 'RTX 4070'}, {'part_number': 'GC-RTX4070-OCV2-GABE', 'key_message': 'RTX 4070'}, {'part_number': 'GC-RTX4070-OC-MSI', 'key_message': 'RTX 4070'}],
         '2783': [{'part_number': 'GC-RTX4070SUPER-OC-MSI', 'key_message': 'RTX 4070 Super'}],
@@ -269,7 +269,7 @@ def report_check(form, field):
             #Jetson format: "link/MAC: 78:d0:04:39:83:27 brd ff:ff:ff:ff:ff"
             totalnetportcnt = totalnetportcnt + 1
             line_lower = line.lower()
-            if ("78:d0:04" in line_lower or "3c:6d:66" in line_lower or "48:b0:2d" in line_lower):
+            if ("78:d0:04" in line_lower or "3c:6d:66" in line_lower or "48:b0:2d" in line_lower or "4c:bb:47" in line_lower or "ac:3a:e2" in line_lower):
                 totalneonetportcnt =  totalneonetportcnt + 1
             elif "9c:6b:00" in line_lower:
                 totalneonetportcnt =  totalneonetportcnt + 1
