@@ -204,8 +204,10 @@ def report_check(form, field):
     #x86 GPU variables
     gpu_device_ids = []
     gpu_detected_parts = []
+    linecnt = 0
     #for non pack & go workorder, POC, Nuvo, SEMIL, Nuvis, we will do check
     for line in contents:
+        linecnt = linecnt + 1
         if "CPU Info:" in line and "Jetson" in line:
             #Detect Jetson system
             is_jetson = True
@@ -269,17 +271,17 @@ def report_check(form, field):
             #Jetson format: "link/MAC: 78:d0:04:39:83:27 brd ff:ff:ff:ff:ff"
             totalnetportcnt = totalnetportcnt + 1
             line_lower = line.lower()
+            prev_line_lower = contents[linecnt-2].lower()
             if ("78:d0:04" in line_lower or "3c:6d:66" in line_lower or "48:b0:2d" in line_lower or "4c:bb:47" in line_lower or "ac:3a:e2" in line_lower):
                 totalneonetportcnt =  totalneonetportcnt + 1
-            elif "9c:6b:00" in line_lower:
                 totalneonetportcnt =  totalneonetportcnt + 1
             elif "88:88:88:88:87:88" in line_lower :     
                 macerrcnt = macerrcnt + 1
-            elif "wl" in line_lower:
+            elif "wl" in prev_line_lower:
                 wlpcnt = wlpcnt + 1    
             elif "can" in line_lower:
                 cancnt = cancnt + 1        
-            elif "wwan" in line_lower:
+            elif "wwan" in prev_line_lower:
                 wancnt = wancnt + 1        
         elif "MAC:" in line and "docker" not in line:
             #x86 format: "enp2s0  (MAC: 78:d0:04:33:40:de)"
@@ -300,7 +302,9 @@ def report_check(form, field):
             elif "can4" in line or "can5" in line or "can6" in line or "can7" in line:
                 cancnt = cancnt + 1        
             elif "wwan" in line :
-                wancnt = wancnt + 1        
+                wancnt = wancnt + 1   
+        elif ("can0" in line or "can1" in line or "can2" in line or "can3" in line) and not is_jetson:
+                cancnt = cancnt + 1                 
         elif "CPU Type" in line:
             #decode and compare cpu type CPU Type: Intel(R) Core(TM) i5-9500TE CPU @ 2.20GHz
             #CPU Type: AMD Ryzen Embedded V1605B with Radeon Vega Gfx
