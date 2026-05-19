@@ -66,7 +66,7 @@ def pn_check0(form, field):
         raise ValidationError("Doesn't find this PN in database.")        
 def pack_pn_check(form, field):
     basicinfo = PnMap.query.filter_by(pn=form.computer.data.strip())
-    if basicinfo.count() == 0 :
+    if basicinfo.count() == 0 and len(form.computer.data.strip()):
         raise ValidationError("Doesn't find this Product in database.")        
 def DuplicateCheck(form, field):
     basicinfo = PnMap.query.filter_by(pn=form.pn.data.strip())
@@ -141,7 +141,7 @@ def report_check(form, field):
         '2783': [{'part_number': 'GC-RTX4070SUPER-OC-MSI', 'key_message': 'RTX 4070 Super'}],
         '2782': [{'part_number': 'GC-RTX4070Ti-OC-MSI', 'key_message': 'RTX 4070Ti'}],
         '2206': [{'part_number': 'GC-RTX-3080-12GB-ASUS', 'key_message': 'RTX 3080'}, {'part_number': 'GC-RTX3080-Tnity-ZTC', 'key_message': 'RTX 3080'}, {'part_number': 'GC-RTX3080-TnityOC-ZTC', 'key_message': 'RTX 3080'}, {'part_number': 'GC-RTX3080-TnityOCLHR-ZTC', 'key_message': 'RTX 3080'}],
-        '27B0': [{'part_number': 'GC-RTX4000Ada-PNY', 'key_message': 'RTX 4000 Ada'}, {'part_number': 'GC-RTX4000SFFAda-PNY', 'key_message': 'RTX 4000 SFF Ada'}, {'part_number': 'GC-RTXPRO4000SFF-LT', 'key_message': 'RTX PRO 4000 SFF'}, {'part_number': 'GC-RTXPRO4000SFF-PNY', 'key_message': 'RTX PRO 4000 SFF'}],
+        '2C33': [{'part_number': 'GC-RTX4000Ada-PNY', 'key_message': 'RTX 4000 Ada'}, {'part_number': 'GC-RTX4000SFFAda-PNY', 'key_message': 'RTX 4000 SFF Ada'}, {'part_number': 'GC-RTXPRO4000SFF-LT', 'key_message': 'RTX PRO 4000 SFF'}, {'part_number': 'GC-RTXPRO4000SFF-PNY', 'key_message': 'RTX PRO 4000 SFF'}],
         '2882': [{'part_number': 'GC-RTX4060-GABE', 'key_message': 'RTX 4060'}, {'part_number': 'GC-RTX4060-LT', 'key_message': 'RTX 4060'}],
         '2684': [{'part_number': 'GC-RTX4080', 'key_message': 'RTX 4080'}, {'part_number': 'GC-RTX4080-OC-MSI', 'key_message': 'RTX 4080'}],
         '2703': [{'part_number': 'GC-RTX4080 SUPER-OC-MSI', 'key_message': 'RTX 4080 Super'}, {'part_number': 'GC-RTX4080S-LT', 'key_message': 'RTX 4080 Super'}],
@@ -152,7 +152,7 @@ def report_check(form, field):
         '2946': [{'part_number': 'GC-RTX5070-OC-MSI', 'key_message': 'RTX 5070'}],
         '2944': [{'part_number': 'GC-RTX5070Ti-OC-MSI', 'key_message': 'RTX 5070Ti'}],
         '2901': [{'part_number': 'GC-RTX5090-OC-MSI', 'key_message': 'RTX 5090'}],
-        '26B1': [{'part_number': 'GC-RTX6000Ada-PNY', 'key_message': 'RTX 6000 Ada'}, {'part_number': 'GC-RTX6000Ada-PNY-601', 'key_message': 'RTX 6000 Ada'}, {'part_number': 'GC-RTXPRO6000-PNY', 'key_message': 'RTX PRO 6000'}],
+        '2BB4': [{'part_number': 'GC-RTX6000Ada-PNY', 'key_message': 'RTX 6000 Ada'}, {'part_number': 'GC-RTX6000Ada-PNY-601', 'key_message': 'RTX 6000 Ada'}, {'part_number': 'GC-RTXPRO6000-PNY', 'key_message': 'RTX PRO 6000'}],
         '25B0': [{'part_number': 'GC-RTXA1000-8GB-LT', 'key_message': 'RTX A1000'}, {'part_number': 'GC-RTXA1000-8GB-PNY', 'key_message': 'RTX A1000'}],
         '25B1': [{'part_number': 'GC-RTXA2000-12GB-LT', 'key_message': 'RTX A2000'}, {'part_number': 'GC-RTXA2000-12GB-PNY', 'key_message': 'RTX A2000'}],
         '24B0': [{'part_number': 'GC-RTXA4000-LT', 'key_message': 'RTX A4000'}, {'part_number': 'GC-RTXA4000-LT1', 'key_message': 'RTX A4000'}, {'part_number': 'GC-RTXA4000-PNY', 'key_message': 'RTX A4000'}],
@@ -212,12 +212,15 @@ def report_check(form, field):
             #Detect Jetson system
             is_jetson = True
             jetson_cpu_info = line.replace("CPU Info:","").strip()
+        if "product: NRU" in line:
+            is_jetson = True  
         if "SOM part number" in line:
             jetson_som_part_found = True
             jetson_som_part_line_count = 0
         #Accumulate SOM part number lines after "SOM part number" header
         if jetson_som_part_found and "****" not in line and "SOM part number" not in line:
             jetson_som_part_line_count += 1
+            print(jetson_som_part_line_count) 
             if jetson_som_part_line_count <= 3:
                 #Parse SOM part number from hex dump format
                 #Line 72: "10: ... 699-13701-00"
@@ -272,7 +275,7 @@ def report_check(form, field):
             totalnetportcnt = totalnetportcnt + 1
             line_lower = line.lower()
             prev_line_lower = contents[linecnt-2].lower()
-            if ("78:d0:04" in line_lower or "3c:6d:66" in line_lower or "48:b0:2d" in line_lower or "4c:bb:47" in line_lower or "ac:3a:e2" in line_lower):
+            if ("78:d0:04" in line_lower or "3c:6d:66" in line_lower or "48:b0:2d" in line_lower or "4c:bb:47" in line_lower or "ac:3a:e2" in line_lower or "74:25:54" in line_lower):
                 totalneonetportcnt =  totalneonetportcnt + 1
                 totalneonetportcnt =  totalneonetportcnt + 1
             elif "88:88:88:88:87:88" in line_lower :     
@@ -959,7 +962,7 @@ class QueryWorkordersForm(FlaskForm):
 class PackingCalculateForm(FlaskForm):
     
     #computer = QuerySelectField('Computer',query_factory =lambda: PnMap.query.filter_by(category='COMPUTER').order_by(PnMap.pn).all()+PnMap.query.filter_by(category='PB').order_by(PnMap.pn).all()+PnMap.query.filter_by(category='NRU').order_by(PnMap.pn).all()+PnMap.query.filter_by(category='SEMIL').order_by(PnMap.pn).all(), get_label='pn', allow_blank=True)
-    computer = StringField('Computer', validators=[DataRequired(),pack_pn_check,Length(max=100)])
+    computer = StringField('Computer', validators=[pack_pn_check,Length(max=100)])
     qty_computer = IntegerField('Computer Quantity', validators=[InputRequired(),NumberRange(min=0,max=1000)],default=1) 
     
     dinrail = QuerySelectField('DIN RAIL',query_factory =lambda: PnMap.query.filter_by(category='DINRAIL').all(), get_label='pn', allow_blank=True)
