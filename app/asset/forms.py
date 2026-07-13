@@ -239,12 +239,39 @@ def report_check(form, field):
         
         #Detect x86 GPU from NVIDIA Corporation Device XXXX lines
         if not is_jetson:
+            device_id = None
             gpu_match = re.search(r'NVIDIA Corporation Device ([0-9a-fA-F]{4})', line)
             if gpu_match:
                 device_id = gpu_match.group(1).upper()
                 if device_id not in gpu_device_ids:
                     gpu_device_ids.append(device_id)
                     print("Detected GPU device ID: " + device_id)
+            # Pattern 1 (group 1): Extracts hex ID from '[10de:XXXX]'
+            # Pattern 2 (group 2): Extracts device name part after 'NVIDIA Corporation '
+            else:
+                gpu_match = re.search(r'NVIDIA Corporation.*\[10de:([0-9a-fA-F]{4})\]|NVIDIA Corporation.*\[(.*?)\]', line)
+                if gpu_match:
+	               # Check Pattern 1: Found numeric ID directly
+                    if gpu_match.group(1):
+                       device_id = gpu_match.group(1).upper()
+	                # Check Pattern 2: Found text part name (e.g., "GA104GL [RTX A4000]")
+                    elif gpu_match.group(2):
+                       extracted_name = gpu_match.group(2).strip()
+	                  # Lookup using the key_message mapping
+	                  # Since keys are part numbers, scan the values to find the matching 'key_message'
+                    for part_data in gpu_part_to_device.values():
+                       if part_data['key_message'] == extracted_name:
+                          device_id = part_data['device_id'].upper()
+                          break # Stop scanning once matched
+	                  # Use your lookup map to cross-reference text string to hex ID
+                    if device_id and device_id not in gpu_device_ids:
+                          gpu_device_ids.append(device_id)
+                          print("Detected GPU device ID: " + device_id)
+	        
+        # If we successfully resolved a device ID through either pattern
+        if device_id and device_id not in gpu_device_ids:
+            gpu_device_ids.append(device_id)
+            print("Detected GPU device ID: " + device_id)        
         if  "Motherboard Serial" in line :
             #decode motherboard serial number
             #x86 format: Motherboard Serial: BNV7505DN34B1110 (space after colon)
@@ -294,8 +321,8 @@ def report_check(form, field):
                 totalneonetportcnt =  totalneonetportcnt + 1
             elif "enp" in line and "9c:6b:00" in line_lower :
                 totalneonetportcnt =  totalneonetportcnt + 1
-            elif "enx" in line and "MAC:" in line :
-                totalneonetportcnt =  totalneonetportcnt + 1    
+            elif ( "enx" in line or "eno" in line ) and "MAC:" in line :
+                totalneonetportcnt =  totalneonetportcnt + 1
             elif "enp" in line and "88:88:88:88:87:88" in line_lower :     
                 macerrcnt = macerrcnt + 1
             elif "wlx" in line or "wlp" in line or "wlo" in line:
