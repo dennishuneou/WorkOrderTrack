@@ -151,7 +151,7 @@ def report_check(form, field):
         '2D05': [{'part_number': 'GC-RTX5060-SOLO-ZTC', 'key_message': 'RTX 5060'}],
         '2946': [{'part_number': 'GC-RTX5070-OC-MSI', 'key_message': 'RTX 5070'}],
         '2944': [{'part_number': 'GC-RTX5070Ti-OC-MSI', 'key_message': 'RTX 5070Ti'}],
-        '2901': [{'part_number': 'GC-RTX5090-OC-MSI', 'key_message': 'RTX 5090'}],
+        '2B85': [{'part_number': 'GC-RTX5090-OC-MSI', 'key_message': 'RTX 5090'}],
         '2BB4': [{'part_number': 'GC-RTX6000Ada-PNY', 'key_message': 'RTX 6000 Ada'}, {'part_number': 'GC-RTX6000Ada-PNY-601', 'key_message': 'RTX 6000 Ada'}, {'part_number': 'GC-RTXPRO6000-PNY', 'key_message': 'RTX PRO 6000'}],
         '25B0': [{'part_number': 'GC-RTXA1000-8GB-LT', 'key_message': 'RTX A1000'}, {'part_number': 'GC-RTXA1000-8GB-PNY', 'key_message': 'RTX A1000'}],
         '25B1': [{'part_number': 'GC-RTXA2000-12GB-LT', 'key_message': 'RTX A2000'}, {'part_number': 'GC-RTXA2000-12GB-PNY', 'key_message': 'RTX A2000'}],
@@ -1061,6 +1061,7 @@ class EditQualityLogForm(FlaskForm):
     options = [('New','New'),('Processing','Processing'),('Pending','Pending'),('Closed','Closed')]
     status = SelectField('Case status(New,Processing,Pending,Closed)', choices= options,validators=[DataRequired(),Length(max=100)])
     conclusion = StringField('Case Conclusion', validators=[Length(max=100)])
+    cause = StringField('Cause ', validators=[Length(max=32)])
     processlog = StringField('Process Log', render_kw={'readonly': True},widget=TextArea())
     newaction = StringField('New Action Log',validators=[Length(max=200)],widget=TextArea())
     submit = SubmitField('Update Quality Log')

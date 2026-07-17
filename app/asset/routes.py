@@ -1661,6 +1661,7 @@ def queryqlog():
         rows.append(get_username(qlog.ownerid))
         rows.append(qlog.reason)
         rows.append(qlog.conclusion)
+        rows.append(qlog.cause)
         searchtable.append(rows)
     return render_template('queryqlog.html', form=form, userrole=role, searched=searched,searchtable=searchtable)
 
@@ -1695,6 +1696,7 @@ def ViewEditQlog(id):
         qlog_org[0].ownerid=current_user.id #last modified by
         qlog_org[0].processlog=processlog
         qlog_org[0].conclusion=form.conclusion.data.strip()
+        qlog_org[0].cause=form.cause.data.strip()
         db.session.commit()
         flash('Update successful')
         #return redirect(session.get('previous_url','/'))

@@ -101,6 +101,7 @@
                             <th data-sortable="true"> Owner</th>
                             <th data-sortable="true"> Issue</th>
                             <th data-sortable="true"> Conclusion</th>
+                            <th data-sortable="true"> Cause</th>
                             <th> View/Edit</th>
                         </tr>
                     </thead>
@@ -119,6 +120,7 @@
                             <td> {{ rows[9] }} </td>
                             <td> {{ rows[10] }} </td>
                             <td> {{ rows[11] }} </td>
+                            <td> {{ rows[12] }} </td>
                             <td>       
                                 <a class="btn btn-light btn-sm"
                                 href= "{{ url_for('main.ViewEditQlog',id=rows[0])}}"

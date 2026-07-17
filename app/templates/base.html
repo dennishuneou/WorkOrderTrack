@@ -57,8 +57,8 @@
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
                             <li><a class="dropdown-item" href="{{ url_for('main.add_qualitylog') }}">Report Quality Issue</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('main.queryqlog') }}">Query Quality Log</a></li>
                              {% if userrole > 1 %}
-                            <li><a class="dropdown-item" href="{{ url_for('main.queryqlog') }}">Query Quality Log</a></li> 
                             <li><a class="dropdown-item" href="{{ url_for('main.queryproduct') }}">Query Products</a></li>
                             <li><a class="dropdown-item" href="{{ url_for('main.createproduct') }}">Create New Product</a></li>
                             <li><hr class="dropdown-divider"></li>

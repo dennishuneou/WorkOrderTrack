@@ -239,8 +239,9 @@ class QualityLog(db.Model):
     ownerid=db.Column(db.Integer, nullable=False)
     processlog=db.Column(db.String(1024), nullable=False)
     conclusion =  db.Column(db.String(100), nullable=True)
+    cause =  db.Column(db.String(32), nullable=True)
 
-    def __init__(self, source, wo, pn, csn, defectpart, defectpartsn, reason, status, reportid, reporttime, ownerid, processlog,conclusion):
+    def __init__(self, source, wo, pn, csn, defectpart, defectpartsn, reason, status, reportid, reporttime, ownerid, processlog,conclusion,cause):
         self.wo = wo
         self.source = source
         self.pn = pn
@@ -254,6 +255,7 @@ class QualityLog(db.Model):
         self.ownerid = ownerid
         self.processlog = processlog
         self.conclusion = conclusion
+        self.cause = cause
      
     def __repr__(self):
         return '{} by {}'.format(self.wo)
