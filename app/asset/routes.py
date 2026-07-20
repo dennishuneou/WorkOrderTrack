@@ -12,7 +12,7 @@ from app.asset.forms import get_biosversion, get_sopversion
 #workorder status, unassigned -1, processing 0, waiting for inspection 1 finished 2.
 from flask_login import current_user
 import datetime
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from app.auth.forms  import get_userrole, get_usersname, get_useridbyname, get_username
 from app.auth.models import User
 import math
@@ -275,15 +275,416 @@ def inspectmore():
             db.session.commit()
     return redirect(url_for('main.display_workorders'))    
 
+@main.route('/dashboard')
+@login_required
+def dashboard():
+    role = get_userrole(current_user.id)
+    basicscoreinfo = PnMap.query.filter(PnMap.id!=0)
+    today = datetime.datetime.today()
+
+    def uf(query):
+        if role == 0:
+            return query.filter(WorkOrder.asid == current_user.id)
+        return query
+
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    use_custom_range = start_date and end_date
+
+    if use_custom_range:
+        try:
+            sd = datetime.datetime.strptime(start_date, '%Y-%m-%d')
+            ed = datetime.datetime.strptime(end_date, '%Y-%m-%d')
+        except (ValueError, TypeError):
+            sd = ed = None
+            use_custom_range = False
+
+    def get_kpi(days):
+        base = uf(WorkOrder.query.filter(WorkOrder.status == 2))
+        if use_custom_range:
+            base = base.filter(func.DATE(WorkOrder.intime) >= func.DATE(sd), func.DATE(WorkOrder.intime) <= func.DATE(ed))
+        elif days == 0:
+            base = base.filter(func.DATE(WorkOrder.intime) == func.DATE(today))
+        else:
+            base = base.filter((func.DATE(WorkOrder.intime)) >= (func.DATE(today - datetime.timedelta(days=days))))
+        total = base.count()
+        build = total - base.filter_by(packgo=True).count()
+        barebone = base.filter(db.or_(WorkOrder.cpuinstall == True, WorkOrder.memoryinstall == True)).count()
+        ins_os = build - base.filter_by(osinstall='', packgo=False).count()
+        ins_module = build - base.filter_by(gpuinstall=False, wifiinstall=False, caninstall=False, mezioinstall=False, packgo=False).count()
+        ins_gpu = base.filter_by(gpuinstall=True).count()
+        score = CalculateScore(base.order_by(WorkOrder.wo), basicscoreinfo)
+        return [total, build, ins_os, ins_module, ins_gpu, score, barebone]
+
+    cntToday = get_kpi(0) if not use_custom_range else None
+    cnt7day = get_kpi(7) if not use_custom_range else None
+    cnt28day = get_kpi(28) if not use_custom_range else None
+    cntCustom = get_kpi(-1) if use_custom_range else None
+
+    # Backlog meter
+    backlog = {
+        'unassigned': uf(WorkOrder.query.filter_by(status=-1)).count(),
+        'pending': uf(WorkOrder.query.filter_by(status=-2)).count(),
+        'processing': uf(WorkOrder.query.filter_by(status=0)).count(),
+        'waiting_inspection': uf(WorkOrder.query.filter_by(status=1)).count(),
+        'completed_today': uf(WorkOrder.query.filter(func.DATE(WorkOrder.intime) == func.DATE(today), WorkOrder.status == 2)).count(),
+    }
+
+    # Operator ranking
+    rank_period_days = 7
+    if use_custom_range:
+        rank_period_days = (ed - sd).days or 1
+    completed_rank = uf(WorkOrder.query.filter(
+        (func.DATE(WorkOrder.intime)) >= (func.DATE(today - datetime.timedelta(days=rank_period_days))),
+        WorkOrder.status == 2)) if not use_custom_range else \
+        uf(WorkOrder.query.filter(func.DATE(WorkOrder.intime) >= func.DATE(sd),
+                                  func.DATE(WorkOrder.intime) <= func.DATE(ed),
+                                  WorkOrder.status == 2))
+    ranking = []
+    for user in User.query.all():
+        if user.role < 3:
+            user_completed = completed_rank.filter(WorkOrder.asid == user.id)
+            cnt = user_completed.count()
+            if cnt:
+                score = CalculateScore(user_completed.order_by(WorkOrder.wo), basicscoreinfo)
+                ranking.append({'id': user.id, 'name': user.user_name, 'count': cnt, 'score': score})
+    ranking.sort(key=lambda r: r['score'], reverse=True)
+
+    # Trend data with auto-aggregation based on period length
+    trend_days = request.args.get('trend_days', '7')
+    trend_days = 28 if trend_days == '28' else 7
+    if use_custom_range:
+        delta = (ed - sd).days
+        trend_period = delta
+    else:
+        trend_period = trend_days
+
+    def compute_day_q(day):
+        q = WorkOrder.query.filter(func.DATE(WorkOrder.intime) == func.DATE(day), WorkOrder.status == 2)
+        q = uf(q)
+        total = q.count()
+        pg_rows = q.filter(WorkOrder.packgo == True).count()
+        wo = q.filter(or_(WorkOrder.wo.like('SO-%'), WorkOrder.wo.like('RWK%'))).with_entities(WorkOrder.wo).distinct().count()
+        pg = q.filter(or_(WorkOrder.wo.like('SO-%'), WorkOrder.wo.like('RWK%')), WorkOrder.packgo == True).with_entities(WorkOrder.wo).distinct().count()
+        rma = q.filter(WorkOrder.wo.like('RNTA%')).with_entities(WorkOrder.wo).distinct().count()
+        return {'total': total, 'build': total - pg_rows, 'wo': wo, 'pg': pg, 'rma': rma}
+
+    def op_key(d, period_days):
+        if period_days < 14:
+            return d.strftime('%m/%d')
+        elif period_days < 60:
+            return d.strftime('%Y-W%V')
+        elif period_days < 180:
+            return d.strftime('%Y-%m')
+        elif period_days < 360:
+            return f"{d.year} Q{(d.month-1)//3+1}"
+        elif period_days < 720:
+            return f"{d.year}-H{'1' if d.month <= 6 else '2'}"
+        else:
+            return d.strftime('%Y')
+
+    def build_aggregated(period_days, end_day):
+        from collections import OrderedDict
+        buckets = OrderedDict()
+        for i in range(period_days, -1, -1):
+            day = end_day - datetime.timedelta(days=i)
+            vals = compute_day_q(day)
+            k = op_key(day, period_days)
+            if k not in buckets:
+                buckets[k] = {'total': 0, 'build': 0, 'wo': 0, 'pg': 0, 'rma': 0}
+            for s in ('total', 'build', 'wo', 'pg', 'rma'):
+                buckets[k][s] += vals[s]
+        labels = list(buckets.keys())
+        trend_list = [{'date': k, 'count': buckets[k]['build']} for k in labels]
+        wo_list = [buckets[k]['wo'] for k in labels]
+        pg_list = [buckets[k]['pg'] for k in labels]
+        rma_list = [buckets[k]['rma'] for k in labels]
+        build_list = [buckets[k]['build'] for k in labels]
+        total_list = [buckets[k]['total'] for k in labels]
+        agg_label = 'Daily' if period_days < 14 else 'Weekly' if period_days < 60 else 'Monthly' if period_days < 180 else 'Quarterly' if period_days < 360 else 'Half-Yearly' if period_days < 720 else 'Yearly'
+        return trend_list, wo_list, pg_list, rma_list, build_list, total_list, agg_label, labels
+
+    trend, wo_data, pg_data, rma_data, build_data, total_data, trend_label, trend_labels7 = build_aggregated(trend_period, ed if use_custom_range else today)
+    trend28, wo_data28, pg_data28, rma_data28, build_data28, total_data28, trend_label28, trend_labels28 = build_aggregated(28, today)
+
+    def compute_operator_daily(period_days, end_day, labels):
+        """Per-operator daily totals aggregated to match labels.
+           Returns dict with keys 'total','build','wo','pg','rma', each a dict of op_id -> [counts per bucket]."""
+        from collections import OrderedDict, defaultdict
+        start_day = end_day - datetime.timedelta(days=period_days)
+        q = WorkOrder.query.filter(
+            WorkOrder.status == 2,
+            func.DATE(WorkOrder.intime) >= func.DATE(start_day),
+            func.DATE(WorkOrder.intime) <= func.DATE(end_day),
+        )
+        q = uf(q)
+        rows = q.with_entities(
+            func.DATE(WorkOrder.intime).label('day'),
+            WorkOrder.asid,
+            WorkOrder.wo,
+            WorkOrder.packgo
+        ).all()
+        op_day_counts = defaultdict(lambda: {'total': 0, 'build': 0, 'wo': set(), 'pg': set(), 'rma': set()})
+        for r in rows:
+            key = (r.day, r.asid)
+            op_day_counts[key]['total'] += 1
+            if not r.packgo:
+                op_day_counts[key]['build'] += 1
+            if r.wo.startswith('SO-') or r.wo.startswith('RWK'):
+                op_day_counts[key]['wo'].add(r.wo)
+                if r.packgo:
+                    op_day_counts[key]['pg'].add(r.wo)
+            elif r.wo.startswith('RNTA'):
+                op_day_counts[key]['rma'].add(r.wo)
+        op_ids = set(asid for (_, asid) in op_day_counts)
+        result = {'total': {}, 'build': {}, 'wo': {}, 'pg': {}, 'rma': {}}
+        for sid in op_ids:
+            sid_str = str(sid)
+            for s in ('total', 'build', 'wo', 'pg', 'rma'):
+                bucket_vals = OrderedDict()
+                for i in range(period_days, -1, -1):
+                    day = (end_day - datetime.timedelta(days=i)).date()
+                    k = op_key(end_day - datetime.timedelta(days=i), period_days)
+                    entry = op_day_counts.get((day, sid), {})
+                    if s in ('total', 'build'):
+                        cnt = entry.get(s, 0)
+                    else:
+                        cnt = len(entry.get(s, set()))
+                    bucket_vals[k] = bucket_vals.get(k, 0) + cnt
+                result[s][sid_str] = [bucket_vals.get(l, 0) for l in labels]
+        return result
+
+    wo_total = sum(wo_data)
+    pg_total = sum(pg_data)
+    rma_total = sum(rma_data)
+    wo_total28 = sum(wo_data28)
+    pg_total28 = sum(pg_data28)
+    rma_total28 = sum(rma_data28)
+
+    op_data = compute_operator_daily(trend_period, ed if use_custom_range else today, trend_labels7)
+    op_data28 = compute_operator_daily(28, today, trend_labels28)
+    operator_trends = op_data['total']
+    operator_build = op_data['build']
+    operator_wo = op_data['wo']
+    operator_pg = op_data['pg']
+    operator_rma = op_data['rma']
+    operator_trends28 = op_data28['total']
+    operator_build28 = op_data28['build']
+    operator_wo28 = op_data28['wo']
+    operator_pg28 = op_data28['pg']
+    operator_rma28 = op_data28['rma']
+
+    # Debug output
+    import sys
+    print("=== PYTHON DEBUG ===", file=sys.stderr)
+    print(f"trend_period={trend_period}, use_custom_range={use_custom_range}", file=sys.stderr)
+    print(f"trend_labels7={trend_labels7}", file=sys.stderr)
+    print(f"trend_labels28={trend_labels28}", file=sys.stderr)
+    print(f"operator_trends keys={list(operator_trends.keys())}", file=sys.stderr)
+    print(f"operator_trends28 keys={list(operator_trends28.keys())}", file=sys.stderr)
+    if operator_trends28:
+        first_key = list(operator_trends28.keys())[0]
+        print(f"operator_trends28[{first_key}]={operator_trends28[first_key]}", file=sys.stderr)
+        print(f"len={len(operator_trends28[first_key])}", file=sys.stderr)
+    if operator_trends:
+        first_key = list(operator_trends.keys())[0]
+        print(f"operator_trends[{first_key}]={operator_trends[first_key]}", file=sys.stderr)
+        print(f"len={len(operator_trends[first_key])}", file=sys.stderr)
+    print(f"wo_data28={wo_data28}", file=sys.stderr)
+    print("===================", file=sys.stderr)
+
+    # Product mix
+    if use_custom_range:
+        completed_mix = uf(WorkOrder.query.filter(func.DATE(WorkOrder.intime) >= func.DATE(sd),
+                                                  func.DATE(WorkOrder.intime) <= func.DATE(ed),
+                                                  WorkOrder.status == 2))
+    else:
+        completed_mix = uf(WorkOrder.query.filter((func.DATE(WorkOrder.intime)) >= (func.DATE(today - datetime.timedelta(days=7))), WorkOrder.status == 2))
+    completed_mix_nopg = completed_mix.filter(WorkOrder.packgo != True)
+    product_mix = {
+        'NRU': completed_mix_nopg.filter(WorkOrder.pn.contains('NRU')).count() + completed_mix_nopg.filter(WorkOrder.pn.contains('FLYC')).count(),
+        'POC/IGT': completed_mix_nopg.filter(WorkOrder.pn.contains('POC')).count() + completed_mix_nopg.filter(WorkOrder.pn.contains('IGT')).count(),
+        'Nuvo-5/6/7': completed_mix_nopg.filter(WorkOrder.pn.contains('Nuvo-5')).count() + completed_mix_nopg.filter(WorkOrder.pn.contains('Nuvo-6')).count() + completed_mix_nopg.filter(WorkOrder.pn.contains('Nuvo-7')).count(),
+        'Nuvo-8': completed_mix_nopg.filter(WorkOrder.pn.contains('Nuvo-8')).count(),
+        'Nuvo-9': completed_mix_nopg.filter(WorkOrder.pn.contains('Nuvo-9')).count(),
+        'Nuvo-10': completed_mix_nopg.filter(WorkOrder.pn.contains('Nuvo-10')).count(),
+        'Nuvo-11': completed_mix_nopg.filter(WorkOrder.pn.contains('Nuvo-11')).count(),
+        'SEMIL': completed_mix_nopg.filter(WorkOrder.pn.contains('SEMIL')).count(),
+        'Others': completed_mix_nopg.filter(~WorkOrder.pn.contains('NRU'), ~WorkOrder.pn.contains('FLYC'), ~WorkOrder.pn.contains('POC'),
+                    ~WorkOrder.pn.contains('IGT'), ~WorkOrder.pn.contains('Nuvo'), ~WorkOrder.pn.contains('SEMIL')).count(),
+    }
+    product_mix = {k: v for k, v in product_mix.items() if v > 0}
+
+    # 28-day product mix
+    completed_mix28 = uf(WorkOrder.query.filter((func.DATE(WorkOrder.intime)) >= (func.DATE(today - datetime.timedelta(days=28))), WorkOrder.status == 2))
+    completed_mix28_nopg = completed_mix28.filter(WorkOrder.packgo != True)
+    product_mix28 = {
+        'NRU': completed_mix28_nopg.filter(WorkOrder.pn.contains('NRU')).count() + completed_mix28_nopg.filter(WorkOrder.pn.contains('FLYC')).count(),
+        'POC/IGT': completed_mix28_nopg.filter(WorkOrder.pn.contains('POC')).count() + completed_mix28_nopg.filter(WorkOrder.pn.contains('IGT')).count(),
+        'Nuvo-5/6/7': completed_mix28_nopg.filter(WorkOrder.pn.contains('Nuvo-5')).count() + completed_mix28_nopg.filter(WorkOrder.pn.contains('Nuvo-6')).count() + completed_mix28_nopg.filter(WorkOrder.pn.contains('Nuvo-7')).count(),
+        'Nuvo-8': completed_mix28_nopg.filter(WorkOrder.pn.contains('Nuvo-8')).count(),
+        'Nuvo-9': completed_mix28_nopg.filter(WorkOrder.pn.contains('Nuvo-9')).count(),
+        'Nuvo-10': completed_mix28_nopg.filter(WorkOrder.pn.contains('Nuvo-10')).count(),
+        'Nuvo-11': completed_mix28_nopg.filter(WorkOrder.pn.contains('Nuvo-11')).count(),
+        'SEMIL': completed_mix28_nopg.filter(WorkOrder.pn.contains('SEMIL')).count(),
+        'Others': completed_mix28_nopg.filter(~WorkOrder.pn.contains('NRU'), ~WorkOrder.pn.contains('FLYC'), ~WorkOrder.pn.contains('POC'),
+                    ~WorkOrder.pn.contains('IGT'), ~WorkOrder.pn.contains('Nuvo'), ~WorkOrder.pn.contains('SEMIL')).count(),
+    }
+    product_mix28 = {k: v for k, v in product_mix28.items() if v > 0}
+
+    # 28-day operator ranking
+    completed_rank28 = uf(WorkOrder.query.filter((func.DATE(WorkOrder.intime)) >= (func.DATE(today - datetime.timedelta(days=28))), WorkOrder.status == 2))
+    ranking28 = []
+    for user in User.query.all():
+        if user.role < 3:
+            user_completed = completed_rank28.filter(WorkOrder.asid == user.id)
+            cnt = user_completed.count()
+            if cnt:
+                score = CalculateScore(user_completed.order_by(WorkOrder.wo), basicscoreinfo)
+                ranking28.append({'id': user.id, 'name': user.user_name, 'count': cnt, 'score': score})
+    ranking28.sort(key=lambda r: r['score'], reverse=True)
+
+    ranking_labels = [r['name'] for r in ranking]
+    ranking_counts = [r['count'] for r in ranking]
+    ranking_scores = [r['score'] for r in ranking]
+    ranking_labels28 = [r['name'] for r in ranking28]
+    ranking_counts28 = [r['count'] for r in ranking28]
+    ranking_scores28 = [r['score'] for r in ranking28]
+
+    # Quality Log data
+    if use_custom_range:
+        total_issues = QualityLog.query.filter(func.DATE(QualityLog.reporttime) >= func.DATE(sd),
+                                                func.DATE(QualityLog.reporttime) <= func.DATE(ed)).count()
+        open_issues = QualityLog.query.filter(QualityLog.status != 'Closed',
+                                              func.DATE(QualityLog.reporttime) >= func.DATE(sd),
+                                              func.DATE(QualityLog.reporttime) <= func.DATE(ed)).count()
+        top_defects = db.session.query(QualityLog.defectpart, func.count(QualityLog.id).label('cnt')) \
+            .filter(func.DATE(QualityLog.reporttime) >= func.DATE(sd),
+                    func.DATE(QualityLog.reporttime) <= func.DATE(ed)) \
+            .group_by(QualityLog.defectpart).order_by(func.count(QualityLog.id).desc()).limit(5).all()
+        defect_causes = db.session.query(QualityLog.cause, func.count(QualityLog.id).label('cnt')) \
+            .filter(QualityLog.cause != '', QualityLog.cause != None,
+                    func.DATE(QualityLog.reporttime) >= func.DATE(sd),
+                    func.DATE(QualityLog.reporttime) <= func.DATE(ed)) \
+            .group_by(QualityLog.cause).order_by(func.count(QualityLog.id).desc()).limit(5).all()
+    else:
+        total_issues = QualityLog.query.count()
+        open_issues = QualityLog.query.filter(QualityLog.status != 'Closed').count()
+        top_defects = db.session.query(QualityLog.defectpart, func.count(QualityLog.id).label('cnt')) \
+            .group_by(QualityLog.defectpart).order_by(func.count(QualityLog.id).desc()).limit(5).all()
+        defect_causes = db.session.query(QualityLog.cause, func.count(QualityLog.id).label('cnt')) \
+            .filter(QualityLog.cause != '', QualityLog.cause != None) \
+            .group_by(QualityLog.cause).order_by(func.count(QualityLog.id).desc()).limit(5).all()
+    quality_data = {
+        'total': total_issues,
+        'open': open_issues,
+        'closed': total_issues - open_issues,
+        'top_defects': [(d.defectpart, d.cnt) for d in top_defects],
+        'defect_causes': [(c.cause, c.cnt) for c in defect_causes],
+    }
+
+    # When custom date range is active, 28-day data mirrors the filtered range
+    if use_custom_range:
+        trend28 = trend
+        product_mix28 = product_mix
+        ranking28 = ranking
+        ranking_labels28 = ranking_labels
+        ranking_counts28 = ranking_counts
+        ranking_scores28 = ranking_scores
+
+    # Detail table (per-operator build breakdown, same as report.html)
+    def build_detail_table(base_q):
+        rows = []
+        users = [current_user] if role == 0 else User.query.all()
+        for user in users:
+            if role == 0 or user.role < 3:
+                user_q = base_q.filter(WorkOrder.asid == user.id)
+                if user_q.count():
+                    row = [user.id, user.user_name]
+                    nNRU = user_q.filter(WorkOrder.pn.contains("NRU"), WorkOrder.packgo != True).count() + user_q.filter(WorkOrder.pn.contains("FLYC"), WorkOrder.packgo != True).count()
+                    row.append(nNRU)
+                    nPoc = user_q.filter(WorkOrder.pn.contains("POC"), WorkOrder.packgo != True).count() + user_q.filter(WorkOrder.pn.contains("IGT"), WorkOrder.packgo != True).count()
+                    row.append(nPoc)
+                    nNuvo5 = user_q.filter(WorkOrder.pn.contains("Nuvo-5"), WorkOrder.packgo != True).count()
+                    nNuvo6 = user_q.filter(WorkOrder.pn.contains("Nuvo-6"), WorkOrder.packgo != True).count()
+                    nNuvo7 = user_q.filter(WorkOrder.pn.contains("Nuvo-7"), WorkOrder.packgo != True).count()
+                    row.append(nNuvo5 + nNuvo6 + nNuvo7)
+                    nOthers = user_q.filter(WorkOrder.pn.contains("GT"), WorkOrder.packgo != True).count() + user_q.filter(WorkOrder.pn.contains("SER-"), WorkOrder.packgo != True).count() + user_q.filter(WorkOrder.pn.contains("SER"), WorkOrder.packgo != True).count()
+                    row.append(nOthers)
+                    nNuvo8 = user_q.filter(WorkOrder.pn.contains("Nuvo-8"), WorkOrder.packgo != True).count()
+                    row.append(nNuvo8)
+                    nNuvo9 = user_q.filter(WorkOrder.pn.contains("Nuvo-9"), WorkOrder.packgo != True).count()
+                    row.append(nNuvo9)
+                    nNuvo10 = user_q.filter(WorkOrder.pn.contains("Nuvo-10"), WorkOrder.packgo != True).count()
+                    row.append(nNuvo10)
+                    nNuvo11 = user_q.filter(WorkOrder.pn.contains("Nuvo-11"), WorkOrder.packgo != True).count()
+                    row.append(nNuvo11)
+                    nSemil = user_q.filter(WorkOrder.pn.contains("SEMIL"), WorkOrder.packgo != True).count()
+                    row.append(nSemil)
+                    nTotal = nNRU + nPoc + nNuvo5 + nNuvo6 + nNuvo7 + nOthers + nNuvo8 + nNuvo9 + nNuvo10 + nNuvo11 + nSemil
+                    row.append(nTotal)
+                    nInsOS = user_q.filter(WorkOrder.osinstall != '').count()
+                    row.append(nInsOS)
+                    nInsGPU = user_q.filter(WorkOrder.gpuinstall == True).count()
+                    row.append(nInsGPU)
+                    nInsModule = user_q.count() - user_q.filter_by(gpuinstall=False, wifiinstall=False, caninstall=False, mezioinstall=False).count()
+                    row.append(nInsModule)
+                    nPackgo = user_q.filter(WorkOrder.packgo == True).count()
+                    row.append(nPackgo)
+                    nScore = CalculateScore(user_q.order_by(WorkOrder.wo), basicscoreinfo)
+                    row.append(nScore)
+                    rows.append(row)
+        return rows
+
+    if use_custom_range:
+        detail_base = uf(WorkOrder.query.filter(func.DATE(WorkOrder.intime) >= func.DATE(sd),
+                                                func.DATE(WorkOrder.intime) <= func.DATE(ed),
+                                                WorkOrder.status == 2))
+        detail_table = build_detail_table(detail_base)
+        detail_table28 = detail_table
+    else:
+        detail_base7 = uf(WorkOrder.query.filter((func.DATE(WorkOrder.intime)) >= (func.DATE(today - datetime.timedelta(days=7))), WorkOrder.status == 2))
+        detail_base28 = uf(WorkOrder.query.filter((func.DATE(WorkOrder.intime)) >= (func.DATE(today - datetime.timedelta(days=28))), WorkOrder.status == 2))
+        detail_table = build_detail_table(detail_base7)
+        detail_table28 = build_detail_table(detail_base28)
+
+    return render_template('dashboard.html', cntToday=cntToday, cnt7day=cnt7day, cnt28day=cnt28day, cntCustom=cntCustom,
+                           use_custom_range=use_custom_range, start_date=start_date, end_date=end_date,
+                           backlog=backlog, ranking=ranking, ranking28=ranking28,
+                            trend=trend, trend28=trend28, trend_days=trend_days,
+                           trend_label=trend_label, trend_label28=trend_label28,
+                           wo_data=wo_data, pg_data=pg_data, rma_data=rma_data, build_data=build_data,
+                           wo_data28=wo_data28, pg_data28=pg_data28, rma_data28=rma_data28, build_data28=build_data28,
+                            wo_total=wo_total, pg_total=pg_total, rma_total=rma_total,
+                           wo_total28=wo_total28, pg_total28=pg_total28, rma_total28=rma_total28,
+                           operator_trends=operator_trends, operator_trends28=operator_trends28,
+                           operator_build=operator_build, operator_build28=operator_build28,
+                           operator_wo=operator_wo, operator_wo28=operator_wo28,
+                           operator_pg=operator_pg, operator_pg28=operator_pg28,
+                           operator_rma=operator_rma, operator_rma28=operator_rma28,
+                           product_mix=product_mix, product_mix28=product_mix28,
+                           ranking_labels=ranking_labels, ranking_counts=ranking_counts,
+                           ranking_scores=ranking_scores,
+                           ranking_labels28=ranking_labels28, ranking_counts28=ranking_counts28,
+                            ranking_scores28=ranking_scores28, quality_data=quality_data, userrole=role,
+                            detail_table=detail_table, detail_table28=detail_table28)
+
+@main.route('/api/workorder-counts')
+@login_required
+def api_workorder_counts():
+    counts = {
+        'unassigned': WorkOrder.query.filter_by(status=-1).count(),
+        'pending': WorkOrder.query.filter_by(status=-2).count(),
+        'processing': WorkOrder.query.filter_by(status=0).count(),
+        'waiting_inspection': WorkOrder.query.filter_by(status=1).count(),
+        'completed_today': WorkOrder.query.filter(func.DATE(WorkOrder.intime) == func.DATE(datetime.datetime.today()), WorkOrder.status == 2).count(),
+    }
+    return counts
+
 @main.route('/')
 @login_required
 def display_workorders():
     role = get_userrole(current_user.id)
-    basicscoreinfo = PnMap.query.filter(PnMap.id!=0)
-    if  datetime.datetime.today().weekday() == 0:
-        delta = 3
-    else :
-        delta = 1
     if role == 0 :
         todoworkorder1 = WorkOrder.query.filter_by(status=-1,asid=-1)
         todoworkorder2 = WorkOrder.query.filter_by(status=-1,asid=current_user.id)
@@ -306,166 +707,21 @@ def display_workorders():
     processing = processing.order_by(WorkOrder.wo) 
     if role == 0 :
         completed = WorkOrder.query.filter(func.DATE(WorkOrder.intime) == func.DATE(datetime.datetime.today()),WorkOrder.asid==current_user.id,WorkOrder.status == 2)
-        completedlastwday = WorkOrder.query.filter(func.DATE(WorkOrder.intime) == (func.DATE(datetime.datetime.today())-delta),WorkOrder.asid==current_user.id,WorkOrder.status == 2)
-        completed7day = WorkOrder.query.filter((func.DATE(WorkOrder.intime)) >= (func.DATE(datetime.datetime.today())-7),WorkOrder.asid==current_user.id,WorkOrder.status == 2)
-        completed28day = WorkOrder.query.filter((func.DATE(WorkOrder.intime)) >= (func.DATE(datetime.datetime.today())-28),WorkOrder.asid==current_user.id,WorkOrder.status == 2)
     else :
         completed = WorkOrder.query.filter(func.DATE(WorkOrder.intime) == func.DATE(datetime.datetime.today()),WorkOrder.status == 2)
-        completedlastwday = WorkOrder.query.filter(func.DATE(WorkOrder.intime) == (func.DATE(datetime.datetime.today())-delta),WorkOrder.status == 2)
-        completed7day = WorkOrder.query.filter((func.DATE(WorkOrder.intime)) >= (func.DATE(datetime.datetime.today())-7),WorkOrder.status == 2)
-        completed28day = WorkOrder.query.filter((func.DATE(WorkOrder.intime)) >= (func.DATE(datetime.datetime.today())-28),WorkOrder.status == 2)
     completed = completed.order_by(WorkOrder.wo)
-    completedlastwday = completedlastwday.order_by(WorkOrder.wo)
-    #Total
-    cntToday = [0,0,0,0,0,0]
-    cntToday[0] = completed.count()
-    #Build, not Pack & Go
-    cntToday[1] = cntToday[0] - completed.filter_by(packgo=True).count()
-    #OS, installed OS
-    cntToday[2] = cntToday[1] - completed.filter_by(osinstall='',packgo=False).count()
-    #Module, installed module
-    cntToday[3] = cntToday[1] - completed.filter_by(gpuinstall = False,wifiinstall = False, caninstall = False, mezioinstall = False, packgo=False).count()
-    #Gpu, Installed GPU
-    cntToday[4] = completed.filter_by(gpuinstall=True).count()
-    #Score
-    cntToday[5] = CalculateScore(completed.order_by(WorkOrder.wo),basicscoreinfo)
-    #Total
-    cnt7day = [0,0,0,0,0,0]
-    cnt7day[0] = completed7day.count()
-    #Build, not Pack & Go
-    cnt7day[1] = cnt7day[0] - completed7day.filter_by(packgo=True).count()
-    #OS, installed OS
-    cnt7day[2] = cnt7day[1] - completed7day.filter_by(osinstall='',packgo=False).count()
-    #Module, installed module
-    cnt7day[3] = cnt7day[1] - completed7day.filter_by(gpuinstall = False,wifiinstall = False, caninstall = False, mezioinstall = False, packgo=False).count()
-    #Gpu, Installed GPU
-    cnt7day[4] = completed7day.filter_by(gpuinstall=True).count()
-    #Score
-    cnt7day[5] = CalculateScore(completed7day.order_by(WorkOrder.wo),basicscoreinfo)
-
-    #Total
-    cnt28day = [0,0,0,0,0,0]
-    cnt28day[0] = completed28day.count()
-    #Build, not Pack & Go
-    cnt28day[1] = cnt28day[0] - completed28day.filter_by(packgo=True).count()
-    #OS, installed OS
-    cnt28day[2] = cnt28day[1] - completed28day.filter_by(osinstall='',packgo=False).count()
-    #Module, installed module
-    cnt28day[3] = cnt28day[1] - completed28day.filter_by(gpuinstall = False,wifiinstall = False, caninstall = False, mezioinstall = False, packgo=False).count()
-    #Gpu, Installed GPU
-    cnt28day[4] = completed28day.filter_by(gpuinstall=True).count()
-    cnt28day[5] = CalculateScore(completed28day.order_by(WorkOrder.wo),basicscoreinfo)
-
-    #Completed last weekday by user
-    tablesearchsummary1day = []
-    users = User.query.all()    
-    for user in users :
-        if user.role < 3 :
-            completedssbyuser=completedlastwday.filter(WorkOrder.asid == user.id)
-            if completedssbyuser.count() :
-                #calculate POC, Nuvo-5000, Nuvo-6000, Nuvo-7000, Nuvo-8000,Nuvo-9000, Muvo-10000, SEMIL, Pack&Go
-                rows = []
-                rows.append(user.user_name)
-                nNRU = completedssbyuser.filter(WorkOrder.pn.contains("NRU")).filter(WorkOrder.packgo!=True).count()
-                rows.append(nNRU)
-                nPoc = completedssbyuser.filter(WorkOrder.pn.contains("POC")).filter(WorkOrder.packgo!=True).count()+completedssbyuser.filter(WorkOrder.pn.contains("IGT")).filter(WorkOrder.packgo!=True).count()
-                rows.append(nPoc)
-                nNuvo5= completedssbyuser.filter(WorkOrder.pn.contains("Nuvo-5")).filter(WorkOrder.packgo!=True).count()+completedssbyuser.filter(WorkOrder.pn.contains("Nuvo-2")).filter(WorkOrder.packgo!=True).count()
-                nNuvo6= completedssbyuser.filter(WorkOrder.pn.contains("Nuvo-6")).filter(WorkOrder.packgo!=True).count()
-                nNuvo7= completedssbyuser.filter(WorkOrder.pn.contains("Nuvo-7")).filter(WorkOrder.packgo!=True).count()
-                rows.append(nNuvo5+nNuvo6+nNuvo7)
-                nOthers= completedssbyuser.filter(WorkOrder.pn.contains("GT")).filter(WorkOrder.packgo!=True).count()
-                nOthers= nOthers+completedssbyuser.filter(WorkOrder.pn.contains("SER")).filter(WorkOrder.packgo!=True).count()
-                rows.append(nOthers)
-                nNuvo8= completedssbyuser.filter(WorkOrder.pn.contains("Nuvo-8")).filter(WorkOrder.packgo!=True).count()
-                rows.append(nNuvo8)
-                nNuvo9= completedssbyuser.filter(WorkOrder.pn.contains("Nuvo-9")).filter(WorkOrder.packgo!=True).count()
-                rows.append(nNuvo9)
-                nNuvoa= completedssbyuser.filter(WorkOrder.pn.contains("Nuvo-10")).filter(WorkOrder.packgo!=True).count()
-                rows.append(nNuvoa)
-                nNuvob= completedssbyuser.filter(WorkOrder.pn.contains("Nuvo-11")).filter(WorkOrder.packgo!=True).count()
-                rows.append(nNuvob)
-                nSemil= completedssbyuser.filter(WorkOrder.pn.contains("SEMIL")).filter(WorkOrder.packgo!=True).count()
-                rows.append(nSemil)
-                nTotal= nNRU + nPoc + nNuvo5 + nNuvo6 + nNuvo7 + nOthers + nNuvo8 + nNuvo9 + nNuvoa + nNuvob +  nSemil
-                rows.append(nTotal)
-                nInsOS = completedssbyuser.filter(WorkOrder.osinstall != '').count()
-                rows.append(nInsOS)
-                nInsGPU = completedssbyuser.filter(WorkOrder.gpuinstall == True).count()
-                rows.append(nInsGPU)
-                nInsModule = completedssbyuser.count() - completedssbyuser.filter_by(gpuinstall = False,wifiinstall = False, caninstall = False, mezioinstall = False).count()
-                rows.append(nInsModule)
-                nPackgo= completedssbyuser.filter(WorkOrder.packgo==True).count()
-                rows.append(nPackgo)
-                nScore = CalculateScore(completedssbyuser.order_by(WorkOrder.wo),basicscoreinfo)
-                rows.append(nScore)
-                tablesearchsummary1day.append(rows)
-    #Completed 7 days by user
-    tablesearchsummary = []
-    users = User.query.all()    
-    for user in users :
-        if user.role < 3 :
-            completedssbyuser=completed7day.filter(WorkOrder.asid == user.id)
-            if completedssbyuser.count() :
-                #calculate POC, Nuvo-5000, Nuvo-6000, Nuvo-7000, Nuvo-8000,Nuvo-9000, Muvo-10000, SEMIL, Pack&Go
-                rows = []
-                rows.append(user.user_name)
-                nNRU = completedssbyuser.filter(WorkOrder.pn.contains("NRU")).filter(WorkOrder.packgo!=True).count()
-                nNRU = nNRU + completedssbyuser.filter(WorkOrder.pn.contains("FLYC")).filter(WorkOrder.packgo!=True).count()
-                rows.append(nNRU)
-                nPoc = completedssbyuser.filter(WorkOrder.pn.contains("POC")).filter(WorkOrder.packgo!=True).count()+completedssbyuser.filter(WorkOrder.pn.contains("IGT")).filter(WorkOrder.packgo!=True).count()
-                rows.append(nPoc)
-                nNuvo5= completedssbyuser.filter(WorkOrder.pn.contains("Nuvo-5")).filter(WorkOrder.packgo!=True).count()+completedssbyuser.filter(WorkOrder.pn.contains("Nuvo-2")).filter(WorkOrder.packgo!=True).count()
-                nNuvo6= completedssbyuser.filter(WorkOrder.pn.contains("Nuvo-6")).filter(WorkOrder.packgo!=True).count()
-                nNuvo7= completedssbyuser.filter(WorkOrder.pn.contains("Nuvo-7")).filter(WorkOrder.packgo!=True).count()
-                rows.append(nNuvo5+nNuvo6+nNuvo7)
-                nOthers= completedssbyuser.filter(WorkOrder.pn.contains("GT/SER-")).filter(WorkOrder.packgo!=True).count()
-                rows.append(nOthers)
-                nNuvo8= completedssbyuser.filter(WorkOrder.pn.contains("Nuvo-8")).filter(WorkOrder.packgo!=True).count()
-                rows.append(nNuvo8)
-                nNuvo9= completedssbyuser.filter(WorkOrder.pn.contains("Nuvo-9")).filter(WorkOrder.packgo!=True).count()
-                rows.append(nNuvo9)
-                nNuvoa= completedssbyuser.filter(WorkOrder.pn.contains("Nuvo-10")).filter(WorkOrder.packgo!=True).count()
-                rows.append(nNuvoa)
-                nNuvob= completedssbyuser.filter(WorkOrder.pn.contains("Nuvo-11")).filter(WorkOrder.packgo!=True).count()
-                rows.append(nNuvob)
-                nSemil= completedssbyuser.filter(WorkOrder.pn.contains("SEMIL")).filter(WorkOrder.packgo!=True).count()
-                rows.append(nSemil)
-                nTotal= nNRU + nPoc + nNuvo5 + nNuvo6 + nNuvo7 + nOthers + nNuvo8 + nNuvo9 + nNuvoa + nNuvob +nSemil
-                rows.append(nTotal)
-                nInsOS = completedssbyuser.filter(WorkOrder.osinstall != '').count()
-                rows.append(nInsOS)
-                nInsGPU = completedssbyuser.filter(WorkOrder.gpuinstall == True).count()
-                rows.append(nInsGPU)
-                nInsModule = completedssbyuser.count() - completedssbyuser.filter_by(gpuinstall = False,wifiinstall = False, caninstall = False, mezioinstall = False).count()
-                rows.append(nInsModule)
-                nPackgo= completedssbyuser.filter(WorkOrder.packgo==True).count()
-                rows.append(nPackgo)
-                nScore = CalculateScore(completedssbyuser.order_by(WorkOrder.wo),basicscoreinfo)
-                rows.append(nScore)
-                tablesearchsummary.append(rows)
-    completedlastwday = completedlastwday.filter(WorkOrder.packgo!=True).order_by(WorkOrder.asid)             
-   
-    searchtable = []  
-    seq = 0
-    for workord in completed7day.filter(WorkOrder.packgo!=True).order_by(WorkOrder.asid):
-        rows = []
-        seq = seq + 1
-        rows.append(seq)
-        rows.append(workord.wo)
-        rows.append(workord.customers)
-        rows.append(workord.pn)
-        rows.append(workord.csn)
-        rows.append(workord.cstime.strftime("%m/%d %H:%M"))
-        rows.append(workord.tktime.strftime("%m/%d %H:%M"))
-        rows.append(get_username(workord.asid))
-        rows.append(workord.astime.strftime("%m/%d %H:%M"))
-        rows.append(get_username(workord.insid))
-        rows.append(workord.intime.strftime("%m/%d %H:%M"))
-        rows.append(CalculateUnitBuildScore(workord,basicscoreinfo))
-        searchtable.append(rows)
-    return render_template('home.html', todoworkorder= todoworkorder, pendingworkorder= pendingworkorder, processing=processing, completed=completed, completedlastwday=completedlastwday,cntToday=cntToday,
-                          cnt7day=cnt7day,cnt28day=cnt28day,tablesearchsummary=tablesearchsummary,tablesearchsummary1day=tablesearchsummary1day,searchtable=searchtable,userrole=role)
+    # Completed last weekday
+    today_dt = datetime.datetime.today()
+    lw = today_dt - datetime.timedelta(days=1)
+    while lw.weekday() >= 5:
+        lw -= datetime.timedelta(days=1)
+    if role == 0:
+        completed_last_wd = WorkOrder.query.filter(func.DATE(WorkOrder.intime) == func.DATE(lw), WorkOrder.asid == current_user.id, WorkOrder.status == 2)
+    else:
+        completed_last_wd = WorkOrder.query.filter(func.DATE(WorkOrder.intime) == func.DATE(lw), WorkOrder.status == 2)
+    completed_last_wd = completed_last_wd.order_by(WorkOrder.wo)
+    return render_template('home.html', todoworkorder=todoworkorder, pendingworkorder=pendingworkorder,
+                           processing=processing, completed=completed, completed_last_wd=completed_last_wd, userrole=role)
 
 @main.route('/query', methods=['GET', 'POST'])
 @login_required

@@ -1,0 +1,714 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+  <div class="row mb-3">
+    <div class="col">
+      <h4 class="font-weight-bold">Dashboard
+        <span id="operatorBadge" style="display:none">
+          <button class="btn btn-sm btn-outline-danger ml-2" onclick="clearOperatorFilter()">✕ <span id="operatorBadgeName"></span></button>
+        </span>
+      </h4>
+    </div>
+  </div>
+
+  <!-- Date Filter -->
+  <div class="row mb-3">
+    <div class="col-md-12">
+      <div class="card card-social">
+        <div class="card-block py-2 px-3">
+          <form method="GET" action="{{ url_for('main.dashboard') }}" class="form-inline row align-items-center">
+            <div class="col-auto"><small class="text-muted">Filter by date:</small></div>
+            <div class="col-auto">
+              <input type="date" name="start_date" class="form-control form-control-sm" value="{{ start_date or '' }}">
+            </div>
+            <div class="col-auto"><small>to</small></div>
+            <div class="col-auto">
+              <input type="date" name="end_date" class="form-control form-control-sm" value="{{ end_date or '' }}">
+            </div>
+            <div class="col-auto">
+              <button type="submit" class="btn btn-sm btn-outline-primary">Apply</button>
+            </div>
+            {% if use_custom_range %}
+            <div class="col-auto">
+              <a href="{{ url_for('main.dashboard') }}" class="btn btn-sm btn-outline-secondary">Clear</a>
+            </div>
+            {% endif %}
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="row">
+    {% if use_custom_range and cntCustom %}
+    <div class="col-md-12 col-xl-4">
+      <div class="card card-social">
+        <div class="card-block border-bottom">
+          <div class="row align-items-center justify-content-center">
+            <div class="col text-left"><h3 class="text-c-green mb-0"><span class="text-muted">{{ start_date }} ~ {{ end_date }}</span></h3></div>
+            <div class="col text-left"><h3 class="text-c-green mb-0">{{ cntCustom[0] }}</h3></div>
+            <div class="col text-right"><h3 class="text-c-green mb-0">{{ cntCustom[5] }}</h3></div>
+          </div>
+        </div>
+        <div class="card-block">
+          <div class="row align-items-center justify-content-center card-active">
+            <div class="col-6">
+              <div class="row"><div class="col text-left"><h6 class="text-left m-b-0"><span class="text-muted">Build</span></h6></div><div class="col text-right"><h6 class="text-right m-b-0">{{ cntCustom[1] }}</h6></div></div>
+              <div class="row"><div class="col text-left"><h6 class="text-left m-b-0"><span class="text-muted">Barebone</span></h6></div><div class="col text-right"><h6 class="text-right m-b-0">{{ cntCustom[6] }}</h6></div></div>
+              <div class="progress"><div class="progress-bar progress-c-theme" role="progressbar" style="width:{{ cntCustom[1]*2.5 if userrole>0 else cntCustom[1]*5 }}%;height:6px;"></div></div>
+            </div>
+            <div class="col-6">
+              <div class="row"><div class="col text-left"><h6 class="text-left m-b-0"><span class="text-muted">InstallOS</span></h6></div><div class="col text-right"><h6 class="text-right m-b-0">{{ cntCustom[2] }}</h6></div></div>
+              <div class="progress"><div class="progress-bar progress-c-theme2" role="progressbar" style="width:{{ cntCustom[2]*2.5 if userrole>0 else cntCustom[2]*5 }}%;height:6px;"></div></div>
+            </div>
+            <div class="col-6">
+              <div class="row"><div class="col text-left"><h6 class="text-left m-b-0"><span class="text-muted">InstallModule</span></h6></div><div class="col text-right"><h6 class="text-right m-b-0">{{ cntCustom[3] }}</h6></div></div>
+              <div class="progress"><div class="progress-bar progress-c-theme" role="progressbar" style="width:{{ cntCustom[3]*4 if userrole>0 else cntCustom[3]*8 }}%;height:6px;"></div></div>
+            </div>
+            <div class="col-6">
+              <div class="row"><div class="col text-left"><h6 class="text-left m-b-0"><span class="text-muted">InstallGPU</span></h6></div><div class="col text-right"><h6 class="text-right m-b-0">{{ cntCustom[4] }}</h6></div></div>
+              <div class="progress"><div class="progress-bar progress-c-theme2" role="progressbar" style="width:{{ cntCustom[4]*5 if userrole>0 else cntCustom[4]*10 }}%;height:6px;"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% else %}
+    <div class="col-md-12 col-xl-4">
+      <div class="card card-social">
+        <div class="card-block border-bottom">
+          <div class="row align-items-center justify-content-center">
+            <div class="col text-left"><h3 class="text-c-green mb-0"><span class="text-muted">Today</span></h3></div>
+            <div class="col text-left"><h3 class="text-c-green mb-0">{{ cntToday[0] }}</h3></div>
+            <div class="col text-right"><h3 class="text-c-green mb-0">{{ cntToday[5] }}</h3></div>
+          </div>
+        </div>
+        <div class="card-block">
+          <div class="row align-items-center justify-content-center card-active">
+            <div class="col-6">
+              <div class="row"><div class="col text-left"><h6 class="text-left m-b-0"><span class="text-muted">Build</span></h6></div><div class="col text-right"><h6 class="text-right m-b-0">{{ cntToday[1] }}</h6></div></div>
+              <div class="row"><div class="col text-left"><h6 class="text-left m-b-0"><span class="text-muted">Barebone</span></h6></div><div class="col text-right"><h6 class="text-right m-b-0">{{ cntToday[6] }}</h6></div></div>
+              <div class="progress"><div class="progress-bar progress-c-theme" role="progressbar" style="width:{{ cntToday[1]*2.5 if userrole>0 else cntToday[1]*5 }}%;height:6px;"></div></div>
+            </div>
+            <div class="col-6">
+              <div class="row"><div class="col text-left"><h6 class="text-left m-b-0"><span class="text-muted">InstallOS</span></h6></div><div class="col text-right"><h6 class="text-right m-b-0">{{ cntToday[2] }}</h6></div></div>
+              <div class="progress"><div class="progress-bar progress-c-theme2" role="progressbar" style="width:{{ cntToday[2]*2.5 if userrole>0 else cntToday[2]*5 }}%;height:6px;"></div></div>
+            </div>
+            <div class="col-6">
+              <div class="row"><div class="col text-left"><h6 class="text-left m-b-0"><span class="text-muted">InstallModule</span></h6></div><div class="col text-right"><h6 class="text-right m-b-0">{{ cntToday[3] }}</h6></div></div>
+              <div class="progress"><div class="progress-bar progress-c-theme" role="progressbar" style="width:{{ cntToday[3]*4 if userrole>0 else cntToday[3]*8 }}%;height:6px;"></div></div>
+            </div>
+            <div class="col-6">
+              <div class="row"><div class="col text-left"><h6 class="text-left m-b-0"><span class="text-muted">InstallGPU</span></h6></div><div class="col text-right"><h6 class="text-right m-b-0">{{ cntToday[4] }}</h6></div></div>
+              <div class="progress"><div class="progress-bar progress-c-theme2" role="progressbar" style="width:{{ cntToday[4]*5 if userrole>0 else cntToday[4]*10 }}%;height:6px;"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-12 col-xl-4">
+      <div class="card card-social">
+        <div class="card-block border-bottom">
+          <div class="row align-items-center justify-content-center">
+            <div class="col text-left"><h3 class="text-c-green mb-0"><span class="text-muted">7-Days</span></h3></div>
+            <div class="col text-left"><h3 class="text-c-green mb-0">{{ cnt7day[0] }}</h3></div>
+            <div class="col text-right"><h3 class="text-c-green mb-0">{{ cnt7day[5] }}</h3></div>
+          </div>
+        </div>
+        <div class="card-block">
+          <div class="row align-items-center justify-content-center card-active">
+            <div class="col-6">
+              <div class="row"><div class="col text-left"><h6 class="text-left m-b-0"><span class="text-muted">Build</span></h6></div><div class="col text-right"><h6 class="text-right m-b-0">{{ cnt7day[1] }}</h6></div></div>
+              <div class="row"><div class="col text-left"><h6 class="text-left m-b-0"><span class="text-muted">Barebone</span></h6></div><div class="col text-right"><h6 class="text-right m-b-0">{{ cnt7day[6] }}</h6></div></div>
+              <div class="progress"><div class="progress-bar progress-c-theme2" role="progressbar" style="width:{{ (cnt7day[1]/2) if userrole>0 else cnt7day[1] }}%;height:6px;"></div></div>
+            </div>
+            <div class="col-6">
+              <div class="row"><div class="col text-left"><h6 class="text-left m-b-0"><span class="text-muted">InstallOS</span></h6></div><div class="col text-right"><h6 class="text-right m-b-0">{{ cnt7day[2] }}</h6></div></div>
+              <div class="progress"><div class="progress-bar progress-c-theme2" role="progressbar" style="width:{{ (cnt7day[2]/2) if userrole>0 else cnt7day[2] }}%;height:6px;"></div></div>
+            </div>
+            <div class="col-6">
+              <div class="row"><div class="col text-left"><h6 class="text-left m-b-0"><span class="text-muted">InstallModule</span></h6></div><div class="col text-right"><h6 class="text-right m-b-0">{{ cnt7day[3] }}</h6></div></div>
+              <div class="progress"><div class="progress-bar progress-c-theme2" role="progressbar" style="width:{{ (cnt7day[3]/2) if userrole>0 else cnt7day[3] }}%;height:6px;"></div></div>
+            </div>
+            <div class="col-6">
+              <div class="row"><div class="col text-left"><h6 class="text-left m-b-0"><span class="text-muted">InstallGPU</span></h6></div><div class="col text-right"><h6 class="text-right m-b-0">{{ cnt7day[4] }}</h6></div></div>
+              <div class="progress"><div class="progress-bar progress-c-theme2" role="progressbar" style="width:{{ cnt7day[4] if userrole>0 else cnt7day[4]*2 }}%;height:6px;"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-12 col-xl-4">
+      <div class="card card-social">
+        <div class="card-block border-bottom">
+          <div class="row align-items-center justify-content-center">
+            <div class="col text-left"><h3 class="text-c-green mb-0"><span class="text-muted">28-Days</span></h3></div>
+            <div class="col text-left"><h3 class="text-c-green mb-0">{{ cnt28day[0] }}</h3></div>
+            <div class="col text-right"><h3 class="text-c-green mb-0">{{ cnt28day[5] }}</h3></div>
+          </div>
+        </div>
+        <div class="card-block">
+          <div class="row align-items-center justify-content-center card-active">
+            <div class="col-6">
+              <div class="row"><div class="col text-left"><h6 class="text-left m-b-0"><span class="text-muted">Build</span></h6></div><div class="col text-right"><h6 class="text-right m-b-0">{{ cnt28day[1] }}</h6></div></div>
+              <div class="row"><div class="col text-left"><h6 class="text-left m-b-0"><span class="text-muted">Barebone</span></h6></div><div class="col text-right"><h6 class="text-right m-b-0">{{ cnt28day[6] }}</h6></div></div>
+              <div class="progress"><div class="progress-bar progress-c-theme2" role="progressbar" style="width:{{ (cnt28day[1]/8) if userrole>0 else (cnt28day[1]/4) }}%;height:6px;"></div></div>
+            </div>
+            <div class="col-6">
+              <div class="row"><div class="col text-left"><h6 class="text-left m-b-0"><span class="text-muted">InstallOS</span></h6></div><div class="col text-right"><h6 class="text-right m-b-0">{{ cnt28day[2] }}</h6></div></div>
+              <div class="progress"><div class="progress-bar progress-c-theme2" role="progressbar" style="width:{{ (cnt28day[2]/8) if userrole>0 else (cnt28day[2]/4) }}%;height:6px;"></div></div>
+            </div>
+            <div class="col-6">
+              <div class="row"><div class="col text-left"><h6 class="text-left m-b-0"><span class="text-muted">InstallModule</span></h6></div><div class="col text-right"><h6 class="text-right m-b-0">{{ cnt28day[3] }}</h6></div></div>
+              <div class="progress"><div class="progress-bar progress-c-theme2" role="progressbar" style="width:{{ (cnt28day[3]/8) if userrole>0 else (cnt28day[3]/4) }}%;height:6px;"></div></div>
+            </div>
+            <div class="col-6">
+              <div class="row"><div class="col text-left"><h6 class="text-left m-b-0"><span class="text-muted">InstallGPU</span></h6></div><div class="col text-right"><h6 class="text-right m-b-0">{{ cnt28day[4] }}</h6></div></div>
+              <div class="progress"><div class="progress-bar progress-c-theme2" role="progressbar" style="width:{{ (cnt28day[4]/4) if userrole>0 else (cnt28day[4]/2) }}%;height:6px;"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Build Detail Table (like report.html) -->
+  <div class="row mt-4">
+    <div class="col-md-12">
+      <div class="card card-social">
+        <div class="card-block border-bottom">
+          <h5 class="mb-0"><span class="text-muted">Build Detail</span>
+            {% if not use_custom_range %}
+            <small class="text-muted" id="detailPeriodLabel">(Last 7 Days)</small>
+            {% endif %}
+          </h5>
+        </div>
+        <div class="card-block p-0">
+          <div class="table-responsive">
+            <table class="table table-striped table-hover mb-0">
+              <thead class="thead-light">
+                <tr>
+                  <th>Name</th>
+                  <th>NRU</th>
+                  <th>POCs</th>
+                  <th>Nuvo-5/6/7</th>
+                  <th>GT/SER-</th>
+                  <th>Nuvo-8</th>
+                  <th>Nuvo-9</th>
+                  <th>Nuvo-10</th>
+                  <th>Nuvo-11</th>
+                  <th>SEMIL</th>
+                  <th>Build</th>
+                  <th>Ins OS</th>
+                  <th>Ins GPU</th>
+                  <th>Ins Module</th>
+                  <th>Pack&Go</th>
+                  <th>Score</th>
+                </tr>
+              </thead>
+              <tbody id="detailTableBody">
+                {% for row in detail_table %}
+                <tr class="operator-row" data-opid="{{ row[0] }}">
+                  <td><a href="#" onclick="filterByOperator({{ row[0] }}, '{{ row[1] }}'); return false;">{{ row[1] }}</a></td>
+                  <td>{{ row[2] }}</td>
+                  <td>{{ row[3] }}</td>
+                  <td>{{ row[4] }}</td>
+                  <td>{{ row[5] }}</td>
+                  <td>{{ row[6] }}</td>
+                  <td>{{ row[7] }}</td>
+                  <td>{{ row[8] }}</td>
+                  <td>{{ row[9] }}</td>
+                  <td>{{ row[10] }}</td>
+                  <td>{{ row[11] }}</td>
+                  <td>{{ row[12] }}</td>
+                  <td>{{ row[13] }}</td>
+                  <td>{{ row[14] }}</td>
+                  <td>{{ row[15] }}</td>
+                  <td><strong>{{ row[16] }}</strong></td>
+                </tr>
+                {% endfor %}
+                {% if not detail_table %}
+                <tr><td colspan="17" class="text-center text-muted">No data</td></tr>
+                {% endif %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Period toggle bar -->
+  <div class="row mt-3 mb-2">
+    <div class="col text-right">
+      <div class="btn-group btn-group-toggle" data-toggle="buttons">
+        <label class="btn btn-sm btn-outline-secondary {% if trend_days == 7 and not use_custom_range %}active{% endif %}" id="period7Btn">
+          <input type="radio" name="period" value="7" {% if trend_days == 7 and not use_custom_range %}checked{% endif %} {% if use_custom_range %}disabled{% endif %}> Last 7 Days
+        </label>
+        <label class="btn btn-sm btn-outline-secondary {% if trend_days == 28 and not use_custom_range %}active{% endif %}" id="period28Btn">
+          <input type="radio" name="period" value="28" {% if trend_days == 28 and not use_custom_range %}checked{% endif %} {% if use_custom_range %}disabled{% endif %}> Last 28 Days
+        </label>
+      </div>
+      {% if use_custom_range %}
+      <small class="text-muted ml-2">(Date range filter active)</small>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Charts Row -->
+  <div class="row mt-2">
+    <div class="col-md-4">
+      <div class="card card-social">
+        <div class="card-block border-bottom">
+          <h5 class="mb-0"><span class="text-muted" id="trendChartTitle">{{ trend_label }} Trend</span></h5>
+        </div>
+        <div class="card-block">
+          <canvas id="trendChart" height="150"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card card-social">
+        <div class="card-block border-bottom">
+          <h5 class="mb-0"><span class="text-muted">Product Mix</span></h5>
+        </div>
+        <div class="card-block">
+          <canvas id="mixChart" height="150"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card card-social">
+        <div class="card-block border-bottom">
+          <h5 class="mb-0"><span class="text-muted">Operator Score</span></h5>
+        </div>
+        <div class="card-block">
+          <canvas id="rankChart" height="150"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Total vs Pack&Go Chart -->
+  <div class="row mt-3">
+    <div class="col-md-12">
+      <div class="card card-social">
+        <div class="card-block border-bottom">
+          <h5 class="mb-0"><span class="text-muted" id="packgoTitle">TotalWO [{{ wo_total }}] / Pack&amp;Go [{{ pg_total }}] / RMA [{{ rma_total }}]</span></h5>
+        </div>
+        <div class="card-block">
+          <canvas id="packgoChart" height="80"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Backlog + Quality row -->
+  <div class="row mt-4">
+    <div class="col-md-6">
+      <div class="card card-social">
+        <div class="card-block border-bottom">
+          <h5 class="mb-0"><span class="text-muted">Backlog Overview</span></h5>
+        </div>
+        <div class="card-block">
+          <div class="row">
+            <div class="col-4 text-center">
+              <h4 class="text-c-green mb-0">{{ backlog.unassigned }}</h4>
+              <small class="text-muted">Unassigned</small>
+            </div>
+            <div class="col-4 text-center">
+              <h4 class="text-c-green mb-0">{{ backlog.processing }}</h4>
+              <small class="text-muted">Processing</small>
+            </div>
+            <div class="col-4 text-center">
+              <h4 class="text-c-green mb-0">{{ backlog.waiting_inspection }}</h4>
+              <small class="text-muted">Wait Inspect</small>
+            </div>
+          </div>
+          <div class="progress mt-3" style="height:20px;">
+            {% set total_backlog = backlog.unassigned + backlog.pending + backlog.processing + backlog.waiting_inspection %}
+            {% if total_backlog > 0 %}
+            <div class="progress-bar progress-c-red" role="progressbar" style="width:{{ (backlog.unassigned / total_backlog) * 100 }}%;" title="Unassigned ({{ backlog.unassigned }})">{{ backlog.unassigned }}</div>
+            <div class="progress-bar progress-c-yellow" role="progressbar" style="width:{{ (backlog.pending / total_backlog) * 100 }}%;" title="Pending ({{ backlog.pending }})">{{ backlog.pending }}</div>
+            <div class="progress-bar progress-c-theme" role="progressbar" style="width:{{ (backlog.processing / total_backlog) * 100 }}%;" title="Processing ({{ backlog.processing }})">{{ backlog.processing }}</div>
+            <div class="progress-bar progress-c-theme2" role="progressbar" style="width:{{ (backlog.waiting_inspection / total_backlog) * 100 }}%;" title="Wait Inspect ({{ backlog.waiting_inspection }})">{{ backlog.waiting_inspection }}</div>
+            {% endif %}
+          </div>
+          <div class="row mt-2">
+            <div class="col text-center"><small><span class="badge bg-danger">&nbsp;</span> Unassigned</small></div>
+            <div class="col text-center"><small><span class="badge bg-warning">&nbsp;</span> Pending</small></div>
+            <div class="col text-center"><small><span class="badge" style="background:linear-gradient(-135deg, #1de9b6 0%, #1dc4e9 100%);">&nbsp;</span> Processing</small></div>
+            <div class="col text-center"><small><span class="badge" style="background:linear-gradient(-135deg, #899FD4 0%, #A389D4 100%);">&nbsp;</span> Wait Inspect</small></div>
+          </div>
+        </div>
+      </div>
+      <!-- Quality Log Summary -->
+      <div class="card card-social mt-3">
+        <div class="card-block border-bottom">
+          <h5 class="mb-0"><span class="text-muted">Quality Log Summary</span></h5>
+        </div>
+        <div class="card-block">
+          <div class="row text-center mb-3">
+            <div class="col-4">
+              <h4 class="text-c-green mb-0">{{ quality_data.total }}</h4>
+              <small class="text-muted">Total Issues</small>
+            </div>
+            <div class="col-4">
+              <h4 class="text-warning mb-0">{{ quality_data.open }}</h4>
+              <small class="text-muted">Open</small>
+            </div>
+            <div class="col-4">
+              <h4 class="text-success mb-0">{{ quality_data.closed }}</h4>
+              <small class="text-muted">Closed</small>
+            </div>
+          </div>
+          {% if quality_data.top_defects %}
+          <div class="row">
+            <div class="col-6">
+              <small class="text-muted"><strong>Top Defect Parts</strong></small>
+              {% for part, cnt in quality_data.top_defects %}
+              <div class="d-flex justify-content-between"><small>{{ part }}</small><small class="text-muted">{{ cnt }}</small></div>
+              {% endfor %}
+            </div>
+            <div class="col-6">
+              <small class="text-muted"><strong>Top Causes</strong></small>
+              {% for cause, cnt in quality_data.defect_causes %}
+              <div class="d-flex justify-content-between"><small>{{ cause }}</small><small class="text-muted">{{ cnt }}</small></div>
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card card-social">
+        <div class="card-block border-bottom">
+          <h5 class="mb-0"><span class="text-muted">Operator Ranking</span></h5>
+        </div>
+        <div class="card-block p-0">
+          <table class="table table-striped table-hover mb-0" id="rankTable">
+            <thead class="thead-light">
+              <tr>
+                <th>#</th>
+                <th>Operator</th>
+                <th class="text-right">Units</th>
+                <th class="text-right">Score</th>
+              </tr>
+            </thead>
+              <tbody id="rankTableBody">
+              {% for op in ranking %}
+              <tr class="operator-row" data-opid="{{ op.id }}">
+                <td>{{ loop.index }}</td>
+                <td><a href="#" onclick="filterByOperator({{ op.id }}, '{{ op.name }}'); return false;">{{ op.name }}</a></td>
+                <td class="text-right">{{ op.count }}</td>
+                <td class="text-right"><strong>{{ op.score }}</strong></td>
+              </tr>
+              {% endfor %}
+              {% if not ranking %}
+              <tr><td colspan="4" class="text-center text-muted">No data</td></tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+var currentOperatorId = null;
+var trendChart, mixChart, rankChart, packgoChart;
+var dateLabels7 = {{ trend | map(attribute='date') | list | tojson }};
+var countData7  = {{ trend | map(attribute='count') | list | tojson }};
+var woData7 = {{ wo_data | tojson }};
+var pgData7 = {{ pg_data | tojson }};
+var rmaData7 = {{ rma_data | tojson }};
+var buildData7 = {{ build_data | tojson }};
+var woTotal7 = {{ wo_total }};
+var pgTotal7 = {{ pg_total }};
+var rmaTotal7 = {{ rma_total }};
+var dateLabels28 = {{ trend28 | map(attribute='date') | list | tojson }};
+var countData28  = {{ trend28 | map(attribute='count') | list | tojson }};
+var woData28 = {{ wo_data28 | tojson }};
+var pgData28 = {{ pg_data28 | tojson }};
+var rmaData28 = {{ rma_data28 | tojson }};
+var buildData28 = {{ build_data28 | tojson }};
+var woTotal28 = {{ wo_total28 }};
+var pgTotal28 = {{ pg_total28 }};
+var rmaTotal28 = {{ rma_total28 }};
+var mixLabels = {{ product_mix.keys() | list | tojson }};
+var mixData   = {{ product_mix.values() | list | tojson }};
+var mixLabels28 = {{ product_mix28.keys() | list | tojson }};
+var mixData28   = {{ product_mix28.values() | list | tojson }};
+var rankLabels = {{ ranking_labels | tojson }};
+var rankScores = {{ ranking_scores | tojson }};
+var rankLabels28 = {{ ranking_labels28 | tojson }};
+var rankScores28 = {{ ranking_scores28 | tojson }};
+var detailTable7 = {{ detail_table | tojson }};
+var detailTable28 = {{ detail_table28 | tojson }};
+var useCustomRange = {{ 'true' if use_custom_range else 'false' }};
+var trendLabel7 = '{{ trend_label }}';
+var trendLabel28 = '{{ trend_label28 }}';
+var operatorTrends7 = {{ operator_trends | tojson }};
+var operatorTrends28 = {{ operator_trends28 | tojson }};
+var operatorBuild7 = {{ operator_build | tojson }};
+var operatorBuild28 = {{ operator_build28 | tojson }};
+var operatorWO7 = {{ operator_wo | tojson }};
+var operatorWO28 = {{ operator_wo28 | tojson }};
+var operatorPG7 = {{ operator_pg | tojson }};
+var operatorPG28 = {{ operator_pg28 | tojson }};
+var operatorRMA7 = {{ operator_rma | tojson }};
+var operatorRMA28 = {{ operator_rma28 | tojson }};
+var allCountData7 = countData7.slice();
+var allCountData28 = countData28.slice();
+var allBuildData7 = buildData7.slice();
+var allBuildData28 = buildData28.slice();
+var allWO7 = woData7.slice();
+var allWO28 = woData28.slice();
+var allPG7 = pgData7.slice();
+var allPG28 = pgData28.slice();
+var allRMA7 = rmaData7.slice();
+var allRMA28 = rmaData28.slice();
+
+function filterByOperator(id, name) {
+  currentOperatorId = id;
+  document.querySelectorAll('.operator-row').forEach(function(tr) {
+    tr.style.display = parseInt(tr.getAttribute('data-opid')) === id ? '' : 'none';
+  });
+  document.getElementById('operatorBadgeName').textContent = name;
+  document.getElementById('operatorBadge').style.display = '';
+  var sid = String(id);
+  console.log('=== OPERATOR FILTER DEBUG ===');
+  console.log('Filtered operator id:', id, 'string key:', sid);
+  console.log('dateLabels28 length:', dateLabels28.length, 'values:', dateLabels28);
+  console.log('countData28 length:', countData28.length, 'values:', countData28);
+  console.log('operatorTrends28 keys:', Object.keys(operatorTrends28));
+  console.log('operatorTrends28[' + sid + ']:', operatorTrends28[sid]);
+  console.log('operatorTrends28[' + sid + '] length:', operatorTrends28[sid] ? operatorTrends28[sid].length : 'N/A');
+  console.log('operatorWO28 keys:', Object.keys(operatorWO28));
+  console.log('operatorWO28[' + sid + ']:', operatorWO28[sid]);
+  console.log('operatorPG28[' + sid + ']:', operatorPG28[sid]);
+  console.log('operatorRMA28[' + sid + ']:', operatorRMA28[sid]);
+  console.log('=============================');
+  updateChartsForOperator(id);
+}
+
+function clearOperatorFilter() {
+  currentOperatorId = null;
+  document.querySelectorAll('.operator-row').forEach(function(tr) {
+    tr.style.display = '';
+  });
+  document.getElementById('operatorBadge').style.display = 'none';
+  updateChartsForOperator(null);
+}
+
+function updateChartsForOperator(opId) {
+  var is7 = !document.getElementById('period28Btn').classList.contains('active');
+  var trendData, woData, pgData, rmaData;
+  var woTotal, pgTotal, rmaTotal;
+  if (is7) {
+    trendData = opId ? (operatorBuild7[String(opId)] || []) : allBuildData7;
+    woData    = opId ? (operatorWO7[String(opId)] || []) : allWO7;
+    pgData    = opId ? (operatorPG7[String(opId)] || []) : allPG7;
+    rmaData   = opId ? (operatorRMA7[String(opId)] || []) : allRMA7;
+    woTotal   = opId ? woData.reduce(function(a,b){return a+b},0) : woTotal7;
+    pgTotal   = opId ? pgData.reduce(function(a,b){return a+b},0) : pgTotal7;
+    rmaTotal  = opId ? rmaData.reduce(function(a,b){return a+b},0) : rmaTotal7;
+  } else {
+    trendData = opId ? (operatorBuild28[String(opId)] || []) : allBuildData28;
+    woData    = opId ? (operatorWO28[String(opId)] || []) : allWO28;
+    pgData    = opId ? (operatorPG28[String(opId)] || []) : allPG28;
+    rmaData   = opId ? (operatorRMA28[String(opId)] || []) : allRMA28;
+    woTotal   = opId ? woData.reduce(function(a,b){return a+b},0) : woTotal28;
+    pgTotal   = opId ? pgData.reduce(function(a,b){return a+b},0) : pgTotal28;
+    rmaTotal  = opId ? rmaData.reduce(function(a,b){return a+b},0) : rmaTotal28;
+  }
+  if (trendChart) {
+    trendChart.data.datasets[0].data = trendData.length ? trendData : [];
+    trendChart.update();
+    console.log('TREND CHART data AFTER update:', JSON.stringify(trendChart.data.datasets[0].data));
+  }
+  if (packgoChart) {
+    packgoChart.data.datasets[0].data = woData.length ? woData : [];
+    packgoChart.data.datasets[1].data = pgData.length ? pgData : [];
+    packgoChart.data.datasets[2].data = rmaData.length ? rmaData : [];
+    packgoChart.update();
+    console.log('PACKGO CHART wo AFTER update:', JSON.stringify(packgoChart.data.datasets[0].data));
+  }
+  document.getElementById('packgoTitle').textContent = 'TotalWO [' + woTotal + '] / Pack&Go [' + pgTotal + '] / RMA [' + rmaTotal + ']';
+}
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var ctx = document.getElementById('trendChart');
+  trendChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: dateLabels7,
+      datasets: [{
+        label: 'Completed',
+        data: buildData7,
+        borderColor: '#1de9b6',
+        backgroundColor: 'rgba(29,233,182,0.1)',
+        fill: true,
+        tension: 0.3,
+        pointBackgroundColor: '#1de9b6',
+        pointRadius: 3,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: true, ticks: { stepSize: 1 } },
+        x: { grid: { display: false }, ticks: { maxTicksLimit: 14 } }
+      }
+    }
+  });
+
+  function setPeriod(days) {
+    if (useCustomRange) return;
+    var is7 = days === 7;
+    // Trend
+    trendChart.data.labels = is7 ? dateLabels7 : dateLabels28;
+    trendChart.data.datasets[0].data = is7 ? buildData7 : buildData28;
+    trendChart.update();
+    document.getElementById('trendChartTitle').textContent = (is7 ? trendLabel7 : trendLabel28) + ' Build Trend';
+    // TotalWO / Pack&Go / RMA
+    packgoChart.data.labels = is7 ? dateLabels7 : dateLabels28;
+    packgoChart.data.datasets[0].data = is7 ? woData7 : woData28;
+    packgoChart.data.datasets[1].data = is7 ? pgData7 : pgData28;
+    packgoChart.data.datasets[2].data = is7 ? rmaData7 : rmaData28;
+    packgoChart.update();
+    document.getElementById('packgoTitle').textContent = 'TotalWO [' + (is7 ? woTotal7 : woTotal28) + '] / Pack&Go [' + (is7 ? pgTotal7 : pgTotal28) + '] / RMA [' + (is7 ? rmaTotal7 : rmaTotal28) + ']';
+    // Product mix
+    mixChart.data.labels = is7 ? mixLabels : mixLabels28;
+    mixChart.data.datasets[0].data = is7 ? mixData : mixData28;
+    mixChart.update();
+    // Operator score bar chart
+    rankChart.data.labels = is7 ? rankLabels : rankLabels28;
+    rankChart.data.datasets[0].data = is7 ? rankScores : rankScores28;
+    rankChart.update();
+    // Operator ranking table
+    var tableData = is7 ? {{ ranking | tojson }} : {{ ranking28 | tojson }};
+    var tbody = document.getElementById('rankTableBody');
+    if (tableData.length) {
+      tbody.innerHTML = tableData.map(function (op, i) {
+        var visible = currentOperatorId ? 'style="display:' + (op.id === currentOperatorId ? '' : 'none') + '"' : '';
+        return '<tr class="operator-row" data-opid="' + op.id + '" ' + visible + '><td>' + (i + 1) + '</td><td><a href="#" onclick="filterByOperator(' + op.id + ', \'' + op.name + '\'); return false;">' + op.name + '</a></td><td class="text-right">' + op.count + '</td><td class="text-right"><strong>' + op.score + '</strong></td></tr>';
+      }).join('');
+    } else {
+      tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No data</td></tr>';
+    }
+    // Detail table
+    var detailData = is7 ? detailTable7 : detailTable28;
+    var dtBody = document.getElementById('detailTableBody');
+    if (detailData.length) {
+      dtBody.innerHTML = detailData.map(function (r) {
+        var visible = currentOperatorId ? 'style="display:' + (r[0] === currentOperatorId ? '' : 'none') + '"' : '';
+        var nameCol = '<a href="#" onclick="filterByOperator(' + r[0] + ', \'' + r[1] + '\'); return false;">' + r[1] + '</a>';
+        var cols = nameCol;
+        for (var j = 2; j < r.length; j++) {
+          var val = (j === r.length - 1) ? '<strong>' + r[j] + '</strong>' : r[j];
+          cols += '<td>' + val + '</td>';
+        }
+        return '<tr class="operator-row" data-opid="' + r[0] + '" ' + visible + '><td>' + cols + '</td></tr>';
+      }).join('');
+    } else {
+      dtBody.innerHTML = '<tr><td colspan="17" class="text-center text-muted">No data</td></tr>';
+    }
+    // Update label
+    document.getElementById('detailPeriodLabel').textContent = is7 ? '(Last 7 Days)' : '(Last 28 Days)';
+    if (currentOperatorId) updateChartsForOperator(currentOperatorId);
+  }
+
+  document.getElementById('period7Btn').addEventListener('click', function () { setPeriod(7); });
+  document.getElementById('period28Btn').addEventListener('click', function () { setPeriod(28); });
+
+  mixChart = new Chart(document.getElementById('mixChart'), {
+    type: 'pie',
+    data: {
+      labels: mixLabels,
+      datasets: [{
+        data: mixData,
+        backgroundColor: ['#1de9b6','#a389d4','#04a9f5','#f4c22b','#f44236','#899FD4','#1dc4e9','#ff8a65','#81c784'],
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } }
+      }
+    }
+  });
+
+  rankChart = new Chart(document.getElementById('rankChart'), {
+    type: 'bar',
+    data: {
+      labels: rankLabels,
+      datasets: [{
+        label: 'Score',
+        data: rankScores,
+        backgroundColor: 'rgba(29,233,182,0.7)',
+        borderColor: '#1de9b6',
+        borderWidth: 1,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { beginAtZero: true, ticks: { stepSize: 1 } },
+        y: { grid: { display: false }, ticks: { autoSkip: false, font: { size: 11 } } }
+      }
+    }
+  });
+
+  packgoChart = new Chart(document.getElementById('packgoChart'), {
+    type: 'bar',
+    data: {
+      labels: dateLabels7,
+      datasets: [
+        {
+          label: 'TotalWO',
+          data: woData7,
+          backgroundColor: 'rgba(4,169,245,0.6)',
+          borderColor: '#04a9f5',
+          borderWidth: 1,
+        },
+        {
+          label: 'Pack&Go',
+          data: pgData7,
+          backgroundColor: 'rgba(244,67,54,0.6)',
+          borderColor: '#f44236',
+          borderWidth: 1,
+        },
+        {
+          label: 'RMA',
+          data: rmaData7,
+          backgroundColor: 'rgba(255,152,0,0.6)',
+          borderColor: '#ff9800',
+          borderWidth: 1,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        x: { grid: { display: false }, stacked: false },
+        y: { beginAtZero: true, ticks: { stepSize: 1 } }
+      }
+    }
+  });
+});
+</script>
+{% endblock %}
