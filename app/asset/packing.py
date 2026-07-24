@@ -63,13 +63,13 @@ class Package:
         return self.__coordinate
 
     def get_max_width(self):
-        return self.__coordinate[0] + self.__width
+        return self.__coordinate[0] + self.get_size()[0]
 
     def get_max_thickness(self):
-        return self.__coordinate[1] + self.__thickness
+        return self.__coordinate[1] + self.get_size()[1]
 
     def get_max_height(self):
-        return self.__coordinate[2] + self.__height
+        return self.__coordinate[2] + self.get_size()[2]
 
 class Box(Package):
     """
@@ -145,7 +145,9 @@ class Box(Package):
         """
         Attempt to pack a package into the box at the given pivot.
         """
-        for rotation in range(6):
+        if pivot[0] >= self._Package__width or pivot[1] >= self._Package__thickness or pivot[2] >= self._Package__height:
+            return False
+        for rotation in sorted(range(6), key=lambda r: (package.get_rotation(r)[0], -package.get_rotation(r)[2])):
             packageSize = package.get_rotation(rotation)
             if (self._Package__width - pivot[0]) < packageSize[0]:
                 continue
@@ -162,8 +164,18 @@ class Box(Package):
                     collided = True
                     break
             if not collided:
+                if pivot[0] + packageSize[0] > self._Package__width or \
+                   pivot[1] + packageSize[1] > self._Package__thickness or \
+                   pivot[2] + packageSize[2] > self._Package__height:
+                    continue
+                if pivot[0] + packageSize[0] > self._Package__width + 0.001 or \
+                   pivot[1] + packageSize[1] > self._Package__thickness + 0.001 or \
+                   pivot[2] + packageSize[2] > self._Package__height + 0.001:
+                    continue
                 package.set_rotation_type(rotation)          # success: change current package rotation
                 package.set_coordinate(pivot)                # success: position the package at the pivot (Bottom Rear Left)
+                package._pack_rot = rotation
+                package._pack_size = list(packageSize)
                 self.set_occupied_pivot(pivot)               # success: position the package at the pivot
                 self.add_packed_package(package)             # success: insert package into box's packed packages
                 self.add_loaded_weight(package.get_weight()) # success: add the package weight to the load
@@ -228,6 +240,7 @@ def classifier(platforms, packages):
     solution = []
     details  = []
     totalpercentage = 0
+    packing_data = []
     for platform in platforms.keys():
     
         
@@ -241,10 +254,20 @@ def classifier(platforms, packages):
             packageCount = {}
             packageNames = {}
             unpackageNames = {}
+            boxPkgData = {}
             for box in boxes:
                 box.clear()
             for box in boxes:
                 packer(box, unpackedPackages)
+                # Snapshot rotation/size per box before next box overwrites
+                snap = {}
+                for p in box.get_packed_packages():
+                    snap[id(p)] = {
+                        'rot': getattr(p, '_pack_rot', p.get_rotation_type()),
+                        'sz': getattr(p, '_pack_size', list(p.get_size())),
+                        'pos': list(p.get_coordinate()),
+                    }
+                boxPkgData[box.get_name()] = snap
                 packagePercentage[box.get_name()] = (len(box.get_packed_packages()) / len(packages))  # Store the % of load carried for each box
                 packageCount[box.get_name()] = (len(box.get_packed_packages()))                       # Store the raw count of load carried for each box
                 packageNames[box.get_name()] = (box.get_packed_packages())                            # Store the packages loaded in each box
@@ -253,39 +276,70 @@ def classifier(platforms, packages):
                     break
 
             bestOption = max(packagePercentage, key=packagePercentage.get)
-           
+            
             totalpercentage = totalpercentage + packagePercentage[bestOption]
             solution.append(f"{bestOption} | Packed: {(packagePercentage[bestOption]*100):.2f}%")
             details.append(f"Details")
             for box in boxes:
                 if box.get_name() == bestOption:
+                    bw = box.get_width(); bt = box.get_thickness(); bh = box.get_height()
+                    box_entry = {
+                        'name': box.get_name(),
+                        'w': bw,
+                        't': bt,
+                        'h': bh,
+                        'packages': []
+                    }
+                    for pkg in packageNames[bestOption]:
+                        snap = boxPkgData.get(bestOption, {}).get(id(pkg), {})
+                        sz = snap.get('sz', pkg.get_size())
+                        rot = snap.get('rot', pkg.get_rotation_type())
+                        coord = snap.get('pos', pkg.get_coordinate())
+                        box_entry['packages'].append({
+                            'name': pkg.get_name(),
+                            'x': coord[0],
+                            'y': coord[1],
+                            'z': coord[2],
+                            'ow': pkg.get_width(),
+                            'ot': pkg.get_thickness(),
+                            'oh': pkg.get_height(),
+                            'rot': rot,
+                        })
+                    packing_data.append(box_entry)
+            for box in boxes:
+                if box.get_name() == bestOption:
                     solution.append(f"{box.get_width()} x {box.get_thickness()} x {box.get_height()}inches | Total Weight | {box.get_loaded_weight()+box.get_self_weight():.2f}lbs")
                     details.append(f"{box.get_width()} x {box.get_thickness()} x {box.get_height()}inches | Total Weight | {box.get_loaded_weight()+box.get_self_weight():.2f}lbs")
+            def pkg_snap(p):
+                return boxPkgData.get(bestOption, {}).get(id(p), {})
             lastpackgename=""  
             lastpackgeweight=0      
             qty = 0
             for package in packageNames[bestOption]:
-                coord = package.get_coordinate()
+                snap = pkg_snap(package)
+                prot = snap.get('rot', package.get_rotation_type())
+                coord = snap.get('pos', package.get_coordinate())
+                line = f"{package.get_name()} | {prot} | {coord[0]:.2f},{coord[1]:.2f},{coord[2]:.2f} | {package.get_width()} x {package.get_thickness()} x {package.get_height()}inches  | { package.get_weight():.2f}lbs"
                 if package.get_name() == lastpackgename :
                    qty = qty +1
-                   details.append(f"{package.get_name()} | {package.get_rotation_type()} | {coord[0]:.2f},{coord[1]:.2f},{coord[2]:.2f} | {package.get_width()} x {package.get_thickness()} x {package.get_height()}inches  | { package.get_weight():.2f}lbs")
+                   details.append(line)
                 else:
                    if(qty == 0) :
                    	   lastpackgename = package.get_name()
                    	   lastpackgeweight = package.get_weight()
                    	   qty = 1
-                   	   details.append(f"{package.get_name()} | {package.get_rotation_type()} | {coord[0]:.2f},{coord[1]:.2f},{coord[2]:.2f} | {package.get_width()} x {package.get_thickness()} x {package.get_height()}inches  | { package.get_weight():.2f}lbs")
+                   	   details.append(line)
                    else :
                    	   solution.append(f"{lastpackgename} | { lastpackgeweight:.2f}lbs x {qty}")
                    	   lastpackgename = package.get_name()
                    	   lastpackgeweight = package.get_weight()
                    	   qty = 1
-                   	   details.append(f"{package.get_name()} | {package.get_rotation_type()} | {coord[0]:.2f},{coord[1]:.2f},{coord[2]:.2f} | {package.get_width()} x {package.get_thickness()} x {package.get_height()}inches  | { package.get_weight():.2f}lbs")
+                   	   details.append(line)
             if(qty): solution.append(f"{lastpackgename} | { lastpackgeweight:.2f}lbs x {qty}")
             unpackedPackages = unpackageNames[bestOption]
             if len(unpackageNames[bestOption]) == 0:
                 break
-    return solution,details,totalpercentage
+    return solution,details,totalpercentage,packing_data
 
 
 

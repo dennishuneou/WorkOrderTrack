@@ -1,0 +1,351 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container">
+    <div class="row mb-3">
+        <div class="col">
+            <h4 class="font-weight-bold">RMA Cases</h4>
+        </div>
+        <div class="col text-right">
+            <a href="{{ url_for('main.rma_new') }}" class="btn btn-primary">New RMA Case</a>
+        </div>
+    </div>
+    <ul class="nav nav-tabs mb-3" id="rmaTab" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link {% if current_status == 'all' %}active{% endif %}" href="{{ url_for('main.rma_list', status='all') }}">All ({{ counts.new + counts.received + counts.processing + counts.waiting_for_shipping + counts.shipped_to_vendor + counts.recv_from_vendor + counts.closed }})</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if current_status == 'new' %}active{% endif %}" href="{{ url_for('main.rma_list', status='new') }}">New ({{ counts.new }})</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if current_status == 'received' %}active{% endif %}" href="{{ url_for('main.rma_list', status='received') }}">Received ({{ counts.received }})</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if current_status == 'processing' %}active{% endif %}" href="{{ url_for('main.rma_list', status='processing') }}">Processing ({{ counts.processing }})</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if current_status == 'waiting_for_shipping' %}active{% endif %}" href="{{ url_for('main.rma_list', status='waiting_for_shipping') }}">Wait Shipping ({{ counts.waiting_for_shipping }})</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if current_status == 'shipped_to_vendor' %}active{% endif %}" href="{{ url_for('main.rma_list', status='shipped_to_vendor') }}">Shipped to Vendor ({{ counts.shipped_to_vendor }})</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if current_status == 'recv_from_vendor' %}active{% endif %}" href="{{ url_for('main.rma_list', status='recv_from_vendor') }}">Received from Vendor ({{ counts.recv_from_vendor }})</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if current_status == 'closed' %}active{% endif %}" href="{{ url_for('main.rma_list', status='closed') }}">Closed ({{ counts.closed }})</a>
+        </li>
+    </ul>
+    <form method="get" class="form-inline mb-3">
+        <input type="hidden" name="status" value="{{ current_status }}">
+        <label class="mr-2">From:</label>
+        <input type="date" name="start_date" class="form-control form-control-sm mr-3" value="{{ start_date }}">
+        <label class="mr-2">To:</label>
+        <input type="date" name="end_date" class="form-control form-control-sm mr-3" value="{{ end_date }}">
+        <label class="mr-2">Keywords:</label>
+        <input type="text" name="keywords" class="form-control form-control-sm mr-3" value="{{ keywords }}" placeholder="Search all fields...">
+        <button type="submit" class="btn btn-sm btn-outline-primary mr-2">Filter</button>
+        <a href="{{ url_for('main.rma_export', start_date=start_date, end_date=end_date, keywords=keywords) }}" class="btn btn-sm btn-success mr-2">Export CSV</a>
+        <a href="{{ url_for('main.rma_list', status=current_status) }}" class="btn btn-sm btn-outline-secondary">Reset</a>
+    </form>
+    <div class="table-responsive">
+        <table class="table table-striped table-hover" id="rmaTable">
+            <thead class="thead-light">
+                <tr>
+                    <th class="sortable">NTA RMA # <i class="bi bi-arrow-down-up"></i></th>
+                    <th class="sortable">Customer <i class="bi bi-arrow-down-up"></i></th>
+                    <th class="sortable">PN <i class="bi bi-arrow-down-up"></i></th>
+                    <th class="sortable">CSN <i class="bi bi-arrow-down-up"></i></th>
+                    <th class="sortable">Description <i class="bi bi-arrow-down-up"></i></th>
+                    {% if current_status in ('all', 'new') %}<th class="sortable">Created <i class="bi bi-arrow-down-up"></i></th>{% endif %}
+                    {% if current_status in ('received', 'all') %}<th class="sortable">Received <i class="bi bi-arrow-down-up"></i></th><th class="sortable">By <i class="bi bi-arrow-down-up"></i></th>{% endif %}
+                    {% if current_status in ('processing', 'all') %}<th class="sortable">Process <i class="bi bi-arrow-down-up"></i></th><th class="sortable">By <i class="bi bi-arrow-down-up"></i></th><th>Notes</th>{% endif %}
+                    {% if current_status in ('waiting_for_shipping', 'all') %}<th class="sortable">Owner <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Ship PN <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Part SN <i class="bi bi-arrow-down-up"></i></th>{% endif %}
+                    {% if current_status in ('shipped_to_vendor', 'all') %}<th class="sortable">Shipped <i class="bi bi-arrow-down-up"></i></th><th class="sortable">By <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Vendor RMA <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Ship PN <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Part SN <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Owner <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Vendor Name <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Category <i class="bi bi-arrow-down-up"></i></th>{% endif %}
+                    {% if current_status in ('recv_from_vendor', 'all') %}<th class="sortable">Vendor Recv <i class="bi bi-arrow-down-up"></i></th><th class="sortable">By <i class="bi bi-arrow-down-up"></i></th>{% endif %}
+                    {% if current_status in ('closed', 'all') %}<th class="sortable">Closed <i class="bi bi-arrow-down-up"></i></th><th class="sortable">By <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Conclusion <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Vendor RMA <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Owner <i class="bi bi-arrow-down-up"></i></th>{% endif %}
+                    {% if current_status == 'all' %}<th>Notes</th>{% endif %}
+                    <th class="sortable">Status <i class="bi bi-arrow-down-up"></i></th>
+                    <th>Files</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for case in cases %}
+                <tr>
+                    <td>{{ case.ntarmano }}</td>
+                    <td>{{ case.customers }}</td>
+                    <td>{{ case.pn }}</td>
+                    <td>{{ case.csn }}</td>
+                    <td title="{{ case.descriptionbycustomer }}">{{ case.descriptionbycustomer[:50] }}{% if case.descriptionbycustomer|length > 50 %}...{% endif %}</td>
+                    {% if current_status in ('all', 'new') %}<td>{{ case.cstime.strftime('%m/%d %H:%M') if case.cstime else '' }}</td>{% endif %}
+                    {% if current_status in ('received', 'all') %}<td>{{ case.recvtime.strftime('%m/%d %H:%M') if case.recvtime else '' }}</td><td>{{ case.recvby }}</td>{% endif %}
+                    {% if current_status in ('processing', 'all') %}<td>{{ case.startprocesstime.strftime('%m/%d %H:%M') if case.startprocesstime else '' }}</td><td>{{ case.processby }}</td>
+                    <td title="{{ case.notes }}">{{ case.notes[:80] if case.notes else '' }}{% if case.notes and case.notes|length > 80 %}...{% endif %}</td>{% endif %}
+                    {% if current_status in ('shipped_to_vendor', 'all') %}<td>{{ case.shiptovendortime.strftime('%m/%d %H:%M') if case.shiptovendortime else '' }}</td><td>{{ case.shipby }}</td><td>{{ case.vendorrmano or '' }}</td><td>{{ case.shippn or '' }}</td><td>{{ case.partsn or '' }}</td><td>{{ case.assetowner }}</td><td>{{ case.vendorname or '' }}</td><td>{{ case.category or '' }}</td>{% endif %}
+                    {% if current_status in ('waiting_for_shipping', 'all') %}<td>{{ case.assetowner }}</td><td>{{ case.shippn or '' }}</td><td>{{ case.partsn or '' }}</td>{% endif %}
+                    {% if current_status in ('recv_from_vendor', 'all') %}<td>{{ case.recvfromvendortime.strftime('%m/%d %H:%M') if case.recvfromvendortime else '' }}</td><td>{{ case.recvfromvendorby }}</td>{% endif %}
+                    {% if current_status in ('closed', 'all') %}<td>{{ case.closetime.strftime('%m/%d %H:%M') if case.closetime else '' }}</td><td>{{ case.closeby }}</td><td>{{ case.conclusion }}</td><td>{{ case.vendorrmano or '' }}</td><td>{{ case.assetowner }}</td>{% endif %}
+                    {% if current_status == 'all' %}<td>
+                        <textarea id="notes-{{ case.id }}" rows="2" style="width:200px;font-size:0.8rem">{{ case.notes or '' }}</textarea>
+                        <button class="btn btn-sm btn-outline-primary" onclick="saveNotes({{ case.id }})">Save</button>
+                    </td>{% endif %}
+                    <td>
+                        {% if case.status == 'new' %}
+                            <span class="badge badge-warning">New</span>
+                        {% elif case.status == 'received' %}
+                            <span class="badge badge-info">Received</span>
+                        {% elif case.status == 'processing' %}
+                            <span class="badge badge-primary">Processing</span>
+                        {% elif case.status == 'waiting_for_shipping' %}
+                            <span class="badge badge-warning">Wait Shipping</span>
+                        {% elif case.status == 'shipped_to_vendor' %}
+                            <span class="badge badge-secondary">Shipped to Vendor</span>
+                        {% elif case.status == 'recv_from_vendor' %}
+                            <span class="badge badge-secondary">Received from Vendor</span>
+                        {% elif case.status == 'closed' %}
+                            <span class="badge badge-success">Closed</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% set doc_name = case.file_base ~ '.doc' %}
+                        {% set pdf_name = case.file_base ~ '.pdf' %}
+                        <a href="{{ url_for('main.rma_download', filename=doc_name) }}" class="btn btn-sm btn-outline-secondary">DOC</a>
+                        <a href="{{ url_for('main.rma_download', filename=pdf_name) }}" class="btn btn-sm btn-outline-danger">PDF</a>
+                    </td>
+                    <td>
+                        {% if case.status == 'new' %}
+                        <form action="{{ url_for('main.rma_receive', id=case.id) }}" method="post" style="display:inline">
+                            <button class="btn btn-sm btn-info">Mark Received</button>
+                        </form>
+                        <form action="{{ url_for('main.rma_delete', id=case.id) }}" method="post" style="display:inline" onsubmit="return confirm('Delete RMA {{ case.ntarmano }}?')">
+                            <button class="btn btn-sm btn-danger">Delete</button>
+                        </form>
+                        {% elif case.status == 'received' %}
+                        <form action="{{ url_for('main.rma_start', id=case.id) }}" method="post" style="display:inline">
+                            <button class="btn btn-sm btn-primary">Start Processing</button>
+                        </form>
+                        <form action="{{ url_for('main.rma_unreceive', id=case.id) }}" method="post" style="display:inline" onsubmit="return confirm('Return {{ case.ntarmano }} to New?')">
+                            <button class="btn btn-sm btn-outline-secondary">Go Back</button>
+                        </form>
+                        {% elif case.status == 'processing' %}
+                        <form action="{{ url_for('main.rma_wait_shipping', id=case.id) }}" method="post" style="display:inline">
+                            <button class="btn btn-sm btn-warning">Wait for Shipping</button>
+                        </form>
+                        <button class="btn btn-sm btn-primary" onclick="showWOModal({{ case.id }}, '{{ case.ntarmano }}')">Create WO</button>
+                        <form action="{{ url_for('main.rma_unprocess', id=case.id) }}" method="post" style="display:inline" onsubmit="return confirm('Return {{ case.ntarmano }} to Received?')">
+                            <button class="btn btn-sm btn-outline-secondary">Go Back</button>
+                        </form>
+                        <button class="btn btn-sm btn-success" onclick="showCloseModal({{ case.id }}, '{{ case.ntarmano }}')">Close Case</button>
+                        {% elif case.status == 'waiting_for_shipping' %}
+                        {% if case.vendorrmano %}
+                        <form action="{{ url_for('main.rma_ship_vendor', id=case.id) }}" method="post" style="display:inline">
+                            <input type="hidden" name="vendorrmano" value="{{ case.vendorrmano }}">
+                            <input type="hidden" name="shippn" value="{{ case.shippn or '' }}">
+                            <input type="hidden" name="partsn" value="{{ case.partsn or '' }}">
+                            <button class="btn btn-sm btn-secondary">Ship to Vendor</button>
+                        </form>
+                        {% else %}
+                        <button class="btn btn-sm btn-secondary" onclick="showShipModal({{ case.id }}, '{{ case.ntarmano }}')">Ship to Vendor</button>
+                        {% endif %}
+                        <form action="{{ url_for('main.rma_unwait', id=case.id) }}" method="post" style="display:inline" onsubmit="return confirm('Return {{ case.ntarmano }} to Processing?')">
+                            <button class="btn btn-sm btn-outline-secondary">Go Back</button>
+                        </form>
+                        {% elif case.status in ('shipped_to_vendor', 'recv_from_vendor') %}
+                        {% if case.status == 'shipped_to_vendor' %}
+                        <form action="{{ url_for('main.rma_recv_vendor', id=case.id) }}" method="post" style="display:inline">
+                            <button class="btn btn-sm btn-secondary">Received from Vendor</button>
+                        </form>
+                        <form action="{{ url_for('main.rma_unshipped', id=case.id) }}" method="post" style="display:inline" onsubmit="return confirm('Return {{ case.ntarmano }} to Wait Shipping?')">
+                            <button class="btn btn-sm btn-outline-secondary">Go Back</button>
+                        </form>
+                        {% else %}
+                        <form action="{{ url_for('main.rma_unrecv_vendor', id=case.id) }}" method="post" style="display:inline" onsubmit="return confirm('Return {{ case.ntarmano }} to Shipped?')">
+                            <button class="btn btn-sm btn-outline-secondary">Go Back</button>
+                        </form>
+                        {% endif %}
+                        <button class="btn btn-sm btn-success" onclick="showCloseModal({{ case.id }}, '{{ case.ntarmano }}')">Close Case</button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="12" class="text-center text-muted">No RMA cases</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="modal fade" id="closeModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <form id="closeForm" method="post">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Close RMA Case</h5>
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Conclusion</label>
+                        <select name="conclusion" class="form-control" required>
+                            <option value="">-- Select --</option>
+                            <option value="no_problem_found">No Problem Found</option>
+                            <option value="boards_quality_issue">Boards Quality Issue</option>
+                            <option value="parts_quality_issue">Parts Quality Issue</option>
+                            <option value="improperly_use">Improperly Use</option>
+                            <option value="unknown">Unknown</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Notes</label>
+                        <textarea name="notes" class="form-control" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Vendor RMA # <small class="text-muted">(if shipping replaced parts to vendor)</small></label>
+                        <input type="text" name="vendorrmano_close" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>Ship PN</label>
+                        <input type="text" name="shippn_close" class="form-control" placeholder="Part number being shipped">
+                    </div>
+                    <div class="form-group">
+                        <label>Part SN</label>
+                        <input type="text" name="partsn_close" class="form-control" placeholder="Serial number of shipped part">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-success">Close Case</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal fade" id="shipModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <form id="shipForm" method="post">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Ship to Vendor</h5>
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Vendor Name *</label>
+                        <input type="text" name="vendorname" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Category *</label>
+                        <select name="category" class="form-control" required>
+                            <option value="">-- Select --</option>
+                            <option value="Motherboard">Motherboard</option>
+                            <option value="Daughterboard">Daughterboard</option>
+                            <option value="Chassis">Chassis</option>
+                            <option value="CPU">CPU</option>
+                            <option value="MEMORY">MEMORY</option>
+                            <option value="DISK">DISK</option>
+                            <option value="Package">Package</option>
+                            <option value="Others">Others</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Vendor RMA # *</label>
+                        <input type="text" name="vendorrmano" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Ship PN</label>
+                        <input type="text" name="shippn" class="form-control" placeholder="Part number being shipped">
+                    </div>
+                    <div class="form-group">
+                        <label>Part SN</label>
+                        <input type="text" name="partsn" class="form-control" placeholder="Serial number of shipped part">
+                    </div>
+                    <div class="form-group">
+                        <div class="custom-control custom-checkbox">
+                            <input type="checkbox" name="report_quality" value="1" class="custom-control-input" id="reportQuality">
+                            <label class="custom-control-label" for="reportQuality">Report Quality Issue</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-secondary">Ship to Vendor</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal fade" id="woModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <form id="woForm" method="post">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Create WorkOrder from RMA</h5>
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>WorkOrder #</label>
+                        <input type="text" name="wo" class="form-control" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">Create</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+$(function() {
+    $('.sortable').click(function() {
+        var col = $(this).index();
+        var tbody = $('#rmaTable tbody');
+        var rows = tbody.find('tr').toArray();
+        var asc = $(this).hasClass('asc');
+        $(this).toggleClass('asc desc');
+        $(this).siblings().removeClass('asc desc');
+        rows.sort(function(a, b) {
+            var va = $(a).find('td').eq(col).text().trim();
+            var vb = $(b).find('td').eq(col).text().trim();
+            if ($.isNumeric(va) && $.isNumeric(vb)) {
+                return asc ? vb - va : va - vb;
+            }
+            return asc ? vb.localeCompare(va) : va.localeCompare(vb);
+        });
+        $.each(rows, function(i, row) { tbody.append(row); });
+    });
+});
+</script>
+<script>
+function saveNotes(id) {
+    var val = document.getElementById('notes-' + id).value;
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', '/rma/' + id + '/save-notes', true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.onload = function() { if (xhr.status == 200) alert('Saved'); };
+    xhr.send(JSON.stringify({notes: val}));
+}
+function showCloseModal(id, ntarmano) {
+    document.getElementById('closeForm').action = '/rma/' + id + '/close';
+    document.getElementById('closeModal').querySelector('.modal-title').textContent = 'Close RMA ' + ntarmano;
+    $('#closeModal').modal('show');
+}
+function showShipModal(id, ntarmano) {
+    document.getElementById('shipForm').action = '/rma/' + id + '/ship-vendor';
+    document.getElementById('shipModal').querySelector('.modal-title').textContent = 'Ship to Vendor - ' + ntarmano;
+    $('#shipModal').modal('show');
+}
+function showWOModal(id, ntarmano) {
+    document.getElementById('woForm').action = '/rma/' + id + '/create-wo';
+    document.querySelector('#woForm input[name=wo]').value = ntarmano;
+    $('#woModal').modal('show');
+}
+</script>
+{% endblock %}

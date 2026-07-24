@@ -1,0 +1,213 @@
+{% extends 'base.html' %}
+{% block content %}
+<style>
+  .hint-popup {
+    position: absolute;
+    z-index: 1000;
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 8px 12px;
+    font-size: 0.85rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    display: none;
+    max-width: 300px;
+  }
+</style>
+<div class="container">
+    <div class="row mb-3">
+        <div class="col">
+            <h4 class="font-weight-bold">New RMA Case</h4>
+        </div>
+    </div>
+    <form method="post">
+        <div class="card card-social mb-3">
+            <div class="card-header">
+                <h5>Customer & Product Info</h5>
+            </div>
+            <div class="card-block">
+                <div class="row">
+                    <div class="col-md-4 form-group">
+                        <label>NTA RMA Number *</label>
+                        <input type="text" name="ntarmano" class="form-control" value="{{ ntarmano }}" readonly required>
+                    </div>
+                    <div class="col-md-4 form-group">
+                        <label>Customer *</label>
+                        <input type="text" name="customers" class="form-control" required>
+                    </div>
+                    <div class="col-md-4 form-group">
+                        <label>Product Number *</label>
+                        <input type="text" name="pn" class="form-control" list="pnDatalist" required>
+                        <datalist id="pnDatalist">
+                          {% for p in products %}
+                            <option value="{{ p }}">
+                          {% endfor %}
+                        </datalist>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4 form-group">
+                        <label>Chassis SN *</label>
+                        <input type="text" name="csn" class="form-control" required>
+                        <small class="text-muted">Multiple SNs: separate by space or comma</small>
+                    </div>
+                    <div class="col-md-4 form-group">
+                    <label>Warranty</label>
+                    <input type="text" name="warranty" class="form-control">
+                </div>
+                <div class="col-md-4 form-group">
+                    <label>RMA Type *</label>
+                    <select name="rmatype" class="form-control" required>
+                        <option value="RMA" selected>RMA</option>
+                        <option value="DOA">DOA</option>
+                        <option value="ECN">ECN</option>
+                        <option value="Sale Return">Sale Return</option>
+                    </select>
+                </div>
+            </div>
+                <div class="form-group">
+                    <label>Issue Description *</label>
+                    <textarea name="description" class="form-control" rows="3" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Special Requirements</label>
+                    <input type="text" name="special" class="form-control" placeholder="e.g. hardcopy RMA report, packing slip, etc.">
+                </div>
+            </div>
+        </div>
+
+        <div class="card card-social mb-3">
+            <div class="card-header">
+                <h5>Contact Info</h5>
+            </div>
+            <div class="card-block">
+                <div class="row">
+                    <div class="col-md-4 form-group">
+                        <label>Contact Name *</label>
+                        <input type="text" name="contactname" class="form-control" required>
+                    </div>
+                    <div class="col-md-4 form-group">
+                        <label>Email *</label>
+                        <input type="email" name="email" class="form-control" required>
+                    </div>
+                    <div class="col-md-4 form-group">
+                        <label>Phone *</label>
+                        <input type="text" name="phone" class="form-control" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Shipping Address</label>
+                    <textarea name="shippingaddress" class="form-control" rows="2" required></textarea>
+                </div>
+            </div>
+        </div>
+
+        <div class="card card-social mb-3">
+            <div class="card-header">
+                <h5>Secondary Contact (optional)</h5>
+            </div>
+            <div class="card-block">
+                <div class="row">
+                    <div class="col-md-4 form-group">
+                        <label>Contact Name</label>
+                        <input type="text" name="contactname1" class="form-control">
+                    </div>
+                    <div class="col-md-4 form-group">
+                        <label>Email</label>
+                        <input type="email" name="email1" class="form-control">
+                    </div>
+                    <div class="col-md-4 form-group">
+                        <label>Phone</label>
+                        <input type="text" name="phone1" class="form-control">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-right mb-4">
+            <button type="submit" id="submitBtn" class="btn btn-primary">Create RMA Case</button>
+            <a href="{{ url_for('main.rma_list') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+<script>
+document.querySelector('form').addEventListener('submit', function() {
+    document.getElementById('submitBtn').disabled = true;
+    document.getElementById('submitBtn').textContent = 'Submitting...';
+});
+</script>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+var pnHintTimer = null;
+
+document.addEventListener('DOMContentLoaded', function () {
+  var customerInput = document.querySelector('[name="customers"]');
+  var pnInput = document.querySelector('[name="pn"]');
+
+  customerInput.addEventListener('blur', function () {
+    var val = this.value.trim();
+    if (val.length < 1) return;
+    fetch('{{ url_for("main.api_rma_customer_info") }}?customer=' + encodeURIComponent(val))
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (!data.found) return;
+        document.querySelector('[name="contactname"]').value = data.contactname || '';
+        document.querySelector('[name="email"]').value = data.email || '';
+        document.querySelector('[name="phone"]').value = data.phone || '';
+        document.querySelector('[name="shippingaddress"]').value = data.shippingaddress || '';
+        document.querySelector('[name="contactname1"]').value = data.contactname1 || '';
+        document.querySelector('[name="email1"]').value = data.email1 || '';
+        document.querySelector('[name="phone1"]').value = data.phone1 || '';
+      });
+  });
+
+  pnInput.addEventListener('blur', function () {
+    if (pnHintTimer) clearTimeout(pnHintTimer);
+    pnHintTimer = setTimeout(function () {
+      var val = pnInput.value.trim();
+      if (val.length < 1) return;
+      fetch('{{ url_for("main.api_rma_pn_info") }}?pn=' + encodeURIComponent(val))
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          var existing = document.getElementById('pnHint');
+          if (existing) existing.remove();
+          if (!data.found) return;
+          var hint = document.createElement('div');
+          hint.id = 'pnHint';
+          hint.className = 'hint-popup';
+          var rect = pnInput.getBoundingClientRect();
+          hint.style.top = (rect.bottom + window.scrollY + 4) + 'px';
+          hint.style.left = (rect.left + window.scrollX) + 'px';
+          hint.style.display = 'block';
+          var html = '';
+          if (data.unitsinabox) html += '<strong>Units/Box:</strong> ' + data.unitsinabox + '<br>';
+          if (data.category) html += '<strong>Category:</strong> ' + data.category + '<br>';
+          if (data.notes) html += '<strong>Notes:</strong> ' + data.notes;
+          hint.innerHTML = html;
+          document.body.appendChild(hint);
+        });
+    }, 300);
+  });
+
+  pnInput.addEventListener('focus', function () {
+    var hint = document.getElementById('pnHint');
+    if (hint) hint.style.display = 'block';
+  });
+
+  pnInput.addEventListener('click', function (e) {
+    var hint = document.getElementById('pnHint');
+    if (hint) hint.style.display = 'block';
+  });
+
+  document.addEventListener('click', function (e) {
+    if (e.target !== pnInput) {
+      var hint = document.getElementById('pnHint');
+      if (hint) hint.style.display = 'none';
+    }
+  });
+});
+</script>
+{% endblock %}

@@ -240,8 +240,10 @@ class QualityLog(db.Model):
     processlog=db.Column(db.String(1024), nullable=False)
     conclusion =  db.Column(db.String(100), nullable=True)
     cause =  db.Column(db.String(32), nullable=True)
+    vendorname = db.Column(db.String(100), nullable=True)
+    category = db.Column(db.String(32), nullable=True)
 
-    def __init__(self, source, wo, pn, csn, defectpart, defectpartsn, reason, status, reportid, reporttime, ownerid, processlog,conclusion,cause):
+    def __init__(self, source, wo, pn, csn, defectpart, defectpartsn, reason, status, reportid, reporttime, ownerid, processlog,conclusion,cause,vendorname=None,category=None):
         self.wo = wo
         self.source = source
         self.pn = pn
@@ -256,6 +258,78 @@ class QualityLog(db.Model):
         self.processlog = processlog
         self.conclusion = conclusion
         self.cause = cause
+        self.vendorname = vendorname
+        self.category = category
      
     def __repr__(self):
         return '{} by {}'.format(self.wo)
+
+class RmaCases(db.Model):
+    __tablename__ = 'rmacases'
+
+    id = db.Column(db.Integer, primary_key=True)
+    ntarmano = db.Column(db.String(32), nullable=False)
+    customers = db.Column(db.String(100), nullable=False)
+    pn = db.Column(db.String(100), nullable=False)
+    csn = db.Column(db.String(16), nullable=False)
+    warranty =  db.Column(db.String(16), nullable=True)
+    descriptionbycustomer =  db.Column(db.String(1000), nullable=True)
+    csid=db.Column(db.Integer, nullable=True)
+    cstime=db.Column(db.DateTime, nullable=True)
+    recvid=db.Column(db.Integer, nullable=True)
+    recvtime=db.Column(db.DateTime, nullable=True)
+    processid=db.Column(db.Integer, nullable=True)
+    startprocesstime=db.Column(db.DateTime, nullable=True)
+    shiptovendortime=db.Column(db.DateTime, nullable=True)
+    shiptovendorid=db.Column(db.Integer, nullable=True)
+    shippn=db.Column(db.String(100), nullable=True)
+    partsn=db.Column(db.String(100), nullable=True)
+    recvfromvendortime=db.Column(db.DateTime, nullable=True)
+    recvfromvendorid=db.Column(db.Integer, nullable=True)
+    closetime=db.Column(db.DateTime, nullable=True)
+    closeid=db.Column(db.Integer, nullable=True)
+    vendorrmano = db.Column(db.String(32), nullable=True)
+    conclusion = db.Column(db.String(32), nullable=True)
+    notes = db.Column(db.String(2000), nullable=True)
+    status = db.Column(db.String(32), nullable=False)
+    rmacontactname = db.Column(db.String(32), nullable=False)
+    rmacontactemail = db.Column(db.String(32), nullable=False)
+    rmacontactphone = db.Column(db.String(32), nullable=False)
+    rmacontactname1 = db.Column(db.String(32), nullable=False)
+    rmacontactemail1 = db.Column(db.String(32), nullable=False)
+    rmacontactphone1 = db.Column(db.String(32), nullable=True)
+    shippingaddress = db.Column(db.String(200), nullable=False, default='')
+    assetowner = db.Column(db.String(100), nullable=False, default='customer')
+    special = db.Column(db.String(100), nullable=True)
+    rmatype = db.Column(db.String(20), nullable=False, default='RMA')
+    vendorname = db.Column(db.String(100), nullable=True)
+    category = db.Column(db.String(32), nullable=True)
+
+
+    def __init__(self, ntarmano, customers, pn, csn, warranty,
+                 descriptionbycustomer, csid, cstime,
+                 rmacontactname, rmacontactemail, rmacontactphone, shippingaddress,
+                 rmacontactname1=None, rmacontactemail1=None, rmacontactphone1=None,
+                 special=None, rmatype='RMA'):
+        self.ntarmano = ntarmano
+        self.customers = customers
+        self.pn = pn
+        self.csn = csn
+        self.warranty = warranty
+        self.descriptionbycustomer = descriptionbycustomer
+        self.csid = csid
+        self.cstime = cstime
+        self.rmacontactname = rmacontactname
+        self.rmacontactemail = rmacontactemail
+        self.rmacontactphone = rmacontactphone
+        self.shippingaddress = shippingaddress
+        self.rmacontactname1 = rmacontactname1
+        self.rmacontactemail1 = rmacontactemail1
+        self.rmacontactphone1 = rmacontactphone1
+        self.special = special
+        self.rmatype = rmatype
+        self.status = 'new'
+
+    def __repr__(self):
+        return 'RMA {} - {}'.format(self.ntarmano, self.status)
+

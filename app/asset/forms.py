@@ -796,6 +796,7 @@ class ReviewReportForm(FlaskForm):
     other = StringField('Other Module',render_kw={'readonly': True})
     note  = StringField('Notes',widget=TextArea(),render_kw={'readonly': False})
     report = StringField('Report File',widget=TextArea(),render_kw={'style': 'width: 400px','readonly': True})
+    wo_doc_items=StringField('WorkOrder Parts Detail',widget=TextArea(),render_kw={'style': 'width: 400px','readonly': True})
     action = SelectField('Approve or Deny',choices=[('0','Approve'),('1','Deny')])
     submit = SubmitField('Confirm')
   
@@ -1033,10 +1034,12 @@ class AddQualityLogForm(FlaskForm):
     wo = StringField('WO or RMA or Invoice', validators=[DataRequired(),Length(max=100)])
     pn = StringField('Product Model', validators=[DataRequired(),pn_check,Length(max=100)])
     csn = StringField('Chassis Serial Number', validators=[DataRequired(),Length(max=100)])
-    options = [('Motherboard','Motherboard'),('Daughterboard','Daughterboard'),('Chassis','Chassis'),('CPU','CPU'),('MEMORY','MEMORY'),('DISK','DISK'),('MODULES','MODULE'),('Package','Package')]
-    defectpart = SelectField('Defect Part', choices= options,validators=[DataRequired(),Length(max=100)])
+    defectpart = StringField('Defect Part Number', validators=[DataRequired(),Length(max=100)])
     defectpartsn = StringField('Defect Part SN(or NA)', validators=[DataRequired(),Length(max=100)])
     reason = StringField('Issue Description', validators=[DataRequired(),Length(max=300)],widget=TextArea())
+    vendorname = StringField('Vendor Name', validators=[Length(max=100)])
+    cat_options = [('','-- Select --'),('Motherboard','Motherboard'),('Daughterboard','Daughterboard'),('Chassis','Chassis'),('CPU','CPU'),('MEMORY','MEMORY'),('DISK','DISK'),('Package','Package'),('Others','Others')]
+    category = SelectField('Category', choices=cat_options, validators=[Length(max=32)])
     submit = SubmitField('Create New Quality Log')
        
 class QueryQlogForm(FlaskForm):
@@ -1046,6 +1049,13 @@ class QueryQlogForm(FlaskForm):
     source = SelectField('Source',  choices= options,validators=[InputRequired(),Length(max=100)])
     options = [('All','All'),('New','New'),('Processing','Processing'),('Pending','Pending'),('Closed','Closed')]
     status = SelectField('Status',  choices= options,validators=[InputRequired(),Length(max=100)])
+    wo = StringField('WO / RMA #', validators=[Length(max=100)])
+    pn = StringField('Product Model', validators=[Length(max=100)])
+    csn = StringField('Chassis SN', validators=[Length(max=100)])
+    defectpart = StringField('Defect Part', validators=[Length(max=100)])
+    defectpartsn = StringField('Defect Part SN', validators=[Length(max=100)])
+    cat_opts = [('','All'),('Motherboard','Motherboard'),('Daughterboard','Daughterboard'),('Chassis','Chassis'),('CPU','CPU'),('MEMORY','MEMORY'),('DISK','DISK'),('Package','Package'),('Others','Others')]
+    category = SelectField('Category', choices=cat_opts, validators=[Length(max=32)])
     submit    = SubmitField('Search')
 
 class EditQualityLogForm(FlaskForm):
@@ -1054,14 +1064,14 @@ class EditQualityLogForm(FlaskForm):
     wo = StringField('WO or RMA or Invoice', validators=[DataRequired(),Length(max=100)])
     pn = StringField('Product Model', validators=[DataRequired(),pn_check0,Length(max=100)])
     csn = StringField('Chassis Serial Number', validators=[DataRequired(),Length(max=100)])
-    options = [('Motherboard','Motherboard'),('Daughterboard','Daughterboard'),('Chassis','Chassis'),('CPU','CPU'),('MEMORY','MEMORY'),('DISK','DISK'),('MODULES','MODULE'),('Package','Package')]
+    options = [('Motherboard','Motherboard'),('Daughterboard','Daughterboard'),('Chassis','Chassis'),('CPU','CPU'),('MEMORY','MEMORY'),('DISK','DISK'),('GPU','GPU'),('MODULES','MODULE'),('Package','Package')]
     defectpart = SelectField('Defect Part', choices= options,validators=[DataRequired(),Length(max=100)])
     defectpartsn = StringField('Defect Part SN(or NA)', validators=[DataRequired(),Length(max=100)])
     reason = StringField('Issue Description', validators=[DataRequired(),Length(max=300)],widget=TextArea())
     options = [('New','New'),('Processing','Processing'),('Pending','Pending'),('Closed','Closed')]
     status = SelectField('Case status(New,Processing,Pending,Closed)', choices= options,validators=[DataRequired(),Length(max=100)])
     conclusion = StringField('Case Conclusion', validators=[Length(max=100)])
-    cause = StringField('Cause ', validators=[Length(max=32)])
+    cause = SelectField('Cause', choices=[('','-- Select --'),('no_problem_found','No Problem Found'),('boards_quality_issue','Boards Quality Issue'),('parts_quality_issue','Parts Quality Issue'),('improperly_use','Improperly Use'),('SOP','SOP'),('unknown','Unknown')], validators=[Length(max=32)])
     processlog = StringField('Process Log', render_kw={'readonly': True},widget=TextArea())
     newaction = StringField('New Action Log',validators=[Length(max=200)],widget=TextArea())
     submit = SubmitField('Update Quality Log')

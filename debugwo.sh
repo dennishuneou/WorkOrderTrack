@@ -1,0 +1,4 @@
+#!/bin/bash
+. ./myenv1/bin/activate
+source  .export
+flask run --host=0.0.0.0 --port=5001

@@ -1,7 +1,7 @@
 .export
 .password
 __pycache__/
-myenv/
+myenv1/
 *.pyc
 *.pyo
 *.pyd
@@ -26,3 +26,6 @@ migrations/versions/*.pyc
 *.egg
 MANIFEST
 *.spec
+00_*.doc
+00_*.pdf
+00*.docx

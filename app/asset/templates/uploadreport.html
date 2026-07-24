@@ -51,46 +51,46 @@
                                     for (let each in linelist) {
                                         i = parseInt(each) + 1;
                                         if (linelist[each].includes("Motherboard Serial"))
-                                            {document.getElementById('msn').value= linelist[each].replace("Motherboard Serial Number:",'')}
+                                            {document.getElementById('msn').value= linelist[each].replace("Motherboard Serial Number:",'').substring(0,100)}
                                         else if (linelist[each].includes("CPU Type:")) 
-                                            { document.getElementById('cpu').value = linelist[each].replace("CPU Type:",'')}
+                                            { document.getElementById('cpu').value = linelist[each].replace("CPU Type:",'').substring(0,100)}
                                         else if (linelist[each].includes("CPU Info:"))
-                                            { document.getElementById('cpu').value = linelist[each].replace("CPU Info:",'')}
+                                            { document.getElementById('cpu').value = linelist[each].replace("CPU Info:",'').substring(0,100)}
                                         else if ((linelist[each].includes("DIMM")||linelist[each].includes("Channel")) && (linelist[each].includes("DDR")||linelist[each].includes("GB")))
                                             {   memcnt=memcnt+1
                                                 memx='mem'+memcnt.toString()
-                                                document.getElementById(memx).value = linelist[each]
+                                                document.getElementById(memx).value = linelist[each].substring(0,256)
                                             }
                                         else if (linelist[each].includes("/dev/nvme0n1") && (linelist[each].includes("M.2")||linelist[each].includes("Serial"))) 
-                                            { document.getElementById('m21').value = linelist[each]}
+                                            { document.getElementById('m21').value = linelist[each].substring(0,100)}
                                         else if (linelist[each].includes("/dev/nvme1n1") && (linelist[each].includes("M.2")||linelist[each].includes("Serial"))) 
-                                            { document.getElementById('m22').value = linelist[each]}    
+                                            { document.getElementById('m22').value = linelist[each].substring(0,100)}    
                                         else if (linelist[each].includes("/dev/sd") && (linelist[each].includes("SATA")||linelist[each].includes("Serial:")||linelist[each].includes("M.2"))&&(linelist[i].includes("/boot")!=true))
                                             { 
                                                 satacnt = satacnt +1
                                                 satax ='sata'+ satacnt.toString()
-                                                document.getElementById(satax).value = linelist[each]
+                                                document.getElementById(satax).value = linelist[each].substring(0,100)
                                             }
                                         else if (linelist[each].includes("can0")) 
-                                            { document.getElementById('can').value += linelist[each]}   
+                                            { document.getElementById('can').value = (document.getElementById('can').value + linelist[each]).substring(0,100)}   
                                         else if (linelist[each].includes("can1")) 
-                                            { document.getElementById('can').value += linelist[each]}   
+                                            { document.getElementById('can').value = (document.getElementById('can').value + linelist[each]).substring(0,100)}   
                                         else if (linelist[each].includes("can2")) 
-                                            { document.getElementById('can').value += linelist[each]}   
+                                            { document.getElementById('can').value = (document.getElementById('can').value + linelist[each]).substring(0,100)}   
                                         else if (linelist[each].includes("can3")) 
-                                            { document.getElementById('can').value += linelist[each]}    
+                                            { document.getElementById('can').value = (document.getElementById('can').value + linelist[each]).substring(0,100)}    
                                         else if (linelist[each].includes("can4")) 
-                                            { document.getElementById('can').value += linelist[each]}   
+                                            { document.getElementById('can').value = (document.getElementById('can').value + linelist[each]).substring(0,100)}   
                                         else if (linelist[each].includes("can5")) 
-                                            { document.getElementById('can').value += linelist[each]}   
+                                            { document.getElementById('can').value = (document.getElementById('can').value + linelist[each]).substring(0,100)}   
                                         else if (linelist[each].includes("can6")) 
-                                            { document.getElementById('can').value += linelist[each]}   
+                                            { document.getElementById('can').value = (document.getElementById('can').value + linelist[each]).substring(0,100)}   
                                         else if (linelist[each].includes("can7")) 
-                                            { document.getElementById('can').value += linelist[each]}    
+                                            { document.getElementById('can').value = (document.getElementById('can').value + linelist[each]).substring(0,100)}    
                                         else if (linelist[each].includes("wlp") || linelist[each].includes("wlx")) 
-                                            { document.getElementById('wifi').value += linelist[each]}   
+                                            { document.getElementById('wifi').value = (document.getElementById('wifi').value + linelist[each]).substring(0,100)}   
                                         else if (linelist[each].includes("wwan")) 
-                                            { document.getElementById('fg5g').value += linelist[each]}                
+                                            { document.getElementById('fg5g').value = (document.getElementById('fg5g').value + linelist[each]).substring(0,100)}                
                                     }
                                     document.getElementById('report').value = text
                             });

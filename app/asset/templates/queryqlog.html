@@ -25,28 +25,48 @@
 
 <div class="container">
     <div class="row">
-        <div class="col-md-12 col-xl-4">
-           <form name="QueryQlog" method="post" novalidate class="formsimple">
+        <div class="col-md-12">
+           <form name="QueryQlog" method="get" novalidate class="formsimple">
                 <div class="form__container">
                     {{ form.hidden_tag() }}
                     <div class="form-row">
-                    <div class="form-group col-md-6">
+                    <div class="form-group col-md-3">
                         {{ form.startdate.label }} {{ form.startdate(size=20, class_="form-control") }}
                         </div>
-                    <div class="form-group col-md-6">    
+                    <div class="form-group col-md-3">    
                         {{ form.enddate.label }} {{ form.enddate(size=20, class_="form-control") }}
+                        </div>
+                    <div class="form-group col-md-3">
+                        {{ form.status.label }} {{ form.status(class_="form-control") }}
+                        </div>
+                    <div class="form-group col-md-3">    
+                        {{ form.source.label }} {{ form.source(class_="form-control") }}
                         </div>
                     </div>
                     <div class="form-row">
-                    <div class="form-group col-md-6">
-                        {{ form.status.label }} {{ form.status }}
+                    <div class="form-group col-md-3">
+                        {{ form.wo.label }} {{ form.wo(class_="form-control") }}
                         </div>
-                    <div class="form-group col-md-6">    
-                        {{ form.source.label }} {{ form.source }}
+                    <div class="form-group col-md-3">
+                        {{ form.pn.label }} {{ form.pn(class_="form-control") }}
+                        </div>
+                    <div class="form-group col-md-3">
+                        {{ form.csn.label }} {{ form.csn(class_="form-control") }}
+                        </div>
+                    <div class="form-group col-md-3">
+                        {{ form.defectpart.label }} {{ form.defectpart(class_="form-control") }}
                         </div>
                     </div>
-                    <div>
-                        {{ form.submit(class_="button button--form") }}
+                    <div class="form-row">
+                    <div class="form-group col-md-3">
+                        {{ form.defectpartsn.label }} {{ form.defectpartsn(class_="form-control") }}
+                        </div>
+                    <div class="form-group col-md-3">
+                        {{ form.category.label }} {{ form.category(class_="form-control") }}
+                        </div>
+                    <div class="form-group col-md-3 d-flex align-items-end">
+                        {{ form.submit(class_="btn btn-primary") }}
+                        </div>
                     </div>
                 </div>
             </form>    
@@ -96,6 +116,7 @@
                             <th data-sortable="true"> Chassis SN</th>
                             <th data-sortable="true"> Defective Parts</th>
                             <th data-sortable="true"> Parts S/N</th>
+                            <th data-sortable="true"> Category</th>
                             <th data-sortable="true"> Report at</th>
                             <th data-sortable="true"> Report By</th>
                             <th data-sortable="true"> Owner</th>
@@ -119,8 +140,9 @@
                             <td> {{ rows[8] }} </td>
                             <td> {{ rows[9] }} </td>
                             <td> {{ rows[10] }} </td>
-                            <td> {{ rows[11] }} </td>
+                            <td title="{{ rows[11] }}">{{ rows[11][:50] }}{% if rows[11]|length > 50 %}...{% endif %}</td>
                             <td> {{ rows[12] }} </td>
+                            <td> {{ rows[13] }} </td>
                             <td>       
                                 <a class="btn btn-light btn-sm"
                                 href= "{{ url_for('main.ViewEditQlog',id=rows[0])}}"

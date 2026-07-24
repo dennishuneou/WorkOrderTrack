@@ -78,21 +78,272 @@
         </div>
         </form>
         
-        {% if searched ==1 %}  
-        <h2 class="mb-4">Result Output</h2>
-        <!-- Rectangle with border, padding, and rounded corners -->
-        <div class="border border-dark rounded p-3 bg-light shadow-sm" style="max-width: 500px;">
-            <p class="mb-0 text-dark" style="white-space: pre-line;">{{ totalpercentage*100 }} /100</p> 
-             {% for eachline in solutions %}
-            <p class="mb-0 text-dark" style="white-space: pre-line;">{{ eachline }}</p>
-            {% endfor %}
-        </div>  
-        <!-- Rectangle with border, padding, and rounded corners -->
-        <div class="border border-dark rounded p-3 bg-light shadow-sm" style="max-width: 500px;">
-             {% for eachline in details %}
-            <p class="mb-0 text-dark" style="white-space: pre-line;">{{ eachline }}</p>
-            {% endfor %}
-        </div>  
+        {% if searched ==1 %}
+        <div class="row">
+            <div class="col-md-6">
+                <h2 class="mb-4">Result Output</h2>
+                <div class="border border-dark rounded p-3 bg-light shadow-sm mb-3">
+                    <p class="mb-0 text-dark" style="white-space: pre-line;">{{ totalpercentage*100 }} /100</p> 
+                     {% for eachline in solutions %}
+                    <p class="mb-0 text-dark" style="white-space: pre-line;">{{ eachline }}</p>
+                    {% endfor %}
+                </div>  
+                <div class="border border-dark rounded p-3 bg-light shadow-sm">
+                     {% for eachline in details %}
+                    <p class="mb-0 text-dark" style="white-space: pre-line;">{{ eachline }}</p>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="col-md-6">
+                <h2 class="mb-4">3D View</h2>
+                <div id="packing3d-container" style="position:relative">
+                    <div id="packing3d-boxname" class="text-center small text-muted mb-1"></div>
+                    <div id="packing3d" style="width:100%;height:500px;border:1px solid #ccc;border-radius:4px;"></div>
+                    <div id="packing3d-nav" class="text-center mt-2"></div>
+                </div>
+            </div>
+        </div>
         {% endif %}
     </div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+{% if searched ==1 and packing_data %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/renderers/CSS2DRenderer.js"></script>
+<script>
+var packingData = {{ packing_data | tojson }};
+var colors = ['#e74c3c','#3498db','#2ecc71','#f39c12','#9b59b6','#1abc9c','#e67e22','#34495e'];
+var scenes = [];
+var currentIdx = 0;
+
+function initScene(boxData, idx) {
+    var container = document.getElementById('scene-' + idx);
+    var parent = document.getElementById('packing3d');
+    var w = parent.clientWidth || parent.offsetWidth || 500;
+    var h = 500;
+
+    var scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xf8f9fa);
+
+    var camera = new THREE.PerspectiveCamera(40, w/h, 1, 1000);
+    var renderer = new THREE.WebGLRenderer({antialias:true});
+    renderer.setSize(w, h);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.shadowMap.enabled = true;
+    container.appendChild(renderer.domElement);
+
+    var labelRenderer = new THREE.CSS2DRenderer();
+    labelRenderer.setSize(w, h);
+    labelRenderer.domElement.style.position = 'absolute';
+    labelRenderer.domElement.style.top = '0';
+    labelRenderer.domElement.style.left = '0';
+    labelRenderer.domElement.style.pointerEvents = 'none';
+    container.appendChild(labelRenderer.domElement);
+
+    // Mapping: packing X -> Three.js Z, packing Y -> Three.js X, packing Z -> Three.js Y
+    var boxX = boxData.t, boxY = boxData.h, boxZ = boxData.w;
+    var cx = boxX/2, cy = boxY/2, cz = boxZ/2;
+    var maxDim = Math.max(boxX, boxY, boxZ);
+    var dist = maxDim * 2.5;
+    camera.position.set(cx + dist * 0.3, cy + dist * 0.5, cz + dist);
+
+    var ambient = new THREE.AmbientLight(0x404040);
+    scene.add(ambient);
+    var dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    dirLight.position.set(1, 1, 1);
+    scene.add(dirLight);
+    var dirLight2 = new THREE.DirectionalLight(0xffffff, 0.3);
+    dirLight2.position.set(-1, 0.5, -1);
+    scene.add(dirLight2);
+
+    // Box wireframe: Three.js X=packing.T, Y=packing.H, Z=packing.W
+    var boxGeo = new THREE.BoxGeometry(boxX, boxY, boxZ);
+    var boxEdges = new THREE.EdgesGeometry(boxGeo);
+    var boxLine = new THREE.LineSegments(boxEdges, new THREE.LineBasicMaterial({color: 0x2c3e50, linewidth: 1}));
+    boxLine.position.set(cx, cy, cz);
+    scene.add(boxLine);
+
+    // Grid on floor
+    var gridHelper = new THREE.GridHelper(maxDim * 1.2, 10, 0x888888, 0xcccccc);
+    gridHelper.position.set(cx, 0, cz);
+    scene.add(gridHelper);
+
+    // Axis markers: R=X, G=Y, B=Z
+    function addSphere(p, c) {
+        var s = new THREE.Mesh(new THREE.SphereGeometry(0.15, 8, 8), new THREE.MeshBasicMaterial({color: c}));
+        s.position.copy(p); scene.add(s);
+    }
+    addSphere(new THREE.Vector3(boxX + 0.5, 0, 0), 0x3498db);  // packing Y
+    addSphere(new THREE.Vector3(0, boxY + 0.5, 0), 0x2ecc71);  // packing Z
+    addSphere(new THREE.Vector3(0, 0, boxZ + 0.5), 0xe74c3c);  // packing X
+
+    // Draw dimension line with ticks and label
+    function addDimLine(start, end, labelText, color, axis) {
+        var clr = color || 0xffffff;
+        var pts = [new THREE.Vector3().copy(start), new THREE.Vector3().copy(end)];
+        var geo = new THREE.BufferGeometry().setFromPoints(pts);
+        var line = new THREE.Line(geo, new THREE.LineBasicMaterial({color: clr}));
+        scene.add(line);
+        // Tick marks (small perpendicular lines at each end)
+        var tickLen = 0.3;
+        var dir = new THREE.Vector3().copy(end).sub(start).normalize();
+        var perp = new THREE.Vector3();
+        if (Math.abs(dir.x) > 0.5) perp.set(0, tickLen, 0);
+        else if (Math.abs(dir.y) > 0.5) perp.set(tickLen, 0, 0);
+        else perp.set(0, tickLen, 0);
+        var t1 = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3().copy(start).sub(perp),
+            new THREE.Vector3().copy(start).add(perp)
+        ]);
+        scene.add(new THREE.Line(t1, new THREE.LineBasicMaterial({color: clr})));
+        var t2 = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3().copy(end).sub(perp),
+            new THREE.Vector3().copy(end).add(perp)
+        ]);
+        scene.add(new THREE.Line(t2, new THREE.LineBasicMaterial({color: clr})));
+        // Text label at midpoint
+        var mid = new THREE.Vector3().copy(start).add(end).multiplyScalar(0.5);
+        var off = new THREE.Vector3();
+        if (Math.abs(dir.x) > 0.5) off.set(0, -tickLen * 2, 0);
+        else if (Math.abs(dir.y) > 0.5) off.set(-tickLen * 2, 0, 0);
+        else off.set(0, -tickLen * 2, 0);
+        mid.add(off);
+        var div = document.createElement('div');
+        div.textContent = labelText;
+        div.style.color = '#fff';
+        div.style.fontSize = '13px';
+        div.style.fontWeight = 'bold';
+        div.style.fontFamily = 'monospace';
+        div.style.textShadow = '1px 1px 2px rgba(0,0,0,0.9)';
+        div.style.background = 'rgba(0,0,0,0.5)';
+        div.style.padding = '1px 4px';
+        div.style.borderRadius = '3px';
+        div.style.pointerEvents = 'none';
+        var label = new THREE.CSS2DObject(div);
+        label.position.copy(mid);
+        scene.add(label);
+    }
+
+    // Packages: compute effective (rotated) dims and render in box coordinates
+    // Map: packing X -> Three.js Z, packing Y -> Three.js X, packing Z -> Three.js Y
+    function rotSize(ow, ot, oh, rot) {
+        switch(rot) {
+            case 0: return [ow, ot, oh];
+            case 1: return [ow, oh, ot];
+            case 2: return [ot, oh, ow];
+            case 3: return [ot, ow, oh];
+            case 4: return [oh, ow, ot];
+            case 5: return [oh, ot, ow];
+        }
+    }
+    boxData.packages.forEach(function(pkg, pi) {
+        var color = colors[pi % colors.length];
+        var sz = rotSize(pkg.ow, pkg.ot, pkg.oh, pkg.rot);
+        var sx = sz[0], sy = sz[1], szz = sz[2];
+        // If effective height exceeds both box and physical height, use original dims (lays flat)
+        if (szz > boxY && szz > pkg.oh) { sx = pkg.ow; sy = pkg.ot; szz = pkg.oh; }
+        // Effective dims in Three.js: X=packing Y(sy), Y=packing Z(szz), Z=packing X(sx)
+        var px = pkg.y + sy/2;   // packing Y center -> Three.js X
+        var py = pkg.z + szz/2;  // packing Z center -> Three.js Y
+        var pz = pkg.x + sx/2;   // packing X center -> Three.js Z
+        var geo = new THREE.BoxGeometry(sy, szz, sx);
+        var overflow = (pkg.y + sy > boxX) || (pkg.z + szz > boxY) || (pkg.x + sx > boxZ);
+        var mat = new THREE.MeshPhongMaterial({
+            color: overflow ? 0xff3333 : parseInt(color.slice(1), 16),
+            transparent: true,
+            opacity: overflow ? 0.6 : 0.75,
+            shininess: 30
+        });
+        var mesh = new THREE.Mesh(geo, mat);
+        mesh.position.set(px, py, pz);
+        scene.add(mesh);
+
+        var edges = new THREE.EdgesGeometry(geo);
+        var line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({color: 0x000000, linewidth: 1}));
+        line.position.copy(mesh.position);
+        scene.add(line);
+
+    });
+    // Box dimension lines along X, Y, Z
+    var off = 0.8;
+    addDimLine(new THREE.Vector3(0, -off, cz), new THREE.Vector3(boxX, -off, cz), 'W '+boxX.toFixed(1), 0x44aaff, 'x');
+    addDimLine(new THREE.Vector3(-off, 0, cz), new THREE.Vector3(-off, boxY, cz), 'H '+boxY.toFixed(1), 0x44ff88, 'y');
+    addDimLine(new THREE.Vector3(cx, -off, 0), new THREE.Vector3(cx, -off, boxZ), 'D '+boxZ.toFixed(1), 0xff8844, 'z');
+
+    // Controls
+    var controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.target.set(cx, cy, cz);
+    controls.update();
+
+    function animate() {
+        requestAnimationFrame(animate);
+        controls.update();
+        renderer.render(scene, camera);
+        labelRenderer.render(scene, camera);
+    }
+    animate();
+
+    scenes[idx] = {container: container, renderer: renderer, labelRenderer: labelRenderer, controls: controls, scene: scene, camera: camera, w: w, h: h};
+}
+
+function showScene(idx) {
+    currentIdx = idx;
+    for (var i = 0; i < scenes.length; i++) {
+        var div = document.getElementById('scene-' + i);
+        if (div) div.style.display = (i === idx) ? 'block' : 'none';
+    }
+    if (scenes[idx]) {
+        var parent = document.getElementById('packing3d');
+        var w = parent.clientWidth || parent.offsetWidth || 500;
+        scenes[idx].renderer.setSize(w, 500);
+        if (scenes[idx].labelRenderer) scenes[idx].labelRenderer.setSize(w, 500);
+        scenes[idx].camera.aspect = w / 500;
+        scenes[idx].camera.updateProjectionMatrix();
+    }
+    var nav = document.getElementById('packing3d-nav');
+    nav.innerHTML = '';
+    for (var i = 0; i < scenes.length; i++) {
+        var btn = document.createElement('button');
+        btn.className = 'btn btn-sm ' + (i === idx ? 'btn-primary' : 'btn-outline-secondary');
+        btn.textContent = 'Box ' + (i+1);
+        btn.style.margin = '2px';
+        btn.onclick = (function(n) { return function() { showScene(n); }; })(i);
+        nav.appendChild(btn);
+    }
+    var bn = document.getElementById('packing3d-boxname');
+    bn.textContent = packingData[idx] ? packingData[idx].name : '';
+}
+
+// Initialize all scenes
+packingData.forEach(function(boxData, idx) {
+    var div = document.createElement('div');
+    div.id = 'scene-' + idx;
+    div.style.width = '100%';
+    div.style.height = '500px';
+    div.style.display = (idx === 0) ? 'block' : 'none';
+    document.getElementById('packing3d').appendChild(div);
+    initScene(boxData, idx);
+});
+
+// Show first
+if (packingData.length > 0) showScene(0);
+
+// Handle resize
+window.addEventListener('resize', function() {
+    var parent = document.getElementById('packing3d');
+    var w = parent.clientWidth || parent.offsetWidth || 500;
+    for (var i = 0; i < scenes.length; i++) {
+        if (scenes[i]) {
+            scenes[i].renderer.setSize(w, 500);
+            if (scenes[i].labelRenderer) scenes[i].labelRenderer.setSize(w, 500);
+            scenes[i].camera.aspect = w / 500;
+            scenes[i].camera.updateProjectionMatrix();
+        }
+    }
+});
+</script>
+{% endif %}
 {% endblock %}

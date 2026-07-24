@@ -15,19 +15,19 @@
         <div class="col col-md-16 my-4">
         <ul class="nav nav-tabs" id="myTab" role="tablist">
             <li class="nav-item">
-               <a class="nav-link " id="home-tab" data-toggle="tab" href="#ToDo" role="tab" aria-controls="home" aria-selected="false">To Do</a>
+               <a class="nav-link " id="home-tab" data-toggle="tab" href="#ToDo" role="tab" aria-controls="home" aria-selected="false">To Do <span class="badge badge-secondary" data-badge="unassigned">{{ unassigned_count }}</span></a>
             </li>
             <li class="nav-item">
-                <a class="nav-link " id="home-tab" data-toggle="tab" href="#Pending" role="tab" aria-controls="home" aria-selected="false">Pending</a>
+                <a class="nav-link " id="home-tab" data-toggle="tab" href="#Pending" role="tab" aria-controls="home" aria-selected="false">Pending <span class="badge badge-warning" data-badge="pending">{{ pending_count }}</span></a>
             </li>
             <li class="nav-item">
-               <a class="nav-link active" id="profile-tab" data-toggle="tab" href="#Processing" role="tab" aria-controls="profile" aria-selected="true">Processing</a>
+               <a class="nav-link active" id="profile-tab" data-toggle="tab" href="#Processing" role="tab" aria-controls="profile" aria-selected="true">Processing <span class="badge badge-primary" data-badge="processing">{{ processing_count }}</span></a>
             </li>
              <li class="nav-item">
-                <a class="nav-link" id="contact-tab" data-toggle="tab" href="#Completed" role="tab" aria-controls="contact" aria-selected="false">Completed Today</a>
+                <a class="nav-link" id="contact-tab" data-toggle="tab" href="#Completed" role="tab" aria-controls="contact" aria-selected="false">Completed Today <span class="badge badge-success" data-badge="completed_today">{{ completed_today_count }}</span></a>
              </li>
              <li class="nav-item">
-                <a class="nav-link" id="completed-lw-tab" data-toggle="tab" href="#CompletedLW" role="tab" aria-controls="contact" aria-selected="false">Completed Last Weekday</a>
+                <a class="nav-link" id="completed-lw-tab" data-toggle="tab" href="#CompletedLW" role="tab" aria-controls="contact" aria-selected="false">Completed Last Weekday <span class="badge badge-secondary" data-badge="completed_lw">{{ completed_lw_count }}</span></a>
              </li>
         </ul>
         <div class="tab-content" id="myTabContent">
@@ -35,7 +35,8 @@
                 <div class="col my-2">
                      <h6 class="font-weight-bold">To Do WorkOrder</h6>
                 </div>
-                <button onclick="TakeSelected()">Take more</button>  
+                <button onclick="TakeSelected()">Take more</button>
+                <button onclick="PendingSelected()">Pending more</button>  
                 <div class="table-responsive">
                     <table data-search="true" data-toggle="table" class="table table-striped table-hover">
                         <thead class="thead-light">
@@ -59,30 +60,38 @@
                         </thead>
                         <script type="text/javascript">
                             function TakeSelected() {
-                                //Reference the Table.
                                 var grid = document.getElementById("ToDo");
-                         
-                                //Reference the CheckBoxes in Table.
                                 var checkBoxes = grid.getElementsByTagName("input");
-                                var message = "";
-                                var cnt=0;
-                                //Loop through the CheckBoxes.
+                                var ids = []; var cnt = 0;
                                 for (var i = 2; i < checkBoxes.length; i++) {
                                     if (checkBoxes[i].checked) {
-                                        var row = checkBoxes[i].parentNode.parentNode.parentNode;
-                                        message += row.cells[1].innerHTML;
-                                        message += ' ';
-                                        cnt=cnt +1;
+                                        ids.push(checkBoxes[i].parentNode.parentNode.parentNode.cells[1].innerHTML.trim());
+                                        cnt++;
                                     }
                                 }
-                         
-                                //Display selected Row data in Alert Box.
-                                fetch("{{ url_for('main.takemore')}}", {
-                                                method: "POST",
-                                                headers: { "Content-type": "application/json" },
-                                                body: JSON.stringify({ message})
-                                       });
-                                if(cnt!=0) location.reload();       
+                                if (cnt == 0) return;
+                                var xhr = new XMLHttpRequest();
+                                xhr.open('POST', '{{ url_for("main.takemore") }}', true);
+                                xhr.setRequestHeader('Content-Type', 'application/json');
+                                xhr.onload = function() { location.reload(); };
+                                xhr.send(JSON.stringify({message: ids.join(' ')}));
+                        }
+                            function PendingSelected() {
+                                var grid = document.getElementById("ToDo");
+                                var checkBoxes = grid.getElementsByTagName("input");
+                                var ids = []; var cnt = 0;
+                                for (var i = 2; i < checkBoxes.length; i++) {
+                                    if (checkBoxes[i].checked) {
+                                        ids.push(checkBoxes[i].parentNode.parentNode.parentNode.cells[1].innerHTML.trim());
+                                        cnt++;
+                                    }
+                                }
+                                if (cnt == 0) return;
+                                var xhr = new XMLHttpRequest();
+                                xhr.open('POST', '{{ url_for("main.pendingmore") }}', true);
+                                xhr.setRequestHeader('Content-Type', 'application/json');
+                                xhr.onload = function() { location.reload(); };
+                                xhr.send(JSON.stringify({message: ids.join(' ')}));
                             }
                         </script>
                         <tbody>
@@ -497,8 +506,10 @@ document.addEventListener('DOMContentLoaded', function () {
           .then(function (r) { return r.json(); })
           .then(function (data) {
             document.querySelectorAll('[data-badge="unassigned"]').forEach(function (el) { el.textContent = data.unassigned; });
+            document.querySelectorAll('[data-badge="pending"]').forEach(function (el) { el.textContent = data.pending; });
             document.querySelectorAll('[data-badge="processing"]').forEach(function (el) { el.textContent = data.processing; });
-            document.querySelectorAll('[data-badge="waiting"]').forEach(function (el) { el.textContent = data.waiting_inspection; });
+            document.querySelectorAll('[data-badge="completed_today"]').forEach(function (el) { el.textContent = data.completed_today; });
+            document.querySelectorAll('[data-badge="completed_lw"]').forEach(function (el) { el.textContent = data.completed_lw; });
           });
       }, 30000);
     } else {

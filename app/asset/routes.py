@@ -1,10 +1,11 @@
+import os, subprocess, csv, io
 from flask_login import login_required
 from app.asset.forms import AddWorkorderForm, UploadReportForm, ReviewReportForm, ReviewReportFileForm,EditOneComputerForm,ReportSearchForm,QueryForm,ViewReportForm,ReviewOneComputerForm
 from app.asset.forms import AddProductForm,QueryProductsForm,EditProductForm,QueryWorkordersForm,PackingCalculateForm
 from app.asset.forms import QueryQlogForm,AddQualityLogForm,EditQualityLogForm
 from app.asset import main
-from app.asset.models import WorkOrder, Production, PnMap, PackageBox, QualityLog
-from flask import render_template, flash, request, redirect, url_for, session
+from app.asset.models import WorkOrder, Production, PnMap, PackageBox, QualityLog, RmaCases
+from flask import render_template, flash, request, redirect, url_for, session, send_from_directory, Response, abort
 from app import db
 from app.asset.forms import get_biosversion, get_sopversion
 
@@ -231,6 +232,17 @@ def takemore():
         workorder.status=0
         workorder.asid=current_user.id
         workorder.tktime=datetime.datetime.now()
+        db.session.commit()
+    return redirect(url_for('main.display_workorders'))
+
+@main.route('/pendingmore', methods=['POST'])
+@login_required
+def pendingmore():
+    x = request.json
+    y = x.get("message")
+    for sid in y.split():
+        wo = WorkOrder.query.get(sid)
+        wo.status = -2
         db.session.commit()
     return redirect(url_for('main.display_workorders'))
     
@@ -672,14 +684,55 @@ def dashboard():
 @main.route('/api/workorder-counts')
 @login_required
 def api_workorder_counts():
+    today = datetime.datetime.today()
+    lw = today - datetime.timedelta(days=1)
+    while lw.weekday() >= 5:
+        lw -= datetime.timedelta(days=1)
     counts = {
         'unassigned': WorkOrder.query.filter_by(status=-1).count(),
         'pending': WorkOrder.query.filter_by(status=-2).count(),
         'processing': WorkOrder.query.filter_by(status=0).count(),
         'waiting_inspection': WorkOrder.query.filter_by(status=1).count(),
-        'completed_today': WorkOrder.query.filter(func.DATE(WorkOrder.intime) == func.DATE(datetime.datetime.today()), WorkOrder.status == 2).count(),
+        'completed_today': WorkOrder.query.filter(func.DATE(WorkOrder.intime) == func.DATE(today), WorkOrder.status == 2).count(),
+        'completed_lw': WorkOrder.query.filter(func.DATE(WorkOrder.intime) == func.DATE(lw), WorkOrder.status == 2).count(),
     }
     return counts
+
+@main.route('/api/rma-customer-info')
+@login_required
+def api_rma_customer_info():
+    customer = request.args.get('customer', '').strip()
+    if not customer:
+        return {'found': False}
+    case = RmaCases.query.filter(RmaCases.customers.ilike(customer)).order_by(RmaCases.id.desc()).first()
+    if not case:
+        return {'found': False}
+    return {
+        'found': True,
+        'contactname': case.rmacontactname,
+        'email': case.rmacontactemail,
+        'phone': case.rmacontactphone,
+        'contactname1': case.rmacontactname1 or '',
+        'email1': case.rmacontactemail1 or '',
+        'phone1': case.rmacontactphone1 or '',
+        'shippingaddress': case.shippingaddress or '',
+    }
+
+@main.route('/api/rma-pn-info')
+@login_required
+def api_rma_pn_info():
+    pn = request.args.get('pn', '').strip()
+    if not pn:
+        return {'found': False}
+    mapping = PnMap.query.filter_by(pn=pn).first()
+    if not mapping:
+        return {'found': False}
+    return {
+        'found': True,
+        'unitsinabox': mapping.unitsinabox or '',
+        'category': mapping.category or '',
+        'notes': mapping.notes or '',
+    }
 
 @main.route('/')
 @login_required
@@ -720,54 +773,89 @@ def display_workorders():
     else:
         completed_last_wd = WorkOrder.query.filter(func.DATE(WorkOrder.intime) == func.DATE(lw), WorkOrder.status == 2)
     completed_last_wd = completed_last_wd.order_by(WorkOrder.wo)
+    unassigned_count = WorkOrder.query.filter_by(status=-1).count()
+    pending_count = WorkOrder.query.filter_by(status=-2).count()
+    processing_count = WorkOrder.query.filter(WorkOrder.status.in_([0, 1])).count()
+    completed_today_count = WorkOrder.query.filter(func.DATE(WorkOrder.intime) == func.DATE(datetime.datetime.today()), WorkOrder.status == 2).count()
+    lw = datetime.datetime.today() - datetime.timedelta(days=1)
+    while lw.weekday() >= 5:
+        lw -= datetime.timedelta(days=1)
+    completed_lw_count = WorkOrder.query.filter(func.DATE(WorkOrder.intime) == func.DATE(lw), WorkOrder.status == 2).count()
     return render_template('home.html', todoworkorder=todoworkorder, pendingworkorder=pendingworkorder,
-                           processing=processing, completed=completed, completed_last_wd=completed_last_wd, userrole=role)
+                           processing=processing, completed=completed, completed_last_wd=completed_last_wd, userrole=role,
+                           unassigned_count=unassigned_count, pending_count=pending_count,
+                           processing_count=processing_count, completed_today_count=completed_today_count,
+                           completed_lw_count=completed_lw_count)
 
 @main.route('/query', methods=['GET', 'POST'])
 @login_required
 def query():
     form = QueryForm()
-    searched = 0
     if request.method == "POST":
-        #Prepare the search results between start date and end date
-        if form.enddate.data != None and form.startdate.data != None:
-            if form.enddate.data >= form.startdate.data :
-                completedss = WorkOrder.query.filter(func.DATE(WorkOrder.intime) >= func.DATE(form.startdate.data ),WorkOrder.status == 2)
-                completedss = completedss.filter((func.DATE(WorkOrder.intime)) <= (func.DATE(form.enddate.data )))
-                print(form.packgo.data)
-                if(form.packgo.data != True) :
-                    completedss = completedss.filter(WorkOrder.packgo!=True)
-                completedss = completedss.order_by(WorkOrder.asid)
-                searched = 1
+        params = {}
+        for f in ['startdate', 'enddate', 'wo', 'customers', 'pn', 'csn']:
+            v = request.form.get(f, '')
+            if v:
+                params[f] = v
+        op = request.form.get('operator', '')
+        if op:
+            params['operator'] = op
+        if request.form.get('packgo'):
+            params['packgo'] = '1'
+        return redirect(url_for('main.query', **params))
+
     role = get_userrole(current_user.id)
     if role < 2:
         return redirect(url_for('main.display_workorders'))
-    #Search by time, operator name, wo, customer name, pn, csn.
-    # user can check the detail of WO and report
-    # Name, Customers, WO#, PN, CSN, 
+    searched = 0
+    completedss = WorkOrder.query.filter(WorkOrder.status == 2)
+    if request.args.get('startdate') and request.args.get('enddate'):
+        try:
+            sd = datetime.datetime.strptime(request.args['startdate'], '%Y-%m-%d')
+            ed = datetime.datetime.strptime(request.args['enddate'], '%Y-%m-%d')
+            if ed >= sd:
+                completedss = completedss.filter(func.DATE(WorkOrder.intime) >= func.DATE(sd),
+                                                  func.DATE(WorkOrder.intime) <= func.DATE(ed))
+                form.startdate.data = sd
+                form.enddate.data = ed
+        except: pass
+    packgo = request.args.get('packgo')
+    if packgo != '1':
+        completedss = completedss.filter(WorkOrder.packgo != True)
+    else:
+        form.packgo.data = True
+    op = request.args.get('operator', '')
+    if op and op != '__None':
+        try:
+            asid = int(op)
+            completedss = completedss.filter(WorkOrder.asid == asid)
+            user = User.query.get(asid)
+            if user:
+                form.operator.data = user
+        except: pass
+    wo = request.args.get('wo', '')
+    if wo:
+        completedss = completedss.filter(WorkOrder.wo == wo)
+        form.wo.data = wo
+    pn = request.args.get('pn', '')
+    if pn:
+        completedss = completedss.filter(WorkOrder.pn.contains(pn))
+        form.pn.data = pn
+    csn = request.args.get('csn', '')
+    if csn:
+        completedss = completedss.filter(WorkOrder.csn.contains(csn))
+        form.csn.data = csn
+    customers = request.args.get('customers', '')
+    if customers:
+        completedss = completedss.filter(WorkOrder.customers.contains(customers))
+        form.customers.data = customers
+    if any(request.args.values()):
+        completedss = completedss.order_by(WorkOrder.asid)
+        searched = 1
     basicscoreinfo = PnMap.query.filter(PnMap.id!=0)
     searchtable = []
     tablesearchsummary = []
-    if searched == 1 :
-        if form.operator.data != None :
-            asid = get_useridbyname(form.operator.data.user_name)
-            completedss = completedss.filter(WorkOrder.asid == asid)
-            print(1)
-        if form.wo.data != '':
-            wo = form.wo.data
-            completedss = completedss.filter(WorkOrder.wo == wo)
-            print(2)
-        if form.pn.data != '' :
-            pn = form.pn.data
-            completedss = completedss.filter(WorkOrder.pn.contains(pn))
-            print(3)
-        if form.csn.data != '' :
-            csn = form.csn.data
-            completedss = completedss.filter(WorkOrder.csn.contains(csn))
-            print(4)
-        if form.customers.data != '' :
-            customer = form.customers.data
-            completedss = completedss.filter(WorkOrder.customers.contains(customer))
+    if searched == 1:
         users = User.query.all()    
         for user in users :
             if user.role < 3 :
@@ -1197,6 +1285,7 @@ def ReviewReport(id):
         workorder = WorkOrder.query.get(id)
         products = Production.query.filter_by(wo=workorder.wo,csn=workorder.csn.strip())
         form = ReviewReportForm(obj=workorder)
+        form.wo_doc_items.data = workorder.doc_items
         role = get_userrole(current_user.id)
         if products.count()>0 :
             product = products[0]
@@ -1262,6 +1351,20 @@ def ReturnOneComputer(id):
     
     flash('ReturnOneComputer successfully')
     return redirect(url_for('main.display_workorders'))    
+
+CPU_PN_MAP = {
+    'GC-J-AGX64GB-Orin-Nvidia-601': 'AGX Orin 64GB',
+    'GC-Jetson-AGX-Xavier-Nvidia': 'AGX Xavier 32GB',
+    'GC-Jetson-AGX32GB-Orin-Nvidia': 'AGX Orin 32GB',
+    'GC-Jetson-AGX64GB-Orin-Nvidia': 'AGX Orin 64GB',
+    'GC-Jetson-AGXi-Xavier-NVIDIA': 'AGX Xavier 32GB Industrial',
+    'GC-Jetson-NO8G-Orin-Nvidia': 'Orin Nano 8GB',
+    'GC-Jetson-NX-Xavier-Nvidia': 'Xavier NX 8GB',
+    'GC-Jetson-NX16G-Orin-Nvidia': 'Orin NX 16GB',
+    'GC-Jetson-NX16GB-Xavier-Nvidia': 'Xavier NX 16GB',
+    'GC-Jetson-NX8G-Orin-Nvidia': 'Orin NX 8GB',
+    'GC-Jetson-T5128GB-Thor-Nvidia': 'Thor 512GB',
+}
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.',1)[1].lower() in ALLOWED_EXTENSION 
@@ -1432,7 +1535,7 @@ def add_workorder():
                         elif 'I7-' in row[0].upper() or 'I9-' in row[0].upper() or 'E22' in row[0].upper() \
                              or 'I3-' in row[0].upper() or 'I5-' in row[0].upper()  \
                              or 'AGX' in row[0].upper() or 'ORIN' in row[0].upper() :
-                            form.cputype.data = row[0]
+                            form.cputype.data = CPU_PN_MAP.get(row[0].strip(), row[0])
                             if 'installed' not in row[3] :
                                 form.cpuinstall.data = True
                             else :
@@ -1503,21 +1606,17 @@ def customized():
 @login_required
 def queryproduct():
     form = QueryProductsForm()
-    searched = 0
-    products = PnMap.query.filter(PnMap.id!=0)
     if request.method == "POST":
-        #Prepare the search results between start date and end date
-        searched = 1
+        return redirect(url_for('main.queryproduct', pn=request.form.get('pn', '')))
     role = get_userrole(current_user.id)
     if role < 2:
         return redirect(url_for('main.display_workorders'))
-    # Filter by PN
-    searchtable = []
-    if searched == 1 :
-        if form.pn.data.strip() != '' :
-            pn = form.pn.data.strip()
-            products = products.filter(PnMap.pn.contains(pn))
-    return render_template('query_products.html', form=form, userrole=role, searched=searched, products=products)
+    products = PnMap.query.filter(PnMap.id!=0)
+    pn = request.args.get('pn', '')
+    if pn:
+        products = products.filter(PnMap.pn.contains(pn))
+        form.pn.data = pn
+    return render_template('query_products.html', form=form, userrole=role, searched=1 if pn else 0, products=products)
 
 
 @main.route('/createproduct', methods=['GET', 'POST'])
@@ -1595,21 +1694,17 @@ def EditProduct(id):
 @login_required
 def queryworkorder():
     form = QueryWorkordersForm()
-    searched = 0
-    workorders = WorkOrder.query.filter(WorkOrder.id!=0)
     if request.method == "POST":
-        #Prepare the search results between start date and end date
-        searched = 1
+        return redirect(url_for('main.queryworkorder', wo=request.form.get('wo', '')))
     role = get_userrole(current_user.id)
     if role < 2:
         return redirect(url_for('main.queryworkorder'))
-    # Filter by PN
-    searchtable = []
-    if searched == 1 :
-        if form.wo.data.strip() != '' :
-            wo = form.wo.data.strip()
-            workorders = workorders.filter(WorkOrder.wo.contains(wo))
-    return render_template('query_workorders.html', form=form, userrole=role, searched=searched, workorders=workorders)
+    workorders = WorkOrder.query.filter(WorkOrder.id!=0)
+    wo = request.args.get('wo', '')
+    if wo:
+        workorders = workorders.filter(WorkOrder.wo.contains(wo))
+        form.wo.data = wo
+    return render_template('query_workorders.html', form=form, userrole=role, searched=1 if wo else 0, workorders=workorders)
 
 
 @main.route('/packingcalculator', methods=['GET', 'POST'])
@@ -1618,6 +1713,7 @@ def packingcalculator():
     solutions = []
     details = []
     totalpercentage = 0
+    packing_data = []
     userrole = 0
 
     form = PackingCalculateForm()
@@ -1663,6 +1759,7 @@ def packingcalculator():
                 boxes = PackageBox.query.filter(PackageBox.purpose.like('%RGS%')).all() 
                 for box in boxes:
                     Boxes_RGS.append(Box('Platform1', box.name, box.width, box.thickness, box.height, box.limitweight - box.weight, box.weight))
+
             if form.dinrail.data != None and form.qty_dinrail.data!=0: 
                 dinrail_name = form.dinrail.data.pn
                 dinrail_qty  = form.qty_dinrail.data
@@ -1828,23 +1925,15 @@ def packingcalculator():
                 packages.append(package)
 
         if Boxes_SEMIL != [] or Boxes_RGS != []:
-           #platforms1 = {'Platform1':Boxes_SEMIL + Boxes_RGS} 
             platforms = {'Platform1':Boxes + Boxes_SEMIL + Boxes_RGS}
-           #solutions_c,details_c,totalpercentage_c = classifier(platforms1, packages_computer)
-           #if(len(packages)):
-           #     solutions_a,details_a,totalpercentage_a = classifier(platforms, packages)
-           #     solutions =  solutions_c + solutions_a
-           #     details = details_c + details_a
-           #     totalpercentage = (totalpercentage_c + totalpercentage_a)/2
-           #else:
-           #     solutions =  solutions_c
-           #     details = details_c
-            #Allow for packaging semil computer and cable together
-            packages =  packages +  packages_computer
-            solutions,details,totalpercentage = classifier(platforms, packages)
-        else :
-            packages =  packages +  packages_computer
-            solutions,details,totalpercentage = classifier(platforms, packages)
+            packages = packages + packages_computer
+            solutions,details,totalpercentage,packing_data = classifier(platforms, packages)
+        else:
+            platforms = {'Platform1':Boxes}
+            packages = packages + packages_computer
+            solutions,details,totalpercentage,packing_data = classifier(platforms, packages)
+    else:
+        packing_data = []
     # 1. Fetch your objects as you did before
     raw_products = (
         PnMap.query.filter_by(category='COMPUTER').order_by(PnMap.pn).all() + 
@@ -1861,7 +1950,7 @@ def packingcalculator():
         pns = pns.replace("('","")
         pns = pns.replace("',)","")
         products.append(pns)
-    return render_template('packing.html', form=form, products=products, searched=searched,solutions=solutions, details=details, totalpercentage=totalpercentage,userrole=userrole)  
+    return render_template('packing.html', form=form, products=products, searched=searched,solutions=solutions, details=details, totalpercentage=totalpercentage, packing_data=packing_data, userrole=userrole)  
 
 @main.route('/qualitylog', methods=['GET', 'POST'])
 @login_required
@@ -1875,7 +1964,8 @@ def add_qualitylog():
         transaction = QualityLog(wo=form.wo.data.replace("/","-"), source= form.source.data, pn=str(form.pn.data), csn=str(form.csn.data), 
                     defectpart=form.defectpart.data,defectpartsn=form.defectpartsn.data,reason=form.reason.data,
                     status="New",reportid=current_user.id,reporttime = datetime.datetime.now(),
-                    ownerid = -1,processlog=processlog,conclusion="")
+                    ownerid = -1,processlog=processlog,conclusion="", cause=None,
+                    vendorname=form.vendorname.data or '', category=form.category.data or '')
         db.session.add(transaction)
         db.session.commit()
         flash('Create Log successful')
@@ -1888,17 +1978,37 @@ def queryqlog():
     searched = 0
     qlogs = []
     if request.method == "POST":
-        #Prepare the search results between start date and end date
-        if form.enddate.data != None and form.startdate.data != None:
-            if form.enddate.data >= form.startdate.data :
-                qlogs = QualityLog.query.filter(func.DATE(QualityLog.reporttime) >= func.DATE(form.startdate.data))
-                qlogs = qlogs.filter((func.DATE(QualityLog.reporttime)) <= (func.DATE(form.enddate.data )))
-                if(form.status.data != "All"):
-                    qlogs = qlogs.filter_by(status = form.status.data)
-                if(form.source.data != "All"):    
-                    qlogs = qlogs.filter_by(source = form.source.data)
-                qlogs = qlogs.order_by(QualityLog.reporttime)
-                searched = 1
+        return redirect(url_for('main.queryqlog', **{k: v for k, v in request.form.items() if v}))
+
+    qlogs = QualityLog.query
+    if request.args.get('startdate') and request.args.get('enddate'):
+        try:
+            sd = datetime.datetime.strptime(request.args['startdate'], '%Y-%m-%d')
+            ed = datetime.datetime.strptime(request.args['enddate'], '%Y-%m-%d')
+            if ed >= sd:
+                qlogs = qlogs.filter(func.DATE(QualityLog.reporttime) >= func.DATE(sd),
+                                     func.DATE(QualityLog.reporttime) <= func.DATE(ed))
+                form.startdate.data = sd
+                form.enddate.data = ed
+        except: pass
+    if request.args.get('status', 'All') != 'All':
+        qlogs = qlogs.filter_by(status=request.args['status'])
+        form.status.data = request.args['status']
+    if request.args.get('source', 'All') != 'All':
+        qlogs = qlogs.filter_by(source=request.args['source'])
+        form.source.data = request.args['source']
+    cat_val = request.args.get('category', '')
+    if cat_val:
+        qlogs = qlogs.filter(QualityLog.category == cat_val)
+        form.category.data = cat_val
+    for field in ['wo', 'pn', 'csn', 'defectpart', 'defectpartsn']:
+        val = request.args.get(field, '')
+        if val:
+            qlogs = qlogs.filter(getattr(QualityLog, field).ilike('%' + val + '%'))
+            setattr(form, field).data = val
+    if any(request.args.values()):
+        qlogs = qlogs.order_by(QualityLog.reporttime).all()
+        searched = 1
     role = get_userrole(current_user.id)
     if role < 2:
         return redirect(url_for('main.display_workorders'))
@@ -1912,6 +2022,7 @@ def queryqlog():
         rows.append(qlog.csn)
         rows.append(qlog.defectpart)
         rows.append(qlog.defectpartsn)
+        rows.append(qlog.category or '')
         rows.append(qlog.reporttime.strftime("%y/%m/%d %H:%M"))
         rows.append(get_username(qlog.reportid))
         rows.append(get_username(qlog.ownerid))
@@ -1957,5 +2068,468 @@ def ViewEditQlog(id):
         flash('Update successful')
         #return redirect(session.get('previous_url','/'))
         #return redirect(url_for('main.queryproduct'))
-    return render_template('edit_Qlog.html', form=form, id=id, userrole=role) 
+    return render_template('edit_Qlog.html', form=form, id=id, userrole=role)
+
+@main.route('/rma')
+@login_required
+def rma_list():
+    if get_userrole(current_user.id) < 2: abort(403)
+    role = get_userrole(current_user.id)
+    status_filter = request.args.get('status', 'all')
+    start_date = request.args.get('start_date', '')
+    end_date = request.args.get('end_date', '')
+    keywords = request.args.get('keywords', '')
+    query = RmaCases.query.order_by(RmaCases.cstime.desc())
+    if keywords:
+        q = '%' + keywords + '%'
+        query = query.filter(
+            db.or_(
+                RmaCases.ntarmano.ilike(q),
+                RmaCases.customers.ilike(q),
+                RmaCases.pn.ilike(q),
+                RmaCases.csn.ilike(q),
+                RmaCases.descriptionbycustomer.ilike(q),
+                RmaCases.shippn.ilike(q),
+                RmaCases.partsn.ilike(q),
+                RmaCases.vendorrmano.ilike(q),
+                RmaCases.assetowner.ilike(q),
+            )
+        )
+    if status_filter == 'all' and not start_date and not end_date and not keywords:
+        ytd = datetime.datetime(datetime.datetime.now().year, 1, 1)
+        query = query.filter(RmaCases.cstime >= ytd)
+    else:
+        if start_date:
+            try:
+                sd = datetime.datetime.strptime(start_date, '%Y-%m-%d')
+                query = query.filter(RmaCases.cstime >= sd)
+            except: pass
+        if end_date:
+            try:
+                ed = datetime.datetime.strptime(end_date, '%Y-%m-%d') + datetime.timedelta(days=1)
+                query = query.filter(RmaCases.cstime < ed)
+            except: pass
+    if status_filter != 'all':
+        query = query.filter(RmaCases.status == status_filter)
+    cases = query.all()
+    for c in cases:
+        safe_cust = c.customers.replace('/', '_').replace('\\', '_')
+        safe_pn = c.pn.replace('/', '_').replace('\\', '_')
+        cnt = RmaCases.query.filter_by(ntarmano=c.ntarmano).count()
+        c.file_base = f"00_{c.ntarmano}_{safe_cust}_{safe_pn}_{cnt}Units"
+        c.recvby = get_username(c.recvid) if c.recvid else ''
+        c.processby = get_username(c.processid) if c.processid else ''
+        c.shipby = get_username(c.shiptovendorid) if c.shiptovendorid else ''
+        c.recvfromvendorby = get_username(c.recvfromvendorid) if c.recvfromvendorid else ''
+        c.closeby = get_username(c.closeid) if c.closeid else ''
+    counts = {
+        'new': RmaCases.query.filter_by(status='new').count(),
+        'received': RmaCases.query.filter_by(status='received').count(),
+        'processing': RmaCases.query.filter_by(status='processing').count(),
+        'waiting_for_shipping': RmaCases.query.filter_by(status='waiting_for_shipping').count(),
+        'shipped_to_vendor': RmaCases.query.filter_by(status='shipped_to_vendor').count(),
+        'recv_from_vendor': RmaCases.query.filter_by(status='recv_from_vendor').count(),
+        'closed': RmaCases.query.filter_by(status='closed').count(),
+    }
+    return render_template('rma.html', cases=cases, counts=counts,
+                           current_status=status_filter, userrole=role,
+                           start_date=start_date, end_date=end_date,
+                           keywords=keywords)
+
+def next_ntarmano():
+    now = datetime.datetime.now()
+    prefix = now.strftime('RNTA%y%m%d-')
+    last = RmaCases.query.filter(
+        RmaCases.ntarmano.like(prefix + '%')
+    ).order_by(RmaCases.id.desc()).first()
+    if last:
+        seq = int(last.ntarmano.split('-')[-1]) + 1
+    else:
+        seq = 1
+    return prefix + str(seq).zfill(3)
+
+
+def generate_rma_files(case, csns=None):
+    basedir = os.path.dirname(os.path.abspath(__file__))
+    template = os.path.join(basedir, '../../rma_template.docx')
+    outdir = os.path.join(basedir, '../static/rma')
+    outdir = os.path.abspath(outdir)
+    os.makedirs(outdir, exist_ok=True)
+    safe_cust = case.customers.replace('/', '_').replace('\\', '_')
+    safe_pn = case.pn.replace('/', '_').replace('\\', '_')
+    base = f"00_{case.ntarmano}_{safe_cust}_{safe_pn}_{len(csns) if csns else 1}Units"
+    docx_path = os.path.join(outdir, base + '.docx')
+    doc_path = os.path.join(outdir, base + '.doc')
+    pdf_path = os.path.join(outdir, base + '.pdf')
+
+    from docx import Document
+    doc = Document(template)
+    t0 = doc.tables[0]
+    t1 = doc.tables[1]
+
+    def set_cell(table, row, col, text):
+        cell = table.cell(row, col)
+        p = cell.paragraphs[0]
+        p.clear()
+        p.add_run(str(text))
+
+    def append_cell(table, row, col, text):
+        cell = table.cell(row, col)
+        p = cell.paragraphs[1]
+        p.add_run(str(text))
+
+    now = datetime.datetime.now()
+    append_cell(t0, 0, 3, case.ntarmano)
+    set_cell(t0, 2, 1, now.strftime('%m/%d/%Y'))
+    set_cell(t0, 3, 1, case.customers)
+    set_cell(t0, 4, 1, case.shippingaddress or '')
+    set_cell(t0, 6, 1, case.rmacontactname or '')
+    set_cell(t0, 6, 5, case.rmacontactemail or '')
+    set_cell(t0, 7, 1, case.rmacontactphone or '')
+    if case.rmacontactname1:
+        set_cell(t0, 8, 1, case.rmacontactname1)
+        set_cell(t0, 8, 4, case.rmacontactemail1 or '')
+    if case.rmacontactphone1:
+        set_cell(t0, 9, 1, case.rmacontactphone1)
+
+    csn_str = ', '.join(csns) if csns else case.csn
+    set_cell(t1, 1, 0, case.pn)
+    set_cell(t1, 1, 1, csn_str)
+    set_cell(t1, 1, 3, str(len(csns)) if csns else '1')
+    if case.cstime:
+        set_cell(t1, 2, 0, case.cstime.strftime('%m/%d/%Y'))
+    set_cell(t1, 3, 0, case.descriptionbycustomer or '')
+
+    doc.save(docx_path)
+    subprocess.run(['libreoffice', '--headless', '--convert-to', 'doc',
+                    docx_path, '--outdir', outdir],
+                   capture_output=True, timeout=30)
+    subprocess.run(['libreoffice', '--headless', '--convert-to', 'pdf',
+                    docx_path, '--outdir', outdir],
+                   capture_output=True, timeout=30)
+    return base
+
+@main.route('/rma/new', methods=['GET', 'POST'])
+@login_required
+def rma_new():
+    if get_userrole(current_user.id) < 2: abort(403)
+    if request.method == 'POST':
+        csns = request.form['csn'].replace(',', ' ').split()
+        if not csns:
+            flash('At least one CSN is required')
+            return redirect(url_for('main.rma_new'))
+        ntarmano = request.form['ntarmano']
+        existing = RmaCases.query.filter(RmaCases.ntarmano == ntarmano, RmaCases.csn.in_(csns)).count()
+        if existing:
+            flash(f'Duplicate submission detected: {existing} record(s) already exist with this RMA#')
+            return redirect(url_for('main.rma_list'))
+        first_case = None
+        for csn in csns:
+            case = RmaCases(
+                ntarmano=ntarmano,
+                customers=request.form['customers'],
+                pn=request.form['pn'],
+                csn=csn,
+                warranty=request.form.get('warranty', ''),
+                descriptionbycustomer=request.form['description'],
+                csid=current_user.id,
+                cstime=datetime.datetime.now(),
+                rmacontactname=request.form['contactname'],
+                rmacontactemail=request.form['email'],
+                rmacontactphone=request.form['phone'],
+                shippingaddress=request.form.get('shippingaddress', ''),
+                rmacontactname1=request.form.get('contactname1'),
+                rmacontactemail1=request.form.get('email1'),
+                rmacontactphone1=request.form.get('phone1'),
+                special=request.form.get('special', ''),
+                rmatype=request.form.get('rmatype', 'RMA'),
+            )
+            db.session.add(case)
+            case.assetowner = case.customers
+            if first_case is None:
+                first_case = case
+        db.session.commit()
+        base = generate_rma_files(first_case, csns)
+        flash(f'RMA case created ({len(csns)} units). Files: {base}.doc / {base}.pdf')
+        return redirect(url_for('main.rma_list'))
+    ntarmano = next_ntarmano()
+    productlist = PnMap.query.with_entities(PnMap.pn).all()
+    products = []
+    for x in productlist:
+        pns = str(x).replace("('", "").replace("',)", "")
+        products.append(pns)
+    return render_template('rma_form.html', case=None,
+                           ntarmano=ntarmano,
+                           userrole=get_userrole(current_user.id),
+                           products=products)
+
+@main.route('/rma/<int:id>/receive', methods=['POST'])
+@login_required
+def rma_receive(id):
+    if get_userrole(current_user.id) < 2: abort(403)
+    case = RmaCases.query.get_or_404(id)
+    case.status = 'received'
+    case.recvid = current_user.id
+    case.recvtime = datetime.datetime.now()
+    db.session.commit()
+    return redirect(url_for('main.rma_list'))
+
+@main.route('/rma/<int:id>/wait-shipping', methods=['POST'])
+@login_required
+def rma_wait_shipping(id):
+    if get_userrole(current_user.id) < 2: abort(403)
+    case = RmaCases.query.get_or_404(id)
+    case.status = 'waiting_for_shipping'
+    db.session.commit()
+    return redirect(url_for('main.rma_list'))
+
+@main.route('/rma/<int:id>/delete', methods=['POST'])
+@login_required
+def rma_delete(id):
+    if get_userrole(current_user.id) < 2: abort(403)
+    case = RmaCases.query.get_or_404(id)
+    if case.status == 'new':
+        db.session.delete(case)
+        db.session.commit()
+    return redirect(url_for('main.rma_list'))
+
+@main.route('/rma/<int:id>/unreceive', methods=['POST'])
+@login_required
+def rma_unreceive(id):
+    if get_userrole(current_user.id) < 2: abort(403)
+    case = RmaCases.query.get_or_404(id)
+    if case.status == 'received':
+        case.status = 'new'
+        case.recvid = None
+        case.recvtime = None
+        db.session.commit()
+    return redirect(url_for('main.rma_list'))
+
+@main.route('/rma/<int:id>/start', methods=['POST'])
+@login_required
+def rma_start(id):
+    if get_userrole(current_user.id) < 2: abort(403)
+    case = RmaCases.query.get_or_404(id)
+    case.status = 'processing'
+    case.processid = current_user.id
+    case.startprocesstime = datetime.datetime.now()
+    db.session.commit()
+    return redirect(url_for('main.rma_list'))
+
+@main.route('/rma/<int:id>/create-wo', methods=['POST'])
+@login_required
+def rma_create_wo(id):
+    if get_userrole(current_user.id) < 2: abort(403)
+    case = RmaCases.query.get_or_404(id)
+    wo_num = request.form.get('wo', case.ntarmano).replace('/', '-')
+    exists = WorkOrder.query.filter_by(wo=wo_num, csn=case.csn).first()
+    if exists:
+        flash(f'WorkOrder {wo_num} already exists for CSN {case.csn}')
+        return redirect(url_for('main.rma_list'))
+    wo = WorkOrder(
+        wo=wo_num, customers=case.customers, pn=case.pn, csn=case.csn,
+        cputype='', memorysize='', disksize='',
+        cpuinstall=False, memoryinstall=False, gpuinstall=False,
+        wifiinstall=False, caninstall=False, mezioinstall=False, fg5ginstall=False,
+        gpu='', withwifi=False, withcan=False, withfg5g=False,
+        ospreinstalled=False, osactivation=False, diskpreinstalled=False,
+        osinstall='', packgo=False,
+        asid=-1, insid=-1, astime=None, intime=None, tktime=None,
+        csid=current_user.id, cstime=datetime.datetime.now(),
+        ldtime=None, status=0, doc_items='')
+    db.session.add(wo)
+    db.session.commit()
+    flash(f'WorkOrder {wo_num} created for {case.customers}')
+    return redirect(url_for('main.rma_list'))
+
+@main.route('/rma/<int:id>/save-notes', methods=['POST'])
+@login_required
+def rma_save_notes(id):
+    if get_userrole(current_user.id) < 2: abort(403)
+    case = RmaCases.query.get_or_404(id)
+    data = request.get_json()
+    case.notes = data.get('notes', '')
+    db.session.commit()
+    return {'ok': True}
+
+@main.route('/rma/<int:id>/unprocess', methods=['POST'])
+@login_required
+def rma_unprocess(id):
+    if get_userrole(current_user.id) < 2: abort(403)
+    case = RmaCases.query.get_or_404(id)
+    if case.status == 'processing':
+        case.status = 'received'
+        case.processid = None
+        case.startprocesstime = None
+        db.session.commit()
+    return redirect(url_for('main.rma_list'))
+
+@main.route('/rma/<int:id>/unwait', methods=['POST'])
+@login_required
+def rma_unwait(id):
+    if get_userrole(current_user.id) < 2: abort(403)
+    case = RmaCases.query.get_or_404(id)
+    if case.status == 'waiting_for_shipping':
+        case.status = 'processing'
+        db.session.commit()
+    return redirect(url_for('main.rma_list'))
+
+@main.route('/rma/<int:id>/unshipped', methods=['POST'])
+@login_required
+def rma_unshipped(id):
+    if get_userrole(current_user.id) < 2: abort(403)
+    case = RmaCases.query.get_or_404(id)
+    if case.status == 'shipped_to_vendor':
+        case.status = 'waiting_for_shipping'
+        case.shiptovendortime = None
+        case.shiptovendorid = None
+        db.session.commit()
+    return redirect(url_for('main.rma_list'))
+
+@main.route('/rma/<int:id>/unrecv-vendor', methods=['POST'])
+@login_required
+def rma_unrecv_vendor(id):
+    if get_userrole(current_user.id) < 2: abort(403)
+    case = RmaCases.query.get_or_404(id)
+    if case.status == 'recv_from_vendor':
+        case.status = 'shipped_to_vendor'
+        case.recvfromvendortime = None
+        case.recvfromvendorid = None
+        db.session.commit()
+    return redirect(url_for('main.rma_list'))
+
+@main.route('/rma/<int:id>/ship-vendor', methods=['POST'])
+@login_required
+def rma_ship_vendor(id):
+    if get_userrole(current_user.id) < 2: abort(403)
+    case = RmaCases.query.get_or_404(id)
+    case.status = 'shipped_to_vendor'
+    case.vendorrmano = request.form.get('vendorrmano', '')
+    case.shippn = request.form.get('shippn', '') or case.shippn or ''
+    case.partsn = request.form.get('partsn', '') or case.partsn or ''
+    case.vendorname = request.form.get('vendorname', '')
+    case.category = request.form.get('category', '')
+    case.shiptovendortime = datetime.datetime.now()
+    case.shiptovendorid = current_user.id
+
+    if request.form.get('report_quality'):
+        source = 'Production Line' if case.customers.upper() == 'NTA' else 'RMA'
+        ql = QualityLog(
+            source=source,
+            wo=case.ntarmano,
+            pn=case.pn,
+            csn=case.csn,
+            defectpart=case.shippn or '',
+            defectpartsn=case.partsn or '',
+            reason=case.descriptionbycustomer or '',
+            status='New',
+            reportid=current_user.id,
+            reporttime=datetime.datetime.now(),
+            ownerid=current_user.id,
+            processlog='',
+            conclusion=None,
+            cause=None,
+            vendorname=request.form.get('vendorname', ''),
+            category=request.form.get('category', ''),
+        )
+        db.session.add(ql)
+
+    db.session.commit()
+    return redirect(url_for('main.rma_list'))
+
+@main.route('/rma/<int:id>/recv-vendor', methods=['POST'])
+@login_required
+def rma_recv_vendor(id):
+    if get_userrole(current_user.id) < 2: abort(403)
+    case = RmaCases.query.get_or_404(id)
+    case.status = 'recv_from_vendor'
+    case.recvfromvendortime = datetime.datetime.now()
+    case.recvfromvendorid = current_user.id
+    db.session.commit()
+    return redirect(url_for('main.rma_list'))
+
+@main.route('/rma/<int:id>/close', methods=['POST'])
+@login_required
+def rma_close(id):
+    if get_userrole(current_user.id) < 2: abort(403)
+    case = RmaCases.query.get_or_404(id)
+    case.conclusion = request.form['conclusion']
+    case.notes = request.form.get('notes', '')
+    vendor_rma = request.form.get('vendorrmano_close', '').strip()
+    if vendor_rma:
+        case.status = 'waiting_for_shipping'
+        case.vendorrmano = vendor_rma
+        case.shippn = request.form.get('shippn_close', '')
+        case.partsn = request.form.get('partsn_close', '')
+        case.assetowner = 'NTA'
+    else:
+        case.status = 'closed'
+        case.closetime = datetime.datetime.now()
+        case.closeid = current_user.id
+    db.session.commit()
+    return redirect(url_for('main.rma_list'))
+
+@main.route('/rma/download/<filename>')
+@login_required
+def rma_download(filename):
+    if get_userrole(current_user.id) < 2: abort(403)
+    outdir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../static/rma')
+    outdir = os.path.abspath(outdir)
+    return send_from_directory(outdir, filename)
+
+@main.route('/rma/export')
+@login_required
+def rma_export():
+    if get_userrole(current_user.id) < 2: abort(403)
+    start_date = request.args.get('start_date', '')
+    end_date = request.args.get('end_date', '')
+    keywords = request.args.get('keywords', '')
+    query = RmaCases.query.order_by(RmaCases.cstime.desc())
+    if keywords:
+        q = '%' + keywords + '%'
+        query = query.filter(
+            db.or_(
+                RmaCases.ntarmano.ilike(q),
+                RmaCases.customers.ilike(q),
+                RmaCases.pn.ilike(q),
+                RmaCases.csn.ilike(q),
+                RmaCases.descriptionbycustomer.ilike(q),
+                RmaCases.shippn.ilike(q),
+                RmaCases.partsn.ilike(q),
+                RmaCases.vendorrmano.ilike(q),
+                RmaCases.assetowner.ilike(q),
+            )
+        )
+    if start_date:
+        try:
+            query = query.filter(RmaCases.cstime >= datetime.datetime.strptime(start_date, '%Y-%m-%d'))
+        except: pass
+    if end_date:
+        try:
+            query = query.filter(RmaCases.cstime < datetime.datetime.strptime(end_date, '%Y-%m-%d') + datetime.timedelta(days=1))
+        except: pass
+    cases = query.all()
+    si = io.StringIO()
+    cw = csv.writer(si)
+    cw.writerow(['RMA#', 'Customer', 'PN', 'CSN', 'Description', 'Created', 'Status',
+                 'Contact', 'Email', 'Phone', 'Shipping Address',
+                 'Received', 'Recv By', 'Processed', 'Process By',
+                 'Shipped to Vendor', 'Ship By', 'Vendor RMA#',
+                 'Recv from Vendor', 'Vendor Recv By',
+                 'Closed', 'Closed By', 'Conclusion', 'Notes'])
+    for c in cases:
+        cw.writerow([c.ntarmano, c.customers, c.pn, c.csn, c.descriptionbycustomer,
+                     c.cstime, c.status,
+                     c.rmacontactname, c.rmacontactemail, c.rmacontactphone, c.shippingaddress,
+                     c.recvtime, get_username(c.recvid) if c.recvid else '',
+                     c.startprocesstime, get_username(c.processid) if c.processid else '',
+                     c.shiptovendortime, get_username(c.shiptovendorid) if c.shiptovendorid else '',
+                     c.vendorrmano,
+                     c.recvfromvendortime, get_username(c.recvfromvendorid) if c.recvfromvendorid else '',
+                     c.closetime, get_username(c.closeid) if c.closeid else '',
+                     c.conclusion, c.notes])
+    out = si.getvalue()
+    si.close()
+    return Response(out, mimetype='text/csv',
+                    headers={'Content-Disposition': f'attachment;filename=rmacases_{datetime.datetime.now().strftime("%y%m%d")}.csv'})
 
