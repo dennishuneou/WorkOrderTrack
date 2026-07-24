@@ -4,7 +4,7 @@ from app.asset.forms import AddWorkorderForm, UploadReportForm, ReviewReportForm
 from app.asset.forms import AddProductForm,QueryProductsForm,EditProductForm,QueryWorkordersForm,PackingCalculateForm
 from app.asset.forms import QueryQlogForm,AddQualityLogForm,EditQualityLogForm
 from app.asset import main
-from app.asset.models import WorkOrder, Production, PnMap, PackageBox, QualityLog, RmaCases
+from app.asset.models import WorkOrder, Production, PnMap, PackageBox, QualityLog, RmaCases, RmaVendorShipment
 from flask import render_template, flash, request, redirect, url_for, session, send_from_directory, Response, abort
 from app import db
 from app.asset.forms import get_biosversion, get_sopversion
@@ -341,6 +341,27 @@ def dashboard():
         'waiting_inspection': uf(WorkOrder.query.filter_by(status=1)).count(),
         'completed_today': uf(WorkOrder.query.filter(func.DATE(WorkOrder.intime) == func.DATE(today), WorkOrder.status == 2)).count(),
     }
+
+    # RMA Cases counts
+    rma_counts_val = {
+        'new': RmaCases.query.filter_by(status='new').count(),
+        'received': RmaCases.query.filter_by(status='received').count(),
+        'processing': RmaCases.query.filter_by(status='processing').count(),
+        'waiting_for_shipping': RmaCases.query.filter_by(status='waiting_for_shipping').count(),
+        'shipped_to_vendor': RmaCases.query.filter_by(status='shipped_to_vendor').count(),
+        'closed': RmaCases.query.filter_by(status='closed').count(),
+        'total': RmaCases.query.count(),
+    }
+    from sqlalchemy import func as sa_func
+    cc = db.session.query(RmaCases.conclusion, sa_func.count(RmaCases.id)).filter(
+        RmaCases.status == 'closed', RmaCases.conclusion != None, RmaCases.conclusion != ''
+    ).group_by(RmaCases.conclusion).order_by(sa_func.count(RmaCases.id).desc()).all()
+    rma_counts_val['conclusions'] = cc
+    from sqlalchemy import func as sa_func
+    closed_conclusions = db.session.query(RmaCases.conclusion, sa_func.count(RmaCases.id)).filter(
+        RmaCases.status == 'closed', RmaCases.conclusion != None, RmaCases.conclusion != ''
+    ).group_by(RmaCases.conclusion).order_by(sa_func.count(RmaCases.id).desc()).all()
+    rma_counts_val['conclusions'] = closed_conclusions
 
     # Operator ranking
     rank_period_days = 7
@@ -679,7 +700,8 @@ def dashboard():
                            ranking_scores=ranking_scores,
                            ranking_labels28=ranking_labels28, ranking_counts28=ranking_counts28,
                             ranking_scores28=ranking_scores28, quality_data=quality_data, userrole=role,
-                            detail_table=detail_table, detail_table28=detail_table28)
+                            detail_table=detail_table, detail_table28=detail_table28,
+                            rma_counts=rma_counts_val)
 
 @main.route('/api/workorder-counts')
 @login_required
@@ -2089,9 +2111,6 @@ def rma_list():
                 RmaCases.pn.ilike(q),
                 RmaCases.csn.ilike(q),
                 RmaCases.descriptionbycustomer.ilike(q),
-                RmaCases.shippn.ilike(q),
-                RmaCases.partsn.ilike(q),
-                RmaCases.vendorrmano.ilike(q),
                 RmaCases.assetowner.ilike(q),
             )
         )
@@ -2116,12 +2135,16 @@ def rma_list():
         safe_cust = c.customers.replace('/', '_').replace('\\', '_')
         safe_pn = c.pn.replace('/', '_').replace('\\', '_')
         cnt = RmaCases.query.filter_by(ntarmano=c.ntarmano).count()
-        c.file_base = f"00_{c.ntarmano}_{safe_cust}_{safe_pn}_{cnt}Units"
+        c.file_base = f"00_Neousys_{c.ntarmano}_{safe_cust}_{safe_pn}_{cnt}Units"
         c.recvby = get_username(c.recvid) if c.recvid else ''
         c.processby = get_username(c.processid) if c.processid else ''
-        c.shipby = get_username(c.shiptovendorid) if c.shiptovendorid else ''
-        c.recvfromvendorby = get_username(c.recvfromvendorid) if c.recvfromvendorid else ''
+        latest = c.shipments.order_by(RmaVendorShipment.shiptovendortime.desc()).first()
+        c.latest_shipment = latest
+        c.shipby = get_username(latest.shiptovendorid) if (latest and latest.shiptovendorid) else ''
+        c.recvfromvendorby = get_username(latest.recvfromvendorid) if (latest and latest.recvfromvendorid) else ''
         c.closeby = get_username(c.closeid) if c.closeid else ''
+        if not c.assetowner:
+            c.assetowner = c.customers
     counts = {
         'new': RmaCases.query.filter_by(status='new').count(),
         'received': RmaCases.query.filter_by(status='received').count(),
@@ -2150,6 +2173,9 @@ def next_ntarmano():
 
 
 def generate_rma_files(case, csns=None):
+    import zipfile, io, shutil
+    from lxml import etree
+
     basedir = os.path.dirname(os.path.abspath(__file__))
     template = os.path.join(basedir, '../../rma_template.docx')
     outdir = os.path.join(basedir, '../static/rma')
@@ -2157,53 +2183,108 @@ def generate_rma_files(case, csns=None):
     os.makedirs(outdir, exist_ok=True)
     safe_cust = case.customers.replace('/', '_').replace('\\', '_')
     safe_pn = case.pn.replace('/', '_').replace('\\', '_')
-    base = f"00_{case.ntarmano}_{safe_cust}_{safe_pn}_{len(csns) if csns else 1}Units"
+    base = f"00_Neousys_{case.ntarmano}_{safe_cust}_{safe_pn}_{len(csns) if csns else 1}Units"
     docx_path = os.path.join(outdir, base + '.docx')
     doc_path = os.path.join(outdir, base + '.doc')
     pdf_path = os.path.join(outdir, base + '.pdf')
 
-    from docx import Document
-    doc = Document(template)
-    t0 = doc.tables[0]
-    t1 = doc.tables[1]
+    W = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
+    XML_SPACE = '{http://www.w3.org/XML/1998/namespace}space'
 
-    def set_cell(table, row, col, text):
-        cell = table.cell(row, col)
-        p = cell.paragraphs[0]
-        p.clear()
-        p.add_run(str(text))
+    def visual_to_cell(cells, vis_col):
+        span = 0
+        for ci, cell in enumerate(cells):
+            tc_pr = cell.find(f'{W}tcPr')
+            n = 1
+            if tc_pr is not None:
+                gs = tc_pr.find(f'{W}gridSpan')
+                if gs is not None and gs.get(f'{W}val'):
+                    n = int(gs.get(f'{W}val'))
+            if vis_col < span + n:
+                return ci
+            span += n
+        return None
 
-    def append_cell(table, row, col, text):
-        cell = table.cell(row, col)
-        p = cell.paragraphs[1]
-        p.add_run(str(text))
+    def set_xml_cell(doc_xml, table_idx, row_idx, vis_col, text):
+        root = etree.fromstring(doc_xml)
+        tables = root.findall(f'.//{W}tbl')
+        if table_idx >= len(tables):
+            return doc_xml
+        rows = tables[table_idx].findall(f'.//{W}tr')
+        if row_idx >= len(rows):
+            return doc_xml
+        cells = rows[row_idx].findall(f'.//{W}tc')
+        ci = visual_to_cell(cells, vis_col)
+        if ci is None:
+            return doc_xml
+        for p in cells[ci].findall(f'.//{W}p'):
+            runs = p.findall(f'.//{W}r')
+            if runs:
+                texts = runs[0].findall(f'.//{W}t')
+                if texts:
+                    texts[0].text = str(text)
+                    texts[0].set(XML_SPACE, 'preserve')
+                    return etree.tostring(root, xml_declaration=True, encoding='UTF-8', standalone=True)
+            # No runs - create one
+            r_elem = etree.SubElement(p, f'{W}r')
+            t_elem = etree.SubElement(r_elem, f'{W}t')
+            t_elem.text = str(text)
+            t_elem.set(XML_SPACE, 'preserve')
+            return etree.tostring(root, xml_declaration=True, encoding='UTF-8', standalone=True)
+        return doc_xml
 
-    now = datetime.datetime.now()
-    append_cell(t0, 0, 3, case.ntarmano)
-    set_cell(t0, 2, 1, now.strftime('%m/%d/%Y'))
-    set_cell(t0, 3, 1, case.customers)
-    set_cell(t0, 4, 1, case.shippingaddress or '')
-    set_cell(t0, 6, 1, case.rmacontactname or '')
-    set_cell(t0, 6, 5, case.rmacontactemail or '')
-    set_cell(t0, 7, 1, case.rmacontactphone or '')
-    if case.rmacontactname1:
-        set_cell(t0, 8, 1, case.rmacontactname1)
-        set_cell(t0, 8, 4, case.rmacontactemail1 or '')
-    if case.rmacontactphone1:
-        set_cell(t0, 9, 1, case.rmacontactphone1)
+    def append_xml_cell(doc_xml, table_idx, row_idx, vis_col, text):
+        root = etree.fromstring(doc_xml)
+        tables = root.findall(f'.//{W}tbl')
+        if table_idx >= len(tables):
+            return doc_xml
+        rows = tables[table_idx].findall(f'.//{W}tr')
+        if row_idx >= len(rows):
+            return doc_xml
+        cells = rows[row_idx].findall(f'.//{W}tc')
+        ci = visual_to_cell(cells, vis_col)
+        if ci is None:
+            return doc_xml
+        all_paras = cells[ci].findall(f'.//{W}p')
+        p = all_paras[1] if len(all_paras) > 1 else all_paras[0]
+        r_elem = etree.SubElement(p, f'{W}r')
+        t_elem = etree.SubElement(r_elem, f'{W}t')
+        t_elem.text = str(text)
+        t_elem.set(XML_SPACE, 'preserve')
+        return etree.tostring(root, xml_declaration=True, encoding='UTF-8', standalone=True)
 
-    csn_str = ', '.join(csns) if csns else case.csn
-    set_cell(t1, 1, 0, case.pn)
-    set_cell(t1, 1, 1, csn_str)
-    set_cell(t1, 1, 3, str(len(csns)) if csns else '1')
-    if case.cstime:
-        set_cell(t1, 2, 0, case.cstime.strftime('%m/%d/%Y'))
-    set_cell(t1, 3, 0, case.descriptionbycustomer or '')
+    # Read template, modify XML directly
+    with zipfile.ZipFile(template, 'r') as zin:
+        doc_xml = zin.read('word/document.xml')
+        now = datetime.datetime.now()
+        doc_xml = append_xml_cell(doc_xml, 0, 0, 3, case.ntarmano)
+        doc_xml = set_xml_cell(doc_xml, 0, 2, 1, now.strftime('%m/%d/%Y'))
+        doc_xml = set_xml_cell(doc_xml, 0, 3, 1, case.customers)
+        doc_xml = set_xml_cell(doc_xml, 0, 4, 1, case.shippingaddress or '')
+        doc_xml = set_xml_cell(doc_xml, 0, 6, 1, case.rmacontactname or '')
+        doc_xml = set_xml_cell(doc_xml, 0, 6, 5, case.rmacontactemail or '')
+        doc_xml = set_xml_cell(doc_xml, 0, 7, 1, case.rmacontactphone or '')
+        if case.rmacontactname1:
+            doc_xml = set_xml_cell(doc_xml, 0, 8, 1, case.rmacontactname1)
+            doc_xml = set_xml_cell(doc_xml, 0, 8, 4, case.rmacontactemail1 or '')
+        if case.rmacontactphone1:
+            doc_xml = set_xml_cell(doc_xml, 0, 9, 1, case.rmacontactphone1)
+        csn_str = ', '.join(csns) if csns else case.csn
+        doc_xml = set_xml_cell(doc_xml, 1, 1, 0, case.pn)
+        doc_xml = set_xml_cell(doc_xml, 1, 1, 1, csn_str)
+        doc_xml = set_xml_cell(doc_xml, 1, 1, 3, str(len(csns)) if csns else '1')
+        if case.cstime:
+            doc_xml = set_xml_cell(doc_xml, 1, 2, 0, case.cstime.strftime('%m/%d/%Y'))
+        doc_xml = set_xml_cell(doc_xml, 1, 3, 0, case.descriptionbycustomer or '')
 
-    doc.save(docx_path)
-    subprocess.run(['libreoffice', '--headless', '--convert-to', 'doc',
-                    docx_path, '--outdir', outdir],
-                   capture_output=True, timeout=30)
+        # Write modified docx
+        with zipfile.ZipFile(docx_path, 'w', zipfile.ZIP_DEFLATED) as zout:
+            for item in zin.infolist():
+                if item.filename == 'word/document.xml':
+                    zout.writestr(item, doc_xml)
+                else:
+                    zout.writestr(item, zin.read(item.filename))
+
     subprocess.run(['libreoffice', '--headless', '--convert-to', 'pdf',
                     docx_path, '--outdir', outdir],
                    capture_output=True, timeout=30)
@@ -2280,6 +2361,12 @@ def rma_wait_shipping(id):
     if get_userrole(current_user.id) < 2: abort(403)
     case = RmaCases.query.get_or_404(id)
     case.status = 'waiting_for_shipping'
+    vendorrmano = request.form.get('vendorrmano', '')
+    shippn = request.form.get('shippn', '')
+    partsn = request.form.get('partsn', '')
+    if vendorrmano or shippn or partsn:
+        shipment = RmaVendorShipment(rma_case_id=case.id, vendorrmano=vendorrmano, shippn=shippn, partsn=partsn)
+        db.session.add(shipment)
     db.session.commit()
     return redirect(url_for('main.rma_list'))
 
@@ -2380,9 +2467,10 @@ def rma_unshipped(id):
     if get_userrole(current_user.id) < 2: abort(403)
     case = RmaCases.query.get_or_404(id)
     if case.status == 'shipped_to_vendor':
+        s = case.shipments.filter_by(status='shipped').order_by(RmaVendorShipment.shiptovendortime.desc()).first()
+        if s:
+            db.session.delete(s)
         case.status = 'waiting_for_shipping'
-        case.shiptovendortime = None
-        case.shiptovendorid = None
         db.session.commit()
     return redirect(url_for('main.rma_list'))
 
@@ -2391,10 +2479,13 @@ def rma_unshipped(id):
 def rma_unrecv_vendor(id):
     if get_userrole(current_user.id) < 2: abort(403)
     case = RmaCases.query.get_or_404(id)
-    if case.status == 'recv_from_vendor':
+    if case.status == 'processing':
+        s = case.shipments.filter_by(status='received').order_by(RmaVendorShipment.recvfromvendortime.desc()).first()
+        if s:
+            s.recvfromvendortime = None
+            s.recvfromvendorid = None
+            s.status = 'shipped'
         case.status = 'shipped_to_vendor'
-        case.recvfromvendortime = None
-        case.recvfromvendorid = None
         db.session.commit()
     return redirect(url_for('main.rma_list'))
 
@@ -2404,13 +2495,23 @@ def rma_ship_vendor(id):
     if get_userrole(current_user.id) < 2: abort(403)
     case = RmaCases.query.get_or_404(id)
     case.status = 'shipped_to_vendor'
-    case.vendorrmano = request.form.get('vendorrmano', '')
-    case.shippn = request.form.get('shippn', '') or case.shippn or ''
-    case.partsn = request.form.get('partsn', '') or case.partsn or ''
-    case.vendorname = request.form.get('vendorname', '')
-    case.category = request.form.get('category', '')
-    case.shiptovendortime = datetime.datetime.now()
-    case.shiptovendorid = current_user.id
+    shippn = request.form.get('shippn', '') or ''
+    partsn = request.form.get('partsn', '') or ''
+    vendorname = request.form.get('vendorname', '')
+    category = request.form.get('category', '')
+    vendorrmano = request.form.get('vendorrmano', '')
+
+    shipment = RmaVendorShipment(
+        rma_case_id=case.id,
+        vendorrmano=vendorrmano,
+        shippn=shippn,
+        partsn=partsn,
+        vendorname=vendorname,
+        category=category,
+        shiptovendortime=datetime.datetime.now(),
+        shiptovendorid=current_user.id,
+    )
+    db.session.add(shipment)
 
     if request.form.get('report_quality'):
         source = 'Production Line' if case.customers.upper() == 'NTA' else 'RMA'
@@ -2419,8 +2520,8 @@ def rma_ship_vendor(id):
             wo=case.ntarmano,
             pn=case.pn,
             csn=case.csn,
-            defectpart=case.shippn or '',
-            defectpartsn=case.partsn or '',
+            defectpart=shippn,
+            defectpartsn=partsn,
             reason=case.descriptionbycustomer or '',
             status='New',
             reportid=current_user.id,
@@ -2429,8 +2530,8 @@ def rma_ship_vendor(id):
             processlog='',
             conclusion=None,
             cause=None,
-            vendorname=request.form.get('vendorname', ''),
-            category=request.form.get('category', ''),
+            vendorname=vendorname,
+            category=category,
         )
         db.session.add(ql)
 
@@ -2442,10 +2543,14 @@ def rma_ship_vendor(id):
 def rma_recv_vendor(id):
     if get_userrole(current_user.id) < 2: abort(403)
     case = RmaCases.query.get_or_404(id)
-    case.status = 'recv_from_vendor'
-    case.recvfromvendortime = datetime.datetime.now()
-    case.recvfromvendorid = current_user.id
+    shipment = case.shipments.filter_by(status='shipped').order_by(RmaVendorShipment.shiptovendortime.desc()).first()
+    if shipment:
+        shipment.recvfromvendortime = datetime.datetime.now()
+        shipment.recvfromvendorid = current_user.id
+        shipment.status = 'received'
+    case.status = 'processing'
     db.session.commit()
+    flash('Vendor shipment received, case returned to processing')
     return redirect(url_for('main.rma_list'))
 
 @main.route('/rma/<int:id>/close', methods=['POST'])
@@ -2494,9 +2599,6 @@ def rma_export():
                 RmaCases.pn.ilike(q),
                 RmaCases.csn.ilike(q),
                 RmaCases.descriptionbycustomer.ilike(q),
-                RmaCases.shippn.ilike(q),
-                RmaCases.partsn.ilike(q),
-                RmaCases.vendorrmano.ilike(q),
                 RmaCases.assetowner.ilike(q),
             )
         )

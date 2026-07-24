@@ -345,8 +345,44 @@
           </div>
         </div>
       </div>
-      <!-- Quality Log Summary -->
-      <div class="card card-social mt-3">
+    </div>
+    <div class="col-md-6">
+      <div class="card card-social">
+        <div class="card-block border-bottom">
+          <h5 class="mb-0"><span class="text-muted">Operator Ranking</span></h5>
+        </div>
+        <div class="card-block p-0">
+          <table class="table table-striped table-hover mb-0" id="rankTable">
+            <thead class="thead-light">
+              <tr>
+                <th>#</th>
+                <th>Operator</th>
+                <th class="text-right">Units</th>
+                <th class="text-right">Score</th>
+              </tr>
+            </thead>
+              <tbody id="rankTableBody">
+              {% for op in ranking %}
+              <tr class="operator-row" data-opid="{{ op.id }}">
+                <td>{{ loop.index }}</td>
+                <td><a href="#" onclick="filterByOperator({{ op.id }}, '{{ op.name }}'); return false;">{{ op.name }}</a></td>
+                <td class="text-right">{{ op.count }}</td>
+                <td class="text-right"><strong>{{ op.score }}</strong></td>
+              </tr>
+              {% endfor %}
+              {% if not ranking %}
+              <tr><td colspan="4" class="text-center text-muted">No data</td></tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Quality / RMA row -->
+  <div class="row mt-4">
+    <div class="col-md-6">
+      <div class="card card-social">
         <div class="card-block border-bottom">
           <h5 class="mb-0"><span class="text-muted">Quality Log Summary</span></h5>
         </div>
@@ -383,38 +419,38 @@
           {% endif %}
         </div>
       </div>
-    </div>
-    <div class="col-md-6">
-      <div class="card card-social">
+      <!-- RMA Cases Summary -->
+      <div class="card card-social mt-3">
         <div class="card-block border-bottom">
-          <h5 class="mb-0"><span class="text-muted">Operator Ranking</span></h5>
+          <h5 class="mb-0"><span class="text-muted">RMA Cases</span></h5>
         </div>
-        <div class="card-block p-0">
-          <table class="table table-striped table-hover mb-0" id="rankTable">
-            <thead class="thead-light">
-              <tr>
-                <th>#</th>
-                <th>Operator</th>
-                <th class="text-right">Units</th>
-                <th class="text-right">Score</th>
-              </tr>
-            </thead>
-              <tbody id="rankTableBody">
-              {% for op in ranking %}
-              <tr class="operator-row" data-opid="{{ op.id }}">
-                <td>{{ loop.index }}</td>
-                <td><a href="#" onclick="filterByOperator({{ op.id }}, '{{ op.name }}'); return false;">{{ op.name }}</a></td>
-                <td class="text-right">{{ op.count }}</td>
-                <td class="text-right"><strong>{{ op.score }}</strong></td>
-              </tr>
+        <div class="card-block">
+          <div class="row text-center mb-2">
+            <div class="col-3"><h5 class="text-c-green mb-0">{{ rma_counts.new }}</h5><small class="text-muted">New</small></div>
+            <div class="col-3"><h5 class="text-c-green mb-0">{{ rma_counts.received }}</h5><small class="text-muted">Received</small></div>
+            <div class="col-3"><h5 class="text-c-green mb-0">{{ rma_counts.processing }}</h5><small class="text-muted">Processing</small></div>
+            <div class="col-3"><h5 class="text-c-green mb-0">{{ rma_counts.waiting_for_shipping }}</h5><small class="text-muted">Wait Ship</small></div>
+          </div>
+          <div class="row text-center">
+            <div class="col-4"><h5 class="text-c-green mb-0">{{ rma_counts.shipped_to_vendor }}</h5><small class="text-muted">Shipped</small></div>
+            <div class="col-4"><h5 class="text-c-green mb-0">{{ rma_counts.closed }}</h5><small class="text-muted">Closed</small></div>
+            <div class="col-4"><h5 class="text-c-green mb-0">{{ rma_counts.total }}</h5><small class="text-muted">Total</small></div>
+          </div>
+          {% if rma_counts.conclusions %}
+          <div class="row mt-3">
+            <div class="col-12">
+              <small class="text-muted"><strong>Closed by Conclusion</strong></small>
+              {% for conc, cnt in rma_counts.conclusions %}
+              <div class="d-flex justify-content-between"><small>{{ conc }}</small><small class="text-muted">{{ cnt }}</small></div>
               {% endfor %}
-              {% if not ranking %}
-              <tr><td colspan="4" class="text-center text-muted">No data</td></tr>
-              {% endif %}
-            </tbody>
-          </table>
+            </div>
+          </div>
+          {% endif %}
         </div>
       </div>
+    </div>
+    <div class="col-md-6">
+      <!-- right column content (Ranking 28, Trend, etc.) remains here -->
     </div>
   </div>
 </div>

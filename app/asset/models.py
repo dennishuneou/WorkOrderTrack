@@ -280,15 +280,8 @@ class RmaCases(db.Model):
     recvtime=db.Column(db.DateTime, nullable=True)
     processid=db.Column(db.Integer, nullable=True)
     startprocesstime=db.Column(db.DateTime, nullable=True)
-    shiptovendortime=db.Column(db.DateTime, nullable=True)
-    shiptovendorid=db.Column(db.Integer, nullable=True)
-    shippn=db.Column(db.String(100), nullable=True)
-    partsn=db.Column(db.String(100), nullable=True)
-    recvfromvendortime=db.Column(db.DateTime, nullable=True)
-    recvfromvendorid=db.Column(db.Integer, nullable=True)
     closetime=db.Column(db.DateTime, nullable=True)
     closeid=db.Column(db.Integer, nullable=True)
-    vendorrmano = db.Column(db.String(32), nullable=True)
     conclusion = db.Column(db.String(32), nullable=True)
     notes = db.Column(db.String(2000), nullable=True)
     status = db.Column(db.String(32), nullable=False)
@@ -302,9 +295,8 @@ class RmaCases(db.Model):
     assetowner = db.Column(db.String(100), nullable=False, default='customer')
     special = db.Column(db.String(100), nullable=True)
     rmatype = db.Column(db.String(20), nullable=False, default='RMA')
-    vendorname = db.Column(db.String(100), nullable=True)
-    category = db.Column(db.String(32), nullable=True)
-
+    shipments = db.relationship('RmaVendorShipment', backref='rma_case', lazy='dynamic',
+                                order_by='RmaVendorShipment.shiptovendortime')
 
     def __init__(self, ntarmano, customers, pn, csn, warranty,
                  descriptionbycustomer, csid, cstime,
@@ -332,4 +324,32 @@ class RmaCases(db.Model):
 
     def __repr__(self):
         return 'RMA {} - {}'.format(self.ntarmano, self.status)
+
+class RmaVendorShipment(db.Model):
+    __tablename__ = 'rmavendorshipment'
+    id = db.Column(db.Integer, primary_key=True)
+    rma_case_id = db.Column(db.Integer, db.ForeignKey('rmacases.id'), nullable=False)
+    vendorrmano = db.Column(db.String(32), nullable=True)
+    shippn = db.Column(db.String(100), nullable=True)
+    partsn = db.Column(db.String(100), nullable=True)
+    vendorname = db.Column(db.String(100), nullable=True)
+    category = db.Column(db.String(32), nullable=True)
+    shiptovendortime = db.Column(db.DateTime, nullable=True)
+    shiptovendorid = db.Column(db.Integer, nullable=True)
+    recvfromvendortime = db.Column(db.DateTime, nullable=True)
+    recvfromvendorid = db.Column(db.Integer, nullable=True)
+    status = db.Column(db.String(16), nullable=False, default='shipped')
+
+    def __init__(self, rma_case_id, vendorrmano='', shippn='', partsn='',
+                 vendorname='', category='', shiptovendortime=None,
+                 shiptovendorid=None):
+        self.rma_case_id = rma_case_id
+        self.vendorrmano = vendorrmano
+        self.shippn = shippn
+        self.partsn = partsn
+        self.vendorname = vendorname
+        self.category = category
+        self.shiptovendortime = shiptovendortime
+        self.shiptovendorid = shiptovendorid
+        self.status = 'shipped'
 
