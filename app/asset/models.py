@@ -339,10 +339,11 @@ class RmaVendorShipment(db.Model):
     recvfromvendortime = db.Column(db.DateTime, nullable=True)
     recvfromvendorid = db.Column(db.Integer, nullable=True)
     status = db.Column(db.String(16), nullable=False, default='shipped')
+    assetowner = db.Column(db.String(100), nullable=True)
 
     def __init__(self, rma_case_id, vendorrmano='', shippn='', partsn='',
                  vendorname='', category='', shiptovendortime=None,
-                 shiptovendorid=None):
+                 shiptovendorid=None, assetowner=None):
         self.rma_case_id = rma_case_id
         self.vendorrmano = vendorrmano
         self.shippn = shippn
@@ -351,5 +352,6 @@ class RmaVendorShipment(db.Model):
         self.category = category
         self.shiptovendortime = shiptovendortime
         self.shiptovendorid = shiptovendorid
+        self.assetowner = assetowner
         self.status = 'shipped'
 

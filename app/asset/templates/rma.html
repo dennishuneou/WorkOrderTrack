@@ -34,6 +34,9 @@
         <li class="nav-item">
             <a class="nav-link {% if current_status == 'closed' %}active{% endif %}" href="{{ url_for('main.rma_list', status='closed') }}">Closed ({{ counts.closed }})</a>
         </li>
+        <li class="nav-item">
+            <a class="nav-link {% if current_status == 'canceled' %}active{% endif %}" href="{{ url_for('main.rma_list', status='canceled') }}">Canceled ({{ counts.canceled }})</a>
+        </li>
     </ul>
     <form method="get" class="form-inline mb-3">
         <input type="hidden" name="status" value="{{ current_status }}">
@@ -82,10 +85,9 @@
                     {% if current_status in ('processing', 'all') %}<td>{{ case.startprocesstime.strftime('%m/%d %H:%M') if case.startprocesstime else '' }}</td><td>{{ case.processby }}</td>
                     <td title="{{ case.notes }}">{{ case.notes[:80] if case.notes else '' }}{% if case.notes and case.notes|length > 80 %}...{% endif %}</td>{% endif %}
                     {% set s = case.latest_shipment %}
-                    {% if current_status in ('shipped_to_vendor', 'all') %}<td>{{ s.shiptovendortime.strftime('%m/%d %H:%M') if s and s.shiptovendortime else '' }}</td><td>{{ case.shipby }}</td><td>{{ s.vendorrmano or '' if s else '' }}</td><td>{{ s.shippn or '' if s else '' }}</td><td>{{ s.partsn or '' if s else '' }}</td><td>{{ case.assetowner }}</td><td>{{ s.vendorname or '' if s else '' }}</td><td>{{ s.category or '' if s else '' }}</td>{% endif %}
-                    {% if current_status == 'waiting_for_shipping' %}<td>{{ case.assetowner }}</td><td>{{ s.shippn or '' if s else '' }}</td><td>{{ s.partsn or '' if s else '' }}</td>{% endif %}
-                    {% if current_status == 'recv_from_vendor' %}<td>{{ s.recvfromvendortime.strftime('%m/%d %H:%M') if s and s.recvfromvendortime else '' }}</td><td>{{ case.recvfromvendorby }}</td>{% endif %}
-                    {% if current_status in ('closed', 'all') %}<td>{{ case.closetime.strftime('%m/%d %H:%M') if case.closetime else '' }}</td><td>{{ case.closeby }}</td><td>{{ case.conclusion }}</td><td>{{ s.vendorrmano or '' if s else '' }}</td><td>{{ case.assetowner }}</td>{% endif %}
+                    {% if current_status in ('shipped_to_vendor', 'all') %}<td>{{ s.shiptovendortime.strftime('%m/%d %H:%M') if s and s.shiptovendortime else '' }}</td><td>{{ case.shipby }}</td><td>{{ s.vendorrmano or '' if s else '' }}</td><td>{{ s.shippn or '' if s else '' }}</td><td>{{ s.partsn or '' if s else '' }}</td><td>{{ s.assetowner or case.assetowner }}</td><td>{{ s.vendorname or '' if s else '' }}</td><td>{{ s.category or '' if s else '' }}</td>{% endif %}
+                    {% if current_status == 'waiting_for_shipping' %}<td>{{ s.assetowner or case.assetowner }}</td><td>{{ s.shippn or '' if s else '' }}</td><td>{{ s.partsn or '' if s else '' }}</td>{% endif %}
+                    {% if current_status in ('closed', 'all') %}<td>{{ case.closetime.strftime('%m/%d %H:%M') if case.closetime else '' }}</td><td>{{ case.closeby }}</td><td>{{ case.conclusion }}</td><td>{{ s.vendorrmano or '' if s else '' }}</td><td>{{ s.assetowner or case.assetowner }}</td>{% endif %}
                     {% if current_status == 'all' %}<td>
                         <textarea id="notes-{{ case.id }}" rows="2" style="width:200px;font-size:0.8rem">{{ case.notes or '' }}</textarea>
                         <button class="btn btn-sm btn-outline-primary" onclick="saveNotes({{ case.id }})">Save</button>
@@ -105,6 +107,8 @@
                             <span class="badge badge-secondary">Received from Vendor</span>
                         {% elif case.status == 'closed' %}
                             <span class="badge badge-success">Closed</span>
+                        {% elif case.status == 'canceled' %}
+                            <span class="badge badge-dark">Canceled</span>
                         {% endif %}
                     </td>
                     <td>
@@ -118,7 +122,10 @@
                         <form action="{{ url_for('main.rma_receive', id=case.id) }}" method="post" style="display:inline">
                             <button class="btn btn-sm btn-info">Mark Received</button>
                         </form>
-                        <form action="{{ url_for('main.rma_delete', id=case.id) }}" method="post" style="display:inline" onsubmit="return confirm('Delete RMA {{ case.ntarmano }}?')">
+                        <form action="{{ url_for('main.rma_delete', id=case.id) }}" method="post" style="display:inline" onsubmit="return confirm('Cancel RMA {{ case.ntarmano }}?')">
+                            <button class="btn btn-sm btn-warning">Cancel</button>
+                        </form>
+                        <form action="{{ url_for('main.rma_hard_delete', id=case.id) }}" method="post" style="display:inline" onsubmit="return confirm('Permanently DELETE RMA {{ case.ntarmano }}? This cannot be undone!')">
                             <button class="btn btn-sm btn-danger">Delete</button>
                         </form>
                         {% elif case.status == 'received' %}

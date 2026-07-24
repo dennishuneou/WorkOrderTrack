@@ -2151,8 +2151,8 @@ def rma_list():
         'processing': RmaCases.query.filter_by(status='processing').count(),
         'waiting_for_shipping': RmaCases.query.filter_by(status='waiting_for_shipping').count(),
         'shipped_to_vendor': RmaCases.query.filter_by(status='shipped_to_vendor').count(),
-        'recv_from_vendor': RmaCases.query.filter_by(status='recv_from_vendor').count(),
         'closed': RmaCases.query.filter_by(status='closed').count(),
+        'canceled': RmaCases.query.filter_by(status='canceled').count(),
     }
     return render_template('rma.html', cases=cases, counts=counts,
                            current_status=status_filter, userrole=role,
@@ -2365,7 +2365,8 @@ def rma_wait_shipping(id):
     shippn = request.form.get('shippn', '')
     partsn = request.form.get('partsn', '')
     if vendorrmano or shippn or partsn:
-        shipment = RmaVendorShipment(rma_case_id=case.id, vendorrmano=vendorrmano, shippn=shippn, partsn=partsn)
+        ao = 'NTA' if shippn else case.customers
+        shipment = RmaVendorShipment(rma_case_id=case.id, vendorrmano=vendorrmano, shippn=shippn, partsn=partsn, assetowner=ao)
         db.session.add(shipment)
     db.session.commit()
     return redirect(url_for('main.rma_list'))
@@ -2376,6 +2377,17 @@ def rma_delete(id):
     if get_userrole(current_user.id) < 2: abort(403)
     case = RmaCases.query.get_or_404(id)
     if case.status == 'new':
+        case.status = 'canceled'
+        db.session.commit()
+    return redirect(url_for('main.rma_list'))
+
+@main.route('/rma/<int:id>/hard-delete', methods=['POST'])
+@login_required
+def rma_hard_delete(id):
+    if get_userrole(current_user.id) < 2: abort(403)
+    case = RmaCases.query.get_or_404(id)
+    if case.status == 'new':
+        RmaVendorShipment.query.filter_by(rma_case_id=case.id).delete()
         db.session.delete(case)
         db.session.commit()
     return redirect(url_for('main.rma_list'))
@@ -2501,6 +2513,7 @@ def rma_ship_vendor(id):
     category = request.form.get('category', '')
     vendorrmano = request.form.get('vendorrmano', '')
 
+    asset_owner = 'NTA' if shippn else case.customers
     shipment = RmaVendorShipment(
         rma_case_id=case.id,
         vendorrmano=vendorrmano,
@@ -2510,6 +2523,7 @@ def rma_ship_vendor(id):
         category=category,
         shiptovendortime=datetime.datetime.now(),
         shiptovendorid=current_user.id,
+        assetowner=asset_owner,
     )
     db.session.add(shipment)
 
