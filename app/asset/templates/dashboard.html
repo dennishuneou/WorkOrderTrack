@@ -308,7 +308,7 @@
 
   <!-- Backlog + Quality row -->
   <div class="row mt-4">
-    <div class="col-md-6">
+    <div class="col-6">
       <div class="card card-social">
         <div class="card-block border-bottom">
           <h5 class="mb-0"><span class="text-muted">Backlog Overview</span></h5>
@@ -345,8 +345,35 @@
           </div>
         </div>
       </div>
+      <!-- Quality Log Summary -->
+          <div class="card card-social mt-3">
+            <div class="card-block border-bottom">
+              <h5 class="mb-0"><span class="text-muted">Quality Log Summary</span></h5>
+            </div>
+            <div class="card-block">
+              <div class="row text-center mb-3">
+                <div class="col-4"><h4 class="text-c-green mb-0">{{ quality_data.total }}</h4><small class="text-muted">Total</small></div>
+                <div class="col-4"><h4 class="text-warning mb-0">{{ quality_data.open }}</h4><small class="text-muted">Open</small></div>
+                <div class="col-4"><h4 class="text-success mb-0">{{ quality_data.closed }}</h4><small class="text-muted">Closed</small></div>
+              </div>
+              {% if quality_data.top_defects %}
+              <div class="row">
+                <div class="col-6"><small class="text-muted"><strong>Top Defect Parts</strong></small>
+                  {% for part, cnt in quality_data.top_defects %}
+                  <div class="d-flex justify-content-between"><small>{{ part }}</small><small class="text-muted">{{ cnt }}</small></div>
+                  {% endfor %}
+                </div>
+                <div class="col-6"><small class="text-muted"><strong>Top Causes</strong></small>
+                  {% for cause, cnt in quality_data.defect_causes %}
+                  <div class="d-flex justify-content-between"><small>{{ cause }}</small><small class="text-muted">{{ cnt }}</small></div>
+                  {% endfor %}
+                </div>
+              </div>
+              {% endif %}
+            </div>
+          </div>
     </div>
-    <div class="col-md-6">
+    <div class="col-6">
       <div class="card card-social">
         <div class="card-block border-bottom">
           <h5 class="mb-0"><span class="text-muted">Operator Ranking</span></h5>
@@ -379,78 +406,85 @@
       </div>
     </div>
   </div>
-  <!-- Quality / RMA row -->
-  <div class="row mt-4">
-    <div class="col-md-6">
-      <div class="card card-social">
-        <div class="card-block border-bottom">
-          <h5 class="mb-0"><span class="text-muted">Quality Log Summary</span></h5>
+  <!-- RMA Cases row -->
+      <div class="row mt-3">
+        <div class="col-4">
+          <div class="card card-social h-100">
+            <div class="card-block border-bottom py-2"><h6 class="mb-0 text-muted">RMA Total</h6></div>
+            <div class="card-block py-2">
+              <div class="row text-center g-0">
+                {% for k, l in [('new','New'),('received','Recv'),('processing','Proc'),('waiting_for_shipping','Wait'),('shipped_to_vendor','Ship'),('closed','Done')] %}
+                <div class="col-2 px-0"><span class="fw-bold">{{ rma_counts[k] }}</span><br><small>{{ l }}</small></div>
+                {% endfor %}
+              </div>
+              <div class="text-center mt-1"><small class="text-muted">IW {{ rma_counts.iw }} / OOW {{ rma_counts.oow }}</small></div>
+              {% if rma_counts.conclusions %}<canvas id="pieTotal" height="60" class="mt-1" style="max-width:75%;margin:0 auto"></canvas>{% endif %}
+            </div>
+          </div>
         </div>
-        <div class="card-block">
-          <div class="row text-center mb-3">
-            <div class="col-4">
-              <h4 class="text-c-green mb-0">{{ quality_data.total }}</h4>
-              <small class="text-muted">Total Issues</small>
-            </div>
-            <div class="col-4">
-              <h4 class="text-warning mb-0">{{ quality_data.open }}</h4>
-              <small class="text-muted">Open</small>
-            </div>
-            <div class="col-4">
-              <h4 class="text-success mb-0">{{ quality_data.closed }}</h4>
-              <small class="text-muted">Closed</small>
+        <div class="col-md-4">
+          <div class="card card-social h-100">
+            <div class="card-block border-bottom py-2"><h6 class="mb-0 text-muted">RMA Retail</h6></div>
+            <div class="card-block py-2">
+              <div class="row text-center g-0">
+                {% for k, l in [('new','New'),('received','Recv'),('processing','Proc'),('waiting_for_shipping','Wait'),('shipped_to_vendor','Ship'),('closed','Done')] %}
+                <div class="col-2 px-0"><span class="fw-bold">{{ rma_retail[k] }}</span><br><small>{{ l }}</small></div>
+                {% endfor %}
+              </div>
+              <div class="text-center mt-1"><small class="text-muted">IW {{ rma_retail.iw }} / OOW {{ rma_retail.oow }}</small></div>
+              {% if rma_retail.conclusions %}<canvas id="pieRetail" height="60" class="mt-1" style="max-width:75%;margin:0 auto"></canvas>{% endif %}
             </div>
           </div>
-          {% if quality_data.top_defects %}
-          <div class="row">
-            <div class="col-6">
-              <small class="text-muted"><strong>Top Defect Parts</strong></small>
-              {% for part, cnt in quality_data.top_defects %}
-              <div class="d-flex justify-content-between"><small>{{ part }}</small><small class="text-muted">{{ cnt }}</small></div>
-              {% endfor %}
-            </div>
-            <div class="col-6">
-              <small class="text-muted"><strong>Top Causes</strong></small>
-              {% for cause, cnt in quality_data.defect_causes %}
-              <div class="d-flex justify-content-between"><small>{{ cause }}</small><small class="text-muted">{{ cnt }}</small></div>
-              {% endfor %}
-            </div>
-          </div>
-          {% endif %}
         </div>
-      </div>
-      <!-- RMA Cases Summary -->
-      <div class="card card-social mt-3">
-        <div class="card-block border-bottom">
-          <h5 class="mb-0"><span class="text-muted">RMA Cases</span></h5>
-        </div>
-        <div class="card-block">
-          <div class="row text-center mb-2">
-            <div class="col-3"><h5 class="text-c-green mb-0">{{ rma_counts.new }}</h5><small class="text-muted">New</small></div>
-            <div class="col-3"><h5 class="text-c-green mb-0">{{ rma_counts.received }}</h5><small class="text-muted">Received</small></div>
-            <div class="col-3"><h5 class="text-c-green mb-0">{{ rma_counts.processing }}</h5><small class="text-muted">Processing</small></div>
-            <div class="col-3"><h5 class="text-c-green mb-0">{{ rma_counts.waiting_for_shipping }}</h5><small class="text-muted">Wait Ship</small></div>
-          </div>
-          <div class="row text-center">
-            <div class="col-4"><h5 class="text-c-green mb-0">{{ rma_counts.shipped_to_vendor }}</h5><small class="text-muted">Shipped</small></div>
-            <div class="col-4"><h5 class="text-c-green mb-0">{{ rma_counts.closed }}</h5><small class="text-muted">Closed</small></div>
-            <div class="col-4"><h5 class="text-c-green mb-0">{{ rma_counts.total }}</h5><small class="text-muted">Total</small></div>
-          </div>
-          {% if rma_counts.conclusions %}
-          <div class="row mt-3">
-            <div class="col-12">
-              <small class="text-muted"><strong>Closed by Conclusion</strong></small>
-              {% for conc, cnt in rma_counts.conclusions %}
-              <div class="d-flex justify-content-between"><small>{{ conc }}</small><small class="text-muted">{{ cnt }}</small></div>
-              {% endfor %}
+        <div class="col-md-4">
+          <div class="card card-social h-100">
+            <div class="card-block border-bottom py-2"><h6 class="mb-0 text-muted">RMA Channel</h6></div>
+            <div class="card-block py-2">
+              <div class="row text-center g-0">
+                {% for k, l in [('new','New'),('received','Recv'),('processing','Proc'),('waiting_for_shipping','Wait'),('shipped_to_vendor','Ship'),('closed','Done')] %}
+                <div class="col-2 px-0"><span class="fw-bold">{{ rma_channel[k] }}</span><br><small>{{ l }}</small></div>
+                {% endfor %}
+              </div>
+              <div class="text-center mt-1"><small class="text-muted">IW {{ rma_channel.iw }} / OOW {{ rma_channel.oow }}</small></div>
+              {% if rma_channel.conclusions %}<canvas id="pieChannel" height="60" class="mt-1" style="max-width:75%;margin:0 auto"></canvas>{% endif %}
             </div>
           </div>
-          {% endif %}
         </div>
       </div>
     </div>
     <div class="col-md-6">
-      <!-- right column content (Ranking 28, Trend, etc.) remains here -->
+      <div class="row">
+        <div class="col-6">
+          <div class="card card-social h-100">
+            <div class="card-block border-bottom py-2"><h6 class="mb-0 text-muted">RMA Rate (IW)</h6></div>
+            <div class="card-block py-2">
+              <table class="table table-sm table-borderless mb-0">
+                <thead><tr><th>Qtr</th><th class="text-right">RMA</th><th class="text-right">Bld</th><th class="text-right">%</th></tr></thead>
+                <tbody>
+                  {% for q in rma_rate %}
+                  <tr><td>{{ q.label }}</td><td class="text-right">{{ q.numer }}</td><td class="text-right">{{ q.denom }}</td><td class="text-right">{{ q.rate }}%</td></tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="col-6">
+          <div class="card card-social h-100">
+            <div class="card-block border-bottom py-2"><h6 class="mb-0 text-muted">DOA Rate</h6></div>
+            <div class="card-block py-2">
+              <table class="table table-sm table-borderless mb-0">
+                <thead><tr><th>Qtr</th><th class="text-right">DOA</th><th class="text-right">PBld</th><th class="text-right">%</th></tr></thead>
+                <tbody>
+                  {% for q in doa_rate %}
+                  <tr><td>{{ q.label }}</td><td class="text-right">{{ q.numer }}</td><td class="text-right">{{ q.denom }}</td><td class="text-right">{{ q.rate }}%</td></tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -745,6 +779,25 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     }
   });
+  // RMA Conclusion Pie Charts
+  try {
+    var pieColors = ['#e74c3c','#3498db','#2ecc71','#f39c12','#9b59b6','#1abc9c','#e67e22','#34495e','#95a5a6'];
+    function initPie(id, data) {
+      var canvas = document.getElementById(id);
+      if (!canvas || !data || data.length === 0) return;
+      new Chart(canvas, {
+        type: 'pie',
+        data: {
+          labels: data.map(function(d){ return d[0]; }),
+          datasets: [{ data: data.map(function(d){ return d[1]; }), backgroundColor: pieColors }]
+        },
+        options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false } } }
+      });
+    }
+    initPie('pieTotal', {{ rma_counts.conclusions | tojson }});
+    initPie('pieRetail', {{ rma_retail.conclusions | tojson }});
+    initPie('pieChannel', {{ rma_channel.conclusions | tojson }});
+  } catch(e) { console.error('Pie chart error:', e); }
 });
 </script>
 {% endblock %}

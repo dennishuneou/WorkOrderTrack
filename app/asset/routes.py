@@ -343,25 +343,121 @@ def dashboard():
     }
 
     # RMA Cases counts
-    rma_counts_val = {
-        'new': RmaCases.query.filter_by(status='new').count(),
-        'received': RmaCases.query.filter_by(status='received').count(),
-        'processing': RmaCases.query.filter_by(status='processing').count(),
-        'waiting_for_shipping': RmaCases.query.filter_by(status='waiting_for_shipping').count(),
-        'shipped_to_vendor': RmaCases.query.filter_by(status='shipped_to_vendor').count(),
-        'closed': RmaCases.query.filter_by(status='closed').count(),
-        'total': RmaCases.query.count(),
-    }
+    channel_names = ['CoastIPC', 'Aerflite', 'Industrial PC']
+    def rma_counts_for(base_q):
+        return {
+            'new': base_q.filter_by(status='new').count(),
+            'received': base_q.filter_by(status='received').count(),
+            'processing': base_q.filter_by(status='processing').count(),
+            'waiting_for_shipping': base_q.filter_by(status='waiting_for_shipping').count(),
+            'shipped_to_vendor': base_q.filter_by(status='shipped_to_vendor').count(),
+            'closed': base_q.filter_by(status='closed').count(),
+            'canceled': base_q.filter_by(status='canceled').count(),
+            'total': base_q.count(),
+        }
     from sqlalchemy import func as sa_func
-    cc = db.session.query(RmaCases.conclusion, sa_func.count(RmaCases.id)).filter(
-        RmaCases.status == 'closed', RmaCases.conclusion != None, RmaCases.conclusion != ''
-    ).group_by(RmaCases.conclusion).order_by(sa_func.count(RmaCases.id).desc()).all()
-    rma_counts_val['conclusions'] = cc
-    from sqlalchemy import func as sa_func
-    closed_conclusions = db.session.query(RmaCases.conclusion, sa_func.count(RmaCases.id)).filter(
-        RmaCases.status == 'closed', RmaCases.conclusion != None, RmaCases.conclusion != ''
-    ).group_by(RmaCases.conclusion).order_by(sa_func.count(RmaCases.id).desc()).all()
-    rma_counts_val['conclusions'] = closed_conclusions
+    def conclusions_for(base_q):
+        return db.session.query(RmaCases.conclusion, sa_func.count(RmaCases.id)).filter(
+            RmaCases.id.in_(base_q.with_entities(RmaCases.id).subquery()),
+            RmaCases.status == 'closed', RmaCases.conclusion != None, RmaCases.conclusion != ''
+        ).group_by(RmaCases.conclusion).order_by(sa_func.count(RmaCases.id).desc()).all()
+
+    all_q = RmaCases.query
+    retail_q = RmaCases.query
+    channel_q = RmaCases.query.filter(db.or_(*[RmaCases.customers.ilike(f'%{c}%') for c in channel_names]))
+    for c in channel_names:
+        retail_q = retail_q.filter(~RmaCases.customers.ilike(f'%{c}%'))
+
+    def flat_conc(rows):
+        return [[str(r[0]), int(r[1])] for r in rows]
+    def iw_oow(base_q):
+        iw = oow = 0
+        for c in base_q.filter_by(status='closed').all():
+            w = (c.warranty or '').strip().lower()
+            if w in ('yes',) or '-' in w or '/' in w:
+                iw += 1
+            else:
+                oow += 1
+        return iw, oow
+    rma_counts_val = rma_counts_for(all_q)
+    rma_counts_val['conclusions'] = flat_conc(conclusions_for(all_q))
+    rma_counts_val['iw'], rma_counts_val['oow'] = iw_oow(all_q)
+    rma_retail_val = rma_counts_for(retail_q)
+    rma_retail_val['conclusions'] = flat_conc(conclusions_for(retail_q))
+    rma_retail_val['iw'], rma_retail_val['oow'] = iw_oow(retail_q)
+    rma_channel_val = rma_counts_for(channel_q)
+    rma_channel_val['conclusions'] = flat_conc(conclusions_for(channel_q))
+    rma_channel_val['iw'], rma_channel_val['oow'] = iw_oow(channel_q)
+
+    # RMA Rate & DOA Rate: retail only, quarterly
+    computer_prefixes = ('NRU', 'Nuvo', 'SEMIL', 'GT', 'FLYC', 'PCIe', 'POC')
+    rma_quarters = []
+    doa_quarters = []
+    q_start = datetime.datetime(2026, 1, 1)
+    last_complete = datetime.datetime(today.year, ((today.month - 1) // 3) * 3 + 1, 1)
+    # Pre-compute 2025-Q4 build for DOA rate denominator of 2026-Q1
+    prev_start = q_start - datetime.timedelta(days=95)
+    prev_q = WorkOrder.query.filter(
+        WorkOrder.intime >= prev_start, WorkOrder.intime < q_start,
+        WorkOrder.status == 2,
+        db.or_(*[WorkOrder.pn.like(f'{p}%') for p in computer_prefixes]),
+        db.or_(WorkOrder.cpuinstall == True, WorkOrder.memoryinstall == True, WorkOrder.packgo == True),
+    )
+    for c in channel_names:
+        prev_q = prev_q.filter(~WorkOrder.customers.ilike(f'%{c}%'))
+    prev_denom = prev_q.count()
+    while q_start < last_complete:
+        q_end = q_start + datetime.timedelta(days=93)
+        if q_end > today:
+            q_end = today
+        # Build computers this quarter
+        wo_q = WorkOrder.query.filter(
+            WorkOrder.intime >= q_start, WorkOrder.intime < q_end,
+            WorkOrder.status == 2,
+            db.or_(*[WorkOrder.pn.like(f'{p}%') for p in computer_prefixes]),
+            db.or_(WorkOrder.cpuinstall == True, WorkOrder.memoryinstall == True, WorkOrder.packgo == True),
+        )
+        for c in channel_names:
+            wo_q = wo_q.filter(~WorkOrder.customers.ilike(f'%{c}%'))
+        denom = wo_q.count()
+        qnum = (q_start.month - 1) // 3 + 1
+        label = f"{q_start.year}-Q{qnum}"
+
+        # RMA numerator: in-warranty retail closed cases
+        rma_q = RmaCases.query.filter(
+            RmaCases.cstime >= q_start, RmaCases.cstime < q_end,
+            RmaCases.status == 'closed',
+            ~RmaCases.conclusion.ilike('%No Problem Found%'),
+            ~RmaCases.rmatype.ilike('ECN'),
+        )
+        for c in channel_names:
+            rma_q = rma_q.filter(~RmaCases.customers.ilike(f'%{c}%'))
+        numer = 0
+        for c in rma_q.all():
+            w = (c.warranty or '').strip().lower()
+            if w in ('yes',) or '-' in w or '/' in w:
+                numer += 1
+        rma_quarters.append({
+            'label': label, 'numer': numer, 'denom': denom,
+            'rate': round(numer / denom * 100, 2) if denom else 0,
+        })
+
+        # DOA numerator: DOA cases this quarter, with prev quarter build as denominator
+        doa_q = RmaCases.query.filter(
+            RmaCases.cstime >= q_start, RmaCases.cstime < q_end,
+            RmaCases.rmatype == 'DOA',
+        )
+        for c in channel_names:
+            doa_q = doa_q.filter(~RmaCases.customers.ilike(f'%{c}%'))
+        doa_cnt = doa_q.count()
+        doa_quarters.append({
+            'label': label, 'numer': doa_cnt, 'denom': prev_denom,
+            'rate': round(doa_cnt / prev_denom * 100, 2) if prev_denom else 0,
+        })
+        prev_denom = denom
+        q_start = q_end
+    rma_rate_data = rma_quarters
+    doa_rate_data = doa_quarters
 
     # Operator ranking
     rank_period_days = 7
@@ -507,24 +603,7 @@ def dashboard():
     operator_pg28 = op_data28['pg']
     operator_rma28 = op_data28['rma']
 
-    # Debug output
-    import sys
-    print("=== PYTHON DEBUG ===", file=sys.stderr)
-    print(f"trend_period={trend_period}, use_custom_range={use_custom_range}", file=sys.stderr)
-    print(f"trend_labels7={trend_labels7}", file=sys.stderr)
-    print(f"trend_labels28={trend_labels28}", file=sys.stderr)
-    print(f"operator_trends keys={list(operator_trends.keys())}", file=sys.stderr)
-    print(f"operator_trends28 keys={list(operator_trends28.keys())}", file=sys.stderr)
-    if operator_trends28:
-        first_key = list(operator_trends28.keys())[0]
-        print(f"operator_trends28[{first_key}]={operator_trends28[first_key]}", file=sys.stderr)
-        print(f"len={len(operator_trends28[first_key])}", file=sys.stderr)
-    if operator_trends:
-        first_key = list(operator_trends.keys())[0]
-        print(f"operator_trends[{first_key}]={operator_trends[first_key]}", file=sys.stderr)
-        print(f"len={len(operator_trends[first_key])}", file=sys.stderr)
-    print(f"wo_data28={wo_data28}", file=sys.stderr)
-    print("===================", file=sys.stderr)
+
 
     # Product mix
     if use_custom_range:
@@ -701,7 +780,7 @@ def dashboard():
                            ranking_labels28=ranking_labels28, ranking_counts28=ranking_counts28,
                             ranking_scores28=ranking_scores28, quality_data=quality_data, userrole=role,
                             detail_table=detail_table, detail_table28=detail_table28,
-                            rma_counts=rma_counts_val)
+                            rma_counts=rma_counts_val, rma_retail=rma_retail_val, rma_channel=rma_channel_val, rma_rate=rma_rate_data, doa_rate=doa_rate_data)
 
 @main.route('/api/workorder-counts')
 @login_required
@@ -2154,6 +2233,17 @@ def rma_list():
         'closed': RmaCases.query.filter_by(status='closed').count(),
         'canceled': RmaCases.query.filter_by(status='canceled').count(),
     }
+    # IW/OOW for closed cases (RMA page)
+    closed_cases = RmaCases.query.filter_by(status='closed').all()
+    iw = oow = 0
+    for c in closed_cases:
+        w = (c.warranty or '').strip().lower()
+        if w in ('yes',) or '-' in w or '/' in w:
+            iw += 1
+        else:
+            oow += 1
+    counts['iw'] = iw
+    counts['oow'] = oow
     return render_template('rma.html', cases=cases, counts=counts,
                            current_status=status_filter, userrole=role,
                            start_date=start_date, end_date=end_date,

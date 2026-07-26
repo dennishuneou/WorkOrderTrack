@@ -11,7 +11,7 @@
     </div>
     <ul class="nav nav-tabs mb-3" id="rmaTab" role="tablist">
         <li class="nav-item">
-            <a class="nav-link {% if current_status == 'all' %}active{% endif %}" href="{{ url_for('main.rma_list', status='all') }}">All ({{ counts.new + counts.received + counts.processing + counts.waiting_for_shipping + counts.shipped_to_vendor + counts.recv_from_vendor + counts.closed }})</a>
+            <a class="nav-link {% if current_status == 'all' %}active{% endif %}" href="{{ url_for('main.rma_list', status='all') }}">All ({{ counts.new + counts.received + counts.processing + counts.waiting_for_shipping + counts.shipped_to_vendor + counts.closed }})</a>
         </li>
         <li class="nav-item">
             <a class="nav-link {% if current_status == 'new' %}active{% endif %}" href="{{ url_for('main.rma_list', status='new') }}">New ({{ counts.new }})</a>
@@ -29,10 +29,7 @@
             <a class="nav-link {% if current_status == 'shipped_to_vendor' %}active{% endif %}" href="{{ url_for('main.rma_list', status='shipped_to_vendor') }}">Shipped to Vendor ({{ counts.shipped_to_vendor }})</a>
         </li>
         <li class="nav-item">
-            <a class="nav-link {% if current_status == 'recv_from_vendor' %}active{% endif %}" href="{{ url_for('main.rma_list', status='recv_from_vendor') }}">Received from Vendor ({{ counts.recv_from_vendor }})</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link {% if current_status == 'closed' %}active{% endif %}" href="{{ url_for('main.rma_list', status='closed') }}">Closed ({{ counts.closed }})</a>
+            <a class="nav-link {% if current_status == 'closed' %}active{% endif %}" href="{{ url_for('main.rma_list', status='closed') }}">Closed ({{ counts.closed }}) <span class="badge badge-light">IW {{ counts.iw }}/OOW {{ counts.oow }}</span></a>
         </li>
         <li class="nav-item">
             <a class="nav-link {% if current_status == 'canceled' %}active{% endif %}" href="{{ url_for('main.rma_list', status='canceled') }}">Canceled ({{ counts.canceled }})</a>
@@ -64,11 +61,10 @@
                     {% if current_status in ('processing', 'all') %}<th class="sortable">Process <i class="bi bi-arrow-down-up"></i></th><th class="sortable">By <i class="bi bi-arrow-down-up"></i></th><th>Notes</th>{% endif %}
                     {% if current_status == 'waiting_for_shipping' %}<th class="sortable">Owner <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Ship PN <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Part SN <i class="bi bi-arrow-down-up"></i></th>{% endif %}
                     {% if current_status in ('shipped_to_vendor', 'all') %}<th class="sortable">Shipped <i class="bi bi-arrow-down-up"></i></th><th class="sortable">By <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Vendor RMA <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Ship PN <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Part SN <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Owner <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Vendor Name <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Category <i class="bi bi-arrow-down-up"></i></th>{% endif %}
-                    {% if current_status == 'recv_from_vendor' %}<th class="sortable">Vendor Recv <i class="bi bi-arrow-down-up"></i></th><th class="sortable">By <i class="bi bi-arrow-down-up"></i></th>{% endif %}
                     {% if current_status in ('closed', 'all') %}<th class="sortable">Closed <i class="bi bi-arrow-down-up"></i></th><th class="sortable">By <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Conclusion <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Vendor RMA <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Owner <i class="bi bi-arrow-down-up"></i></th>{% endif %}
                     {% if current_status == 'all' %}<th>Notes</th>{% endif %}
                     <th class="sortable">Status <i class="bi bi-arrow-down-up"></i></th>
-                    <th>Files</th>
+                    {% if current_status == 'new' %}<th>Files</th>{% endif %}
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -111,12 +107,14 @@
                             <span class="badge badge-dark">Canceled</span>
                         {% endif %}
                     </td>
+                    {% if current_status == 'new' %}
                     <td>
                         {% set docx_name = case.file_base ~ '.docx' %}
                         {% set pdf_name = case.file_base ~ '.pdf' %}
                         <a href="{{ url_for('main.rma_download', filename=docx_name) }}" class="btn btn-sm btn-outline-secondary">DOCX</a>
                         <a href="{{ url_for('main.rma_download', filename=pdf_name) }}" class="btn btn-sm btn-outline-danger">PDF</a>
                     </td>
+                    {% endif %}
                     <td>
                         {% if case.status == 'new' %}
                         <form action="{{ url_for('main.rma_receive', id=case.id) }}" method="post" style="display:inline">
