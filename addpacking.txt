@@ -1,0 +1,8 @@
+2026/07/26
+1. add packid,packtime,finalintime, for exist records in table workorder, copy asid to packid, astime to packtime, 
+   intime to finalintime.
+2. the home page, add tab 'wait for packing'
+   after 'inspection', the next status is 'wait for packing'.
+   once finish packing, 'final inspection', after finish 'final inspection', the workorder is conpleted.   
+   
+  

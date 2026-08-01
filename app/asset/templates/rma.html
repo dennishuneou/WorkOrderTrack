@@ -59,7 +59,7 @@
                     {% if current_status in ('all', 'new') %}<th class="sortable">Created <i class="bi bi-arrow-down-up"></i></th>{% endif %}
                     {% if current_status in ('received', 'all') %}<th class="sortable">Received <i class="bi bi-arrow-down-up"></i></th><th class="sortable">By <i class="bi bi-arrow-down-up"></i></th>{% endif %}
                     {% if current_status in ('processing', 'all') %}<th class="sortable">Process <i class="bi bi-arrow-down-up"></i></th><th class="sortable">By <i class="bi bi-arrow-down-up"></i></th><th>Notes</th>{% endif %}
-                    {% if current_status == 'waiting_for_shipping' %}<th class="sortable">Owner <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Ship PN <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Part SN <i class="bi bi-arrow-down-up"></i></th>{% endif %}
+                    {% if current_status == 'waiting_for_shipping' %}<th class="sortable">Owner <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Vendor <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Ship PN <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Part SN <i class="bi bi-arrow-down-up"></i></th>{% endif %}
                     {% if current_status in ('shipped_to_vendor', 'all') %}<th class="sortable">Shipped <i class="bi bi-arrow-down-up"></i></th><th class="sortable">By <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Vendor RMA <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Ship PN <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Part SN <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Owner <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Vendor Name <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Category <i class="bi bi-arrow-down-up"></i></th>{% endif %}
                     {% if current_status in ('closed', 'all') %}<th class="sortable">Closed <i class="bi bi-arrow-down-up"></i></th><th class="sortable">By <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Conclusion <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Vendor RMA <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Owner <i class="bi bi-arrow-down-up"></i></th>{% endif %}
                     {% if current_status == 'all' %}<th>Notes</th>{% endif %}
@@ -75,14 +75,14 @@
                     <td>{{ case.customers }}</td>
                     <td>{{ case.pn }}</td>
                     <td>{{ case.csn }}</td>
-                    <td title="{{ case.descriptionbycustomer }}">{{ case.descriptionbycustomer[:50] }}{% if case.descriptionbycustomer|length > 50 %}...{% endif %}</td>
+                    <td>{% if current_status == 'all' %}{{ case.descriptionbycustomer }}{% else %}{{ case.descriptionbycustomer[:50] }}{% if case.descriptionbycustomer|length > 50 %}...{% endif %}{% endif %}</td>
                     {% if current_status in ('all', 'new') %}<td>{{ case.cstime.strftime('%m/%d %H:%M') if case.cstime else '' }}</td>{% endif %}
                     {% if current_status in ('received', 'all') %}<td>{{ case.recvtime.strftime('%m/%d %H:%M') if case.recvtime else '' }}</td><td>{{ case.recvby }}</td>{% endif %}
                     {% if current_status in ('processing', 'all') %}<td>{{ case.startprocesstime.strftime('%m/%d %H:%M') if case.startprocesstime else '' }}</td><td>{{ case.processby }}</td>
                     <td title="{{ case.notes }}">{{ case.notes[:80] if case.notes else '' }}{% if case.notes and case.notes|length > 80 %}...{% endif %}</td>{% endif %}
                     {% set s = case.latest_shipment %}
                     {% if current_status in ('shipped_to_vendor', 'all') %}<td>{{ s.shiptovendortime.strftime('%m/%d %H:%M') if s and s.shiptovendortime else '' }}</td><td>{{ case.shipby }}</td><td>{{ s.vendorrmano or '' if s else '' }}</td><td>{{ s.shippn or '' if s else '' }}</td><td>{{ s.partsn or '' if s else '' }}</td><td>{{ s.assetowner or case.assetowner }}</td><td>{{ s.vendorname or '' if s else '' }}</td><td>{{ s.category or '' if s else '' }}</td>{% endif %}
-                    {% if current_status == 'waiting_for_shipping' %}<td>{{ s.assetowner or case.assetowner }}</td><td>{{ s.shippn or '' if s else '' }}</td><td>{{ s.partsn or '' if s else '' }}</td>{% endif %}
+                    {% if current_status == 'waiting_for_shipping' %}<td>{{ s.assetowner or case.assetowner }}</td><td>{{ s.vendorname or '' if s else '' }}</td><td>{{ s.shippn or '' if s else '' }}</td><td>{{ s.partsn or '' if s else '' }}</td>{% endif %}
                     {% if current_status in ('closed', 'all') %}<td>{{ case.closetime.strftime('%m/%d %H:%M') if case.closetime else '' }}</td><td>{{ case.closeby }}</td><td>{{ case.conclusion }}</td><td>{{ s.vendorrmano or '' if s else '' }}</td><td>{{ s.assetowner or case.assetowner }}</td>{% endif %}
                     {% if current_status == 'all' %}<td>
                         <textarea id="notes-{{ case.id }}" rows="2" style="width:200px;font-size:0.8rem">{{ case.notes or '' }}</textarea>
@@ -110,9 +110,7 @@
                     {% if current_status == 'new' %}
                     <td>
                         {% set docx_name = case.file_base ~ '.docx' %}
-                        {% set pdf_name = case.file_base ~ '.pdf' %}
                         <a href="{{ url_for('main.rma_download', filename=docx_name) }}" class="btn btn-sm btn-outline-secondary">DOCX</a>
-                        <a href="{{ url_for('main.rma_download', filename=pdf_name) }}" class="btn btn-sm btn-outline-danger">PDF</a>
                     </td>
                     {% endif %}
                     <td>
@@ -139,9 +137,9 @@
                         <form action="{{ url_for('main.rma_unprocess', id=case.id) }}" method="post" style="display:inline" onsubmit="return confirm('Return {{ case.ntarmano }} to Received?')">
                             <button class="btn btn-sm btn-outline-secondary">Go Back</button>
                         </form>
-                        <button class="btn btn-sm btn-success" onclick="showCloseModal({{ case.id }}, '{{ case.ntarmano }}')">Close Case</button>
+                        <button class="btn btn-sm btn-success" onclick='showCloseModal({{ case.id }}, {{ case.ntarmano|tojson }}, {{ s.vendorname|tojson if s and s.vendorname else ""|tojson }})'>Close Case</button>
                         {% elif case.status == 'waiting_for_shipping' %}
-                        <button class="btn btn-sm btn-secondary" onclick="showShipModal({{ case.id }}, '{{ case.ntarmano }}')">Ship to Vendor</button>
+                        <button class="btn btn-sm btn-secondary" onclick='showShipModal({{ case.id }}, {{ case.ntarmano|tojson }}, {{ s.vendorname|tojson if s and s.vendorname else ""|tojson }})'>Ship to Vendor</button>
                         <form action="{{ url_for('main.rma_unwait', id=case.id) }}" method="post" style="display:inline" onsubmit="return confirm('Return {{ case.ntarmano }} to Processing?')">
                             <button class="btn btn-sm btn-outline-secondary">Go Back</button>
                         </form>
@@ -158,7 +156,7 @@
                             <button class="btn btn-sm btn-outline-secondary">Go Back</button>
                         </form>
                         {% endif %}
-                        <button class="btn btn-sm btn-success" onclick="showCloseModal({{ case.id }}, '{{ case.ntarmano }}')">Close Case</button>
+                        <button class="btn btn-sm btn-success" onclick='showCloseModal({{ case.id }}, {{ case.ntarmano|tojson }}, {{ s.vendorname|tojson if s and s.vendorname else ""|tojson }})'>Close Case</button>
                         <span class="badge badge-info" style="margin-left:4px">{{ case.shipments.count() }} shipment(s)</span>
                         {% endif %}
                     </td>
@@ -177,7 +175,7 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">Close RMA Case</h5>
-                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <button type="button" class="close" data-dismiss="modal" onclick="$('#closeModal').modal('hide');return false;">&times;</button>
                 </div>
                 <div class="modal-body">
                     <div class="form-group">
@@ -187,6 +185,7 @@
                             <option value="no_problem_found">No Problem Found</option>
                             <option value="boards_quality_issue">Boards Quality Issue</option>
                             <option value="parts_quality_issue">Parts Quality Issue</option>
+                            <option value="assembling_issue">Assembling Issue</option>
                             <option value="improperly_use">Improperly Use</option>
                             <option value="unknown">Unknown</option>
                         </select>
@@ -194,6 +193,10 @@
                     <div class="form-group">
                         <label>Notes</label>
                         <textarea name="notes" class="form-control" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Vendor Name</label>
+                        <input type="text" name="vendorname_close" class="form-control">
                     </div>
                     <div class="form-group">
                         <label>Vendor RMA # <small class="text-muted">(if shipping replaced parts to vendor)</small></label>
@@ -210,7 +213,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="submit" class="btn btn-success">Close Case</button>
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal" onclick="$('#closeModal').modal('hide');return false;">Cancel</button>
                 </div>
             </div>
         </form>
@@ -223,7 +226,7 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">Ship to Vendor</h5>
-                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <button type="button" class="close" data-dismiss="modal" onclick="$('#shipModal').modal('hide');return false;">&times;</button>
                 </div>
                 <div class="modal-body">
                     <div class="form-group">
@@ -265,7 +268,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="submit" class="btn btn-secondary">Ship to Vendor</button>
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal" onclick="$('#shipModal').modal('hide');return false;">Cancel</button>
                 </div>
             </div>
         </form>
@@ -278,9 +281,17 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">Wait for Shipping</h5>
-                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <button type="button" class="close" data-dismiss="modal" onclick="$('#waitShipModal').modal('hide');return false;">&times;</button>
                 </div>
                 <div class="modal-body">
+                    <div class="form-group">
+                        <label>Vendor Name</label>
+                        <input type="text" name="vendorname" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>Vendor RMA #</label>
+                        <input type="text" name="vendorrmano" class="form-control">
+                    </div>
                     <div class="form-group">
                         <label>Ship PN</label>
                         <input type="text" name="shippn" class="form-control" placeholder="Part number to ship">
@@ -292,38 +303,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="submit" class="btn btn-warning">Confirm</button>
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                </div>
-            </div>
-        </form>
-    </div>
-</div>
-
-<div class="modal fade" id="waitShipModal" tabindex="-1" role="dialog">
-    <div class="modal-dialog" role="document">
-        <form id="waitShipForm" method="post">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Wait for Shipping</h5>
-                    <button type="button" class="close" data-dismiss="modal">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <div class="form-group">
-                        <label>Vendor RMA #</label>
-                        <input type="text" name="vendorrmano" class="form-control">
-                    </div>
-                    <div class="form-group">
-                        <label>Ship PN</label>
-                        <input type="text" name="shippn" class="form-control">
-                    </div>
-                    <div class="form-group">
-                        <label>Part SN</label>
-                        <input type="text" name="partsn" class="form-control">
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="submit" class="btn btn-warning">Confirm</button>
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal" onclick="$('#waitShipModal').modal('hide');return false;">Cancel</button>
                 </div>
             </div>
         </form>
@@ -336,7 +316,7 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">Create WorkOrder from RMA</h5>
-                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <button type="button" class="close" data-dismiss="modal" onclick="$('#woModal').modal('hide');return false;">&times;</button>
                 </div>
                 <div class="modal-body">
                     <div class="form-group">
@@ -346,7 +326,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="submit" class="btn btn-primary">Create</button>
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal" onclick="$('#woModal').modal('hide');return false;">Cancel</button>
                 </div>
             </div>
         </form>
@@ -386,25 +366,22 @@ function saveNotes(id) {
     xhr.onload = function() { if (xhr.status == 200) alert('Saved'); };
     xhr.send(JSON.stringify({notes: val}));
 }
-function showCloseModal(id, ntarmano) {
+function showCloseModal(id, ntarmano, vendorname) {
     document.getElementById('closeForm').action = '/rma/' + id + '/close';
     document.getElementById('closeModal').querySelector('.modal-title').textContent = 'Close RMA ' + ntarmano;
+    document.querySelector('#closeForm input[name=vendorname_close]').value = vendorname || '';
     $('#closeModal').modal('show');
 }
-function showShipModal(id, ntarmano) {
+function showShipModal(id, ntarmano, vendorname) {
     document.getElementById('shipForm').action = '/rma/' + id + '/ship-vendor';
     document.getElementById('shipModal').querySelector('.modal-title').textContent = 'Ship to Vendor - ' + ntarmano;
+    document.querySelector('#shipForm input[name=vendorname]').value = vendorname || '';
     $('#shipModal').modal('show');
 }
 function showWOModal(id, ntarmano) {
     document.getElementById('woForm').action = '/rma/' + id + '/create-wo';
     document.querySelector('#woForm input[name=wo]').value = ntarmano;
     $('#woModal').modal('show');
-}
-function showWaitShipModal(id, ntarmano) {
-    document.getElementById('waitShipForm').action = '/rma/' + id + '/wait-shipping';
-    document.getElementById('waitShipModal').querySelector('.modal-title').textContent = 'Wait for Shipping - ' + ntarmano;
-    $('#waitShipModal').modal('show');
 }
 function showWaitShipModal(id, ntarmano) {
     document.getElementById('waitShipForm').action = '/rma/' + id + '/wait-shipping';

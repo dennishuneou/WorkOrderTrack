@@ -121,10 +121,15 @@ class WorkOrder(db.Model):
     diskpreinstalled=db.Column(db.Boolean, nullable=True)
     osactivation=db.Column(db.Boolean, nullable=True)
     doc_items=db.Column(db.String(512), nullable=True)  #Items from work order doc, separated by |
+    packid=db.Column(db.Integer, nullable=True)
+    tkforpacktime=db.Column(db.DateTime, nullable=True)
+    pktime=db.Column(db.DateTime, nullable=True)
+    finalintime=db.Column(db.DateTime, nullable=True)
     
     def __init__(self, wo, customers, pn, csn, cputype, memorysize, gpu, withwifi, withcan,withfg5g, ospreinstalled, diskpreinstalled,\
                  disksize, cpuinstall, memoryinstall, gpuinstall,  wifiinstall, caninstall, mezioinstall, fg5ginstall, osinstall, packgo,\
-                 asid, insid,astime, intime, csid, cstime, tktime, ldtime, status,osactivation,doc_items=None):
+                 asid, insid,astime, intime, csid, cstime, tktime, ldtime, status,osactivation,doc_items=None,
+                 packid=None, tkforpacktime=None, pktime=None, finalintime=None):
         self.wo = wo
         self.customers = customers
         self.pn = pn
@@ -158,6 +163,10 @@ class WorkOrder(db.Model):
         self.status = status
         self.osactivation = osactivation
         self.doc_items = doc_items
+        self.packid = packid
+        self.tkforpacktime = tkforpacktime
+        self.pktime = pktime
+        self.finalintime = finalintime
          
     def __repr__(self):
         return '{} by {}'.format(self.wo)

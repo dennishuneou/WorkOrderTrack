@@ -147,7 +147,13 @@ class Box(Package):
         """
         if pivot[0] >= self._Package__width or pivot[1] >= self._Package__thickness or pivot[2] >= self._Package__height:
             return False
-        for rotation in sorted(range(6), key=lambda r: (package.get_rotation(r)[0], -package.get_rotation(r)[2])):
+        # Sort rotations: prefer higher estimated pack count, then smaller X, then larger Z
+        # Estimated count = max units that can fit in box with this rotation
+        def rot_key(r):
+            s = package.get_rotation(r)
+            est = int(self._Package__width // s[0]) * int(self._Package__thickness // s[1]) * int(self._Package__height // s[2])
+            return (-est, s[0], -s[2])
+        for rotation in sorted(range(6), key=rot_key):
             packageSize = package.get_rotation(rotation)
             if (self._Package__width - pivot[0]) < packageSize[0]:
                 continue
@@ -245,7 +251,7 @@ def classifier(platforms, packages):
     
         
         boxes = platforms.get(platform)
-        boxes.sort(key=lambda box: box.get_volume())  # Sort boxes by volume
+        boxes.sort(key=lambda box: box.get_volume())  # Smallest first, to match box to load
         unpackedPackages = packages
         i = 1000 # maximum 1000 boxes
         while i > 1: # Try multiple iterations to find the best fit
@@ -275,7 +281,7 @@ def classifier(platforms, packages):
                 if len(box.get_packed_packages()) == len(packages):  # Early termination if all packages are packed
                     break
 
-            bestOption = max(packagePercentage, key=packagePercentage.get)
+            bestOption = max(packageCount, key=packageCount.get)
             
             totalpercentage = totalpercentage + packagePercentage[bestOption]
             solution.append(f"{bestOption} | Packed: {(packagePercentage[bestOption]*100):.2f}%")

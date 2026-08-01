@@ -5,6 +5,35 @@ from app.asset.forms import AddProductForm,QueryProductsForm,EditProductForm,Que
 from app.asset.forms import QueryQlogForm,AddQualityLogForm,EditQualityLogForm
 from app.asset import main
 from app.asset.models import WorkOrder, Production, PnMap, PackageBox, QualityLog, RmaCases, RmaVendorShipment
+
+def lookup_pn(pn):
+    """Lookup PN in PnMap, trying exact match first, then stripping common suffixes."""
+    if not pn:
+        return None
+    result = PnMap.query.filter_by(pn=pn).first()
+    if result:
+        return result
+    # Try stripping common suffixes
+    import re
+    suffixes = ['-UL', '-EA', '-RH01', '-RH02', '-CF1', '-CF2', '-CF3', '-KS1', '-KS-CF1',
+                '-MEZ-KS-CF1-PA', '-IOT-KS-CF1-PA', '-UL-KS1', '-UL-KS1(EA)',
+                '-LME', '-ADV', '-IGN', '-PoE', '-10G', '-AGX32G-COOLIT',
+                '-JAO32G', '-JAO64G', '-JXI64G']
+    for suffix in suffixes:
+        stripped = pn
+        while stripped.endswith(suffix):
+            stripped = stripped[:-len(suffix)]
+        if stripped and stripped != pn:
+            result = PnMap.query.filter_by(pn=stripped).first()
+            if result:
+                return result
+    # Try removing trailing parenthetical like (EA)
+    cleaned = re.sub(r'\([^)]*\)', '', pn).strip()
+    if cleaned != pn:
+        result = PnMap.query.filter_by(pn=cleaned).first()
+        if result:
+            return result
+    return None
 from flask import render_template, flash, request, redirect, url_for, session, send_from_directory, Response, abort
 from app import db
 from app.asset.forms import get_biosversion, get_sopversion
@@ -246,26 +275,239 @@ def pendingmore():
         db.session.commit()
     return redirect(url_for('main.display_workorders'))
     
+def packing_solution_for(id):
+    wo = WorkOrder.query.get(id)
+    if not wo:
+        return None
+    product = lookup_pn(wo.pn)
+    if not product:
+        return None
+    result = {
+        'wo': wo.wo, 'pn': wo.pn, 'csn': wo.csn,
+        'internal': [], 'external': [],
+        'box_name': '', 'box_dims': '',
+    }
+    from app.asset.packing import Box, Package, packer, classifier
+    from app.asset.models import PackageBox
+    boxes = PackageBox.query.filter_by(status=1).all()
+    platforms = {'Platform1': [Box('Platform1', b.name, b.width, b.thickness, b.height, b.limitweight - b.weight, b.weight) for b in boxes]}
+    packages = []
+
+    # Parse doc_items (format: PNxQTY|PNxQTY|...) or use PN itself
+    items_to_pack = []
+    if wo.doc_items:
+        for part in wo.doc_items.split('|'):
+            part = part.strip()
+            if not part:
+                continue
+            if 'x' in part:
+                pn, qty = part.rsplit('x', 1)
+                try:
+                    qty = int(qty)
+                except:
+                    qty = 1
+            else:
+                pn, qty = part, 1
+            items_to_pack.append((pn.strip(), qty))
+    else:
+        items_to_pack.append((wo.pn, 1))
+
+    # Build package list: pair computers with their power adaptors
+    # First, get inneraccessory of the main computer to know what fits inside
+    main_comp = lookup_pn(items_to_pack[0][0]) if items_to_pack else None
+    inner_acc_set = set()
+    if main_comp and main_comp.inneraccessory:
+        for acc_str in main_comp.inneraccessory.replace('|', ',').split(','):
+            acc_str = acc_str.strip()
+            if acc_str:
+                inner_acc_set.add(acc_str.upper())
+    computer_pkgs = []
+    pa_pkgs = []
+    cbl_pkgs = []
+    other_pkgs = []
+    inside_pkgs = []  # items that fit inside the computer box
+    for pn, qty in items_to_pack:
+        item = lookup_pn(pn)
+        if not item:
+            result['internal'].append(f"{pn} (not found in DB)")
+            continue
+        # Check if this item is an inneraccessory of the computer (fits inside)
+        is_inner = False
+        if inner_acc_set:
+            for check in [pn.upper(), (item.abbreviation or '').upper()]:
+                if check in inner_acc_set:
+                    is_inner = True
+                    break
+        if is_inner:
+            result['internal'].append(f"{pn} x{qty} (fits inside)")
+            inside_pkgs.extend([Package(pn, 1, 1, 1, 1)] * qty)
+            continue
+        pkgs = []
+        for _ in range(qty):
+            if item.width and item.height and item.thickness:
+                pkgs.append(Package(pn, item.width, item.thickness, item.height, item.weight or 1))
+        if item.pn.startswith('PA-') or item.category == 'CABLEKIT':
+            (pa_pkgs if item.pn.startswith('PA-') else cbl_pkgs).extend(pkgs)
+            result['external'].append(f"{pn} x{qty}")
+        elif not item.category or item.category in ('COMPUTER', 'NRU', 'SEMIL', 'PB', 'CARD', 'GPU'):
+            computer_pkgs.extend(pkgs)
+            result['internal'].append(f"{pn} x{qty}")
+        else:
+            other_pkgs.extend(pkgs)
+            result['internal'].append(f"{pn} x{qty}")
+    # Strategy: call calculator once for one set, then compare with all-items
+    from app.asset.packing import Box as PackBox, Package as PackPkg, classifier
+    box_objs = [PackBox('Platform1', b.name, b.width, b.thickness, b.height, b.limitweight - b.weight, b.weight) for b in boxes if b.status == 1]
+    # Include special-purpose boxes (status=2) that match the main computer (e.g. SEMIL, RGS)
+    if main_comp and main_comp.abbreviation:
+        for keyword in ('SEMIL', 'RGS'):
+            if keyword in main_comp.abbreviation:
+                special_boxes = PackageBox.query.filter(PackageBox.status == 2, PackageBox.purpose.like('%' + keyword + '%')).all()
+                for b in special_boxes:
+                    box_objs.append(PackBox('Platform1', b.name, b.width, b.thickness, b.height, b.limitweight - b.weight, b.weight))
+    platforms = {'Platform1': box_objs}
+
+    n_units = min(len(computer_pkgs), len(pa_pkgs), len(cbl_pkgs)) if pa_pkgs and cbl_pkgs else len(computer_pkgs)
+    best_pdata = None
+
+    if n_units > 0 and len(pa_pkgs) >= n_units and len(cbl_pkgs) >= n_units and all_items:
+        # Strategy A: pack one set, then repeat
+        one_set = [computer_pkgs[0], pa_pkgs[0], cbl_pkgs[0]]
+        sol_a, det_a, pct_a, pdata_a = classifier(platforms, one_set)
+        a_ok = pdata_a and len(pdata_a) == 1  # one set fits in one box
+    else:
+        a_ok = False
+
+    # Strategy B: pack all items together
+    all_items = computer_pkgs + pa_pkgs + cbl_pkgs + other_pkgs
+    if not all_items:
+        return result
+    sol_b, det_b, pct_b, pdata_b = classifier(platforms, all_items)
+    b_boxes = len(pdata_b) if pdata_b else 999
+
+    result['boxes'] = []
+    # Use strategy A if it works and gives same or fewer boxes
+    if a_ok and n_units <= b_boxes:
+        # Repeat the single-set box for each unit
+        bd = pdata_a[0]
+        for i in range(n_units):
+            items = []
+            if i < len(computer_pkgs): items.append(computer_pkgs[i].get_name())
+            if i < len(pa_pkgs): items.append(pa_pkgs[i].get_name())
+            if i < len(cbl_pkgs): items.append(cbl_pkgs[i].get_name())
+            result['boxes'].append({
+                'name': bd['name'], 'w': bd['w'], 't': bd['t'], 'h': bd['h'],
+                'packages': items,
+            })
+    elif pdata_b:
+        for bd in pdata_b:
+            box_items = [pkg['name'] for pkg in bd['packages']]
+            result['boxes'].append({
+                'name': bd['name'], 'w': bd['w'], 't': bd['t'], 'h': bd['h'],
+                'packages': box_items,
+            })
+    return result
+
+@main.route('/api/packing-solution/<int:id>', methods=['GET'])
+@login_required
+def api_packing_solution(id):
+    data = packing_solution_for(id)
+    if not data:
+        return {'found': False}
+    return {'found': True, 'data': data}
+
+@main.route('/packmore', methods=['POST'])
+@login_required
+def packmore():
+    import sys
+    x = request.get_json(force=True, silent=True)
+    if not x:
+        print("packmore: no JSON", file=sys.stderr)
+        return redirect(url_for('main.display_workorders'))
+    msg = x.get("message", "")
+    print(f"packmore: message={msg}", file=sys.stderr)
+    count = 0
+    for sid in msg.strip().split():
+        wo = WorkOrder.query.get(int(sid))
+        if wo and wo.status == 3:
+            count += 1
+            wo.status = 1
+            wo.packid = current_user.id
+            wo.tkforpacktime = datetime.datetime.now()
+            wo.pktime = datetime.datetime.now()
+            db.session.commit()
+    flash(f'Packed {count} item(s)')
+    return redirect(url_for('main.display_workorders'))
+
+@main.route('/packdone', methods=['POST'])
+@login_required
+def packdone():
+    x = request.json
+    count = 0
+    for sid in x.get("message", "").split():
+        wo = WorkOrder.query.get(sid)
+        if wo and wo.status == 4:
+            wo.status = 1
+            wo.pktime = datetime.datetime.now()
+            db.session.commit()
+            count += 1
+    flash(f'Packed more {count} item(s)')
+    return redirect(url_for('main.display_workorders'))
+
+@main.route('/inspectfinal', methods=['POST'])
+@login_required
+def inspectfinal():
+    x = request.json
+    count = 0
+    for sid in x.get("message", "").split():
+        wo = WorkOrder.query.get(sid)
+        if wo and wo.status == 5:
+            wo.status = 2
+            wo.finalintime = datetime.datetime.now()
+            db.session.commit()
+            count += 1
+    flash(f'Final inspected {count} item(s)')
+    return redirect(url_for('main.display_workorders'))
+
 @main.route('/uploadmore', methods=['GET', 'POST'])
 @login_required
 def uploadmore():
-    print("upload more")
-    x = request.json
-    y = x.get("message")
-    z = y.split()
+    import sys
+    print("upload more", file=sys.stderr)
+    x = request.get_json(force=True, silent=True)
+    if not x:
+        print("uploadmore: no JSON received", file=sys.stderr)
+        return redirect(url_for('main.display_workorders'))
+    y = x.get("message", "")
+    if not y:
+        print("uploadmore: empty message", file=sys.stderr)
+        return redirect(url_for('main.display_workorders'))
+    z = y.strip().split()
+    print(f"uploadmore: ids={z}", file=sys.stderr)
+    count = 0
+    skipped = 0
     for sid in z:
-        print(sid)
-        workorder = WorkOrder.query.get(sid)
-        if(workorder.packgo == True):
-            workorder.astime=datetime.datetime.now()
-            workorder.status = 1
-            transaction = Production(wo=workorder.wo, pn=workorder.pn, csn=workorder.csn, msn="N/A", cpu="N/A",mem1="", mem2="", mem3="", mem4="", gpu1="", gpu2="", 
+        print(sid, file=sys.stderr)
+        workorder = WorkOrder.query.get(int(sid))
+        if workorder.packgo != True:
+            print(f"uploadmore: skip {sid} (not pack & go)", file=sys.stderr)
+            skipped += 1
+            continue
+        workorder.astime=datetime.datetime.now()
+        workorder.status = 3
+        transaction = Production(wo=workorder.wo, pn=workorder.pn, csn=workorder.csn, msn="N/A", cpu="N/A",
+            mem1="", mem2="", mem3="", mem4="", gpu1="", gpu2="",
             sata1="", sata2="",sata3="", sata4="", m21="", m22="", wifi="", fg5g="",can="",other="",note="",report="")
-            existproduct = Production.query.filter_by(wo=workorder.wo,csn=workorder.csn)
-            if existproduct.count() :
-                db.session.delete(existproduct[0])
-            db.session.add(transaction)
-            db.session.commit()
+        existproduct = Production.query.filter_by(wo=workorder.wo,csn=workorder.csn)
+        if existproduct.count() :
+            db.session.delete(existproduct[0])
+        db.session.add(transaction)
+        db.session.commit()
+        count += 1
+    if skipped:
+        flash(f'Uploaded {count} pack&go item(s); skipped {skipped} Build item(s) - use Upload Report for Build')
+    else:
+        flash(f'Uploaded {count} item(s)')
     return redirect(url_for('main.display_workorders'))
 
 @main.route('/inspectmore', methods=['GET', 'POST'])
@@ -339,6 +581,9 @@ def dashboard():
         'pending': uf(WorkOrder.query.filter_by(status=-2)).count(),
         'processing': uf(WorkOrder.query.filter_by(status=0)).count(),
         'waiting_inspection': uf(WorkOrder.query.filter_by(status=1)).count(),
+        'waiting_packing': uf(WorkOrder.query.filter_by(status=3)).count(),
+        'packing': uf(WorkOrder.query.filter_by(status=4)).count(),
+        'waiting_final': uf(WorkOrder.query.filter_by(status=5)).count(),
         'completed_today': uf(WorkOrder.query.filter(func.DATE(WorkOrder.intime) == func.DATE(today), WorkOrder.status == 2)).count(),
     }
 
@@ -792,8 +1037,11 @@ def api_workorder_counts():
     counts = {
         'unassigned': WorkOrder.query.filter_by(status=-1).count(),
         'pending': WorkOrder.query.filter_by(status=-2).count(),
-        'processing': WorkOrder.query.filter_by(status=0).count(),
+        'bldtst': WorkOrder.query.filter_by(status=0).count(),
         'waiting_inspection': WorkOrder.query.filter_by(status=1).count(),
+        'waiting_packing': WorkOrder.query.filter_by(status=3).count(),
+        'packing': WorkOrder.query.filter_by(status=4).count(),
+        'waiting_final': WorkOrder.query.filter_by(status=5).count(),
         'completed_today': WorkOrder.query.filter(func.DATE(WorkOrder.intime) == func.DATE(today), WorkOrder.status == 2).count(),
         'completed_lw': WorkOrder.query.filter(func.DATE(WorkOrder.intime) == func.DATE(lw), WorkOrder.status == 2).count(),
     }
@@ -825,7 +1073,7 @@ def api_rma_pn_info():
     pn = request.args.get('pn', '').strip()
     if not pn:
         return {'found': False}
-    mapping = PnMap.query.filter_by(pn=pn).first()
+    mapping = lookup_pn(pn)
     if not mapping:
         return {'found': False}
     return {
@@ -851,20 +1099,21 @@ def display_workorders():
         pendingworkorder = WorkOrder.query.filter_by(status=-2)  
     todoworkorder = todoworkorder.order_by(WorkOrder.wo)    
     pendingworkorder = pendingworkorder.order_by(WorkOrder.wo)    
-    if role == 0 :
-        query1 = WorkOrder.query.filter_by(asid=current_user.id, status=0)
-        query2 =  WorkOrder.query.filter_by(asid=current_user.id, status=1)
-    else :
-        query1 = WorkOrder.query.filter_by(status=0)
-        query2 =  WorkOrder.query.filter_by(status=1)
-    processing = query1.union(query2)
-    processing = processing.order_by(WorkOrder.wo) 
+    def f(q):
+        return q.filter if role == 0 else lambda **k: q.filter_by(**k) if len(k)==1 else q.filter(*[getattr(WorkOrder,k).__eq__(v) for k,v in k.items()])
+    # Simpler approach: use role-based base
+    def by_role(base):
+        return base.filter(WorkOrder.asid == current_user.id) if role == 0 else base
+    bldtst = by_role(WorkOrder.query.filter_by(status=0)).order_by(WorkOrder.wo)
+    wfi = by_role(WorkOrder.query.filter_by(status=1)).order_by(WorkOrder.wo)  # wait inspection
+    wfp = by_role(WorkOrder.query.filter_by(status=3)).order_by(WorkOrder.wo)  # wait for packing
+    packing = by_role(WorkOrder.query.filter_by(status=4)).order_by(WorkOrder.wo)  # packing
+    wffi = by_role(WorkOrder.query.filter_by(status=5)).order_by(WorkOrder.wo)  # wait for final inspect
     if role == 0 :
         completed = WorkOrder.query.filter(func.DATE(WorkOrder.intime) == func.DATE(datetime.datetime.today()),WorkOrder.asid==current_user.id,WorkOrder.status == 2)
     else :
         completed = WorkOrder.query.filter(func.DATE(WorkOrder.intime) == func.DATE(datetime.datetime.today()),WorkOrder.status == 2)
     completed = completed.order_by(WorkOrder.wo)
-    # Completed last weekday
     today_dt = datetime.datetime.today()
     lw = today_dt - datetime.timedelta(days=1)
     while lw.weekday() >= 5:
@@ -876,16 +1125,23 @@ def display_workorders():
     completed_last_wd = completed_last_wd.order_by(WorkOrder.wo)
     unassigned_count = WorkOrder.query.filter_by(status=-1).count()
     pending_count = WorkOrder.query.filter_by(status=-2).count()
-    processing_count = WorkOrder.query.filter(WorkOrder.status.in_([0, 1])).count()
+    bldtst_count = by_role(WorkOrder.query.filter_by(status=0)).count()
+    wfi_count = by_role(WorkOrder.query.filter_by(status=1)).count()
+    wfp_count = by_role(WorkOrder.query.filter_by(status=3)).count()
+    packing_count = by_role(WorkOrder.query.filter_by(status=4)).count()
+    wffi_count = by_role(WorkOrder.query.filter_by(status=5)).count()
     completed_today_count = WorkOrder.query.filter(func.DATE(WorkOrder.intime) == func.DATE(datetime.datetime.today()), WorkOrder.status == 2).count()
     lw = datetime.datetime.today() - datetime.timedelta(days=1)
     while lw.weekday() >= 5:
         lw -= datetime.timedelta(days=1)
     completed_lw_count = WorkOrder.query.filter(func.DATE(WorkOrder.intime) == func.DATE(lw), WorkOrder.status == 2).count()
     return render_template('home.html', todoworkorder=todoworkorder, pendingworkorder=pendingworkorder,
-                           processing=processing, completed=completed, completed_last_wd=completed_last_wd, userrole=role,
+                           bldtst=bldtst, wfi=wfi, wfp=wfp, packing=packing, wffi=wffi,
+                           completed=completed, completed_last_wd=completed_last_wd, userrole=role,
                            unassigned_count=unassigned_count, pending_count=pending_count,
-                           processing_count=processing_count, completed_today_count=completed_today_count,
+                           bldtst_count=bldtst_count, wfi_count=wfi_count,
+                           wfp_count=wfp_count, packing_count=packing_count, wffi_count=wffi_count,
+                           completed_today_count=completed_today_count,
                            completed_lw_count=completed_lw_count)
 
 @main.route('/query', methods=['GET', 'POST'])
@@ -1354,30 +1610,27 @@ def UploadReport(id):
     form = UploadReportForm(obj=workorder)
     role = get_userrole(current_user.id)
     if form.validate_on_submit():
-        if(workorder.status != 0):
-            fstr = "Please take workorder before upload report!"
-            flash(fstr)
-            return render_template('uploadreport.html', form=form, id=id,userrole = role)
-        else :     
-            workorder.status = 1
-            transaction = Production(wo=form.wo.data, pn=form.pn.data, csn=form.csn.data, msn=form.msn.data, cpu=form.cpu.data, 
+        if workorder.status == 0:
+            workorder.status = 3
+            workorder.insid = current_user.id
+        transaction = Production(wo=form.wo.data, pn=form.pn.data, csn=form.csn.data, msn=form.msn.data, cpu=form.cpu.data, 
             mem1=form.mem1.data, mem2=form.mem2.data, mem3=form.mem3.data, mem4=form.mem4.data, gpu1=form.gpu1.data, gpu2=form.gpu2.data, sata1=form.sata1.data, sata2=form.sata2.data,
             sata3=form.sata3.data, sata4=form.sata4.data, m21=form.m21.data, m22=form.m22.data, wifi=form.wifi.data, fg5g=form.fg5g.data,
             can=form.can.data,other=form.other.data,note=form.note.data,report=form.report.data)
-            existproduct = Production.query.filter_by(wo=form.wo.data,csn=form.csn.data.strip())
-            if existproduct.count() :
-                db.session.delete(existproduct[0])
-            db.session.add(transaction)
-            db.session.commit()
-            fstr = "Upload successful! "
-            if workorder.cpuinstall == False and ("Nuvo" in workorder.pn or "SEMIL" in workorder.pn):
-                fstr += "PLEASE uninstall CPU. "
-            if workorder.memoryinstall == False and ("Nuvo" in workorder.pn or "POC" in workorder.pn or "SEMIL" in workorder.pn) :    
-                fstr += "PLEASE uninstall Memory."
-            if "WARNING" in form.note.data :
-                fstr += form.note.data     
-            flash(fstr)
-            return redirect(url_for('main.display_workorders'))
+        existproduct = Production.query.filter_by(wo=form.wo.data,csn=form.csn.data.strip())
+        if existproduct.count() :
+            db.session.delete(existproduct[0])
+        db.session.add(transaction)
+        db.session.commit()
+        fstr = "Upload successful! "
+        if workorder.cpuinstall == False and ("Nuvo" in workorder.pn or "SEMIL" in workorder.pn):
+            fstr += "PLEASE uninstall CPU. "
+        if workorder.memoryinstall == False and ("Nuvo" in workorder.pn or "POC" in workorder.pn or "SEMIL" in workorder.pn) :    
+            fstr += "PLEASE uninstall Memory."
+        if "WARNING" in form.note.data :
+            fstr += form.note.data     
+        flash(fstr)
+        return redirect(url_for('main.display_workorders'))
     return render_template('uploadreport.html', form=form, id=id,userrole = role)
 
 @main.route('/ReviewReport/<id>', methods=['GET', 'POST'])
@@ -1414,7 +1667,7 @@ def ReviewReport(id):
         workorder.intime=datetime.datetime.now()
         if form.validate_on_submit():
             if form.action.data == '0' :
-                workorder.status = 2
+                workorder.status = 3
                 workorder.insid = current_user.id
             else: 
                 workorder.status = 0  
@@ -1849,6 +2102,17 @@ def packingcalculator():
            computer_name = form.computer.data
            computer_qty = form.qty_computer.data
         inneraccessory_name = ''
+        dinrail_name = ''; dinrail_qty = 0
+        dmpbr_name = ''; dmpbr_qty = 0
+        fankit_name = ''; fankit_qty = 0
+        wallmount_name = ''; wallmount_qty = 0
+        card1_name = ''; card1_qty = 0
+        card2_name = ''; card2_qty = 0
+        gpu_name = ''; gpu_qty = 0
+        poweradaptor_name = ''; poweradaptor_qty = 0
+        cablekit1_name = ''; cablekit1_qty = 0
+        cablekit2_name = ''; cablekit2_qty = 0
+        camera_name = ''; camera_qty = 0
         if computer_qty != 0: #preinstalled computer
             computer = PnMap.query.filter_by(pn=computer_name).first()
             computer_weight = computer.weight
@@ -2026,13 +2290,79 @@ def packingcalculator():
                 packages.append(package)
 
         if Boxes_SEMIL != [] or Boxes_RGS != []:
-            platforms = {'Platform1':Boxes + Boxes_SEMIL + Boxes_RGS}
-            packages = packages + packages_computer
-            solutions,details,totalpercentage,packing_data = classifier(platforms, packages)
+            platforms_b = {'Platform1':Boxes + Boxes_SEMIL + Boxes_RGS}
         else:
-            platforms = {'Platform1':Boxes}
-            packages = packages + packages_computer
-            solutions,details,totalpercentage,packing_data = classifier(platforms, packages)
+            platforms_b = {'Platform1':Boxes}
+        all_pkgs = packages + packages_computer
+        solutions,details,totalpercentage,packing_data = classifier(platforms_b, all_pkgs)
+
+        # Strategy: if computers exist, try packing one set and compare
+        if computer_qty > 0 and packages_computer:
+            def ceil_div(a, b):
+                return (a + b - 1) // b if b > 0 else 0
+            # Build one_set: 1 computer + its share of accessories
+            one_set = [packages_computer[0]]
+            # Helper to create accessory package
+            def add_acc(name, pn):
+                if not pn:
+                    return
+                p = lookup_pn(pn)
+                if p and p.width and p.height and p.thickness:
+                    one_set.append(Package(pn, p.width, p.thickness, p.height, p.weight or 1))
+            # Binary accessories (0 or 1 per computer)
+            for q, n in [(dinrail_qty, dinrail_name), (dmpbr_qty, dmpbr_name),
+                         (fankit_qty, fankit_name), (wallmount_qty, wallmount_name),
+                         (poweradaptor_qty, poweradaptor_name)]:
+                if q and q > 0 and n:
+                    add_acc(n, n)
+            # Multiple accessories (divided by computer_qty)
+            for q, n in [(card1_qty, card1_name), (card2_qty, card2_name),
+                         (gpu_qty, gpu_name), (cablekit1_qty, cablekit1_name),
+                         (cablekit2_qty, cablekit2_name), (camera_qty, camera_name)]:
+                cnt = ceil_div(q, computer_qty) if q and n else 0
+                for _ in range(cnt):
+                    add_acc(n, n)
+
+            if len(one_set) > 1:
+                sol_a, det_a, pct_a, pdata_a = classifier(platforms_b, one_set)
+                if pdata_a and len(pdata_a) == 1 and computer_qty <= len(packing_data):
+                    # Strategy A wins: repeat one_set box for each unit
+                    packing_data = []
+                    details = []
+                    bd = pdata_a[0]
+                    total_wt = 0
+                    pkg_list = []
+                    for acc in one_set:
+                        total_wt += acc.get_weight()
+                    solutions = [f"{bd['name']} | Packed: 100.00%",
+                                 f"{bd['w']} x {bd['t']} x {bd['h']}inches | Total Weight | {total_wt:.2f}lbs"]
+                    # Count items by name
+                    from collections import Counter
+                    name_counts = Counter(acc.get_name() for acc in one_set)
+                    for name, cnt in name_counts.items():
+                        wgt = sum(acc.get_weight() for acc in one_set if acc.get_name() == name)
+                        solutions.append(f"{name} | {wgt:.2f}lbs x {cnt}")
+                    # Use actual classifier output for positions/rotations
+                    ref_box = pdata_a[0]
+                    details.append(f"Details")
+                    details.append(f"{bd['w']} x {bd['t']} x {bd['h']}inches | Total Weight | {total_wt:.2f}lbs")
+                    for pkg in ref_box['packages']:
+                        details.append(f"{pkg['name']} | {pkg['rot']} | {pkg['x']:.2f},{pkg['y']:.2f},{pkg['z']:.2f} | {pkg['ow']} x {pkg['ot']} x {pkg['oh']}inches | {pkg.get('weight', 0):.2f}lbs")
+                    # Build packing_data for 3D view using actual classifier positions
+                    for unit_idx in range(computer_qty):
+                        pkgs_data = []
+                        for pkg in ref_box['packages']:
+                            pkgs_data.append({
+                                'name': pkg['name'], 'x': pkg['x'], 'y': pkg['y'], 'z': pkg['z'],
+                                'ow': pkg['ow'], 'ot': pkg['ot'], 'oh': pkg['oh'],
+                                'rot': pkg['rot'],
+                            })
+                        packing_data.append({
+                            'name': bd['name'],
+                            'w': bd['w'], 't': bd['t'], 'h': bd['h'],
+                            'packages': pkgs_data,
+                        })
+                    totalpercentage = 1.0
     else:
         packing_data = []
     # 1. Fetch your objects as you did before
@@ -2106,7 +2436,7 @@ def queryqlog():
         val = request.args.get(field, '')
         if val:
             qlogs = qlogs.filter(getattr(QualityLog, field).ilike('%' + val + '%'))
-            setattr(form, field).data = val
+            getattr(form, field).data = val
     if any(request.args.values()):
         qlogs = qlogs.order_by(QualityLog.reporttime).all()
         searched = 1
@@ -2375,9 +2705,6 @@ def generate_rma_files(case, csns=None):
                 else:
                     zout.writestr(item, zin.read(item.filename))
 
-    subprocess.run(['libreoffice', '--headless', '--convert-to', 'pdf',
-                    docx_path, '--outdir', outdir],
-                   capture_output=True, timeout=30)
     return base
 
 @main.route('/rma/new', methods=['GET', 'POST'])
@@ -2385,7 +2712,7 @@ def generate_rma_files(case, csns=None):
 def rma_new():
     if get_userrole(current_user.id) < 2: abort(403)
     if request.method == 'POST':
-        csns = request.form['csn'].replace(',', ' ').split()
+        csns = [c.strip() for c in request.form['csn'].replace('|', ' ').replace(',', ' ').split() if c.strip()]
         if not csns:
             flash('At least one CSN is required')
             return redirect(url_for('main.rma_new'))
@@ -2452,11 +2779,12 @@ def rma_wait_shipping(id):
     case = RmaCases.query.get_or_404(id)
     case.status = 'waiting_for_shipping'
     vendorrmano = request.form.get('vendorrmano', '')
+    vendorname = request.form.get('vendorname', '')
     shippn = request.form.get('shippn', '')
     partsn = request.form.get('partsn', '')
     if vendorrmano or shippn or partsn:
         ao = 'NTA' if shippn else case.customers
-        shipment = RmaVendorShipment(rma_case_id=case.id, vendorrmano=vendorrmano, shippn=shippn, partsn=partsn, assetowner=ao)
+        shipment = RmaVendorShipment(rma_case_id=case.id, vendorrmano=vendorrmano, shippn=shippn, partsn=partsn, assetowner=ao, vendorname=vendorname)
         db.session.add(shipment)
     db.session.commit()
     return redirect(url_for('main.rma_list'))
@@ -2665,12 +2993,20 @@ def rma_close(id):
     case.conclusion = request.form['conclusion']
     case.notes = request.form.get('notes', '')
     vendor_rma = request.form.get('vendorrmano_close', '').strip()
+    vendorname = request.form.get('vendorname_close', '').strip()
     if vendor_rma:
         case.status = 'waiting_for_shipping'
         case.vendorrmano = vendor_rma
         case.shippn = request.form.get('shippn_close', '')
         case.partsn = request.form.get('partsn_close', '')
         case.assetowner = 'NTA'
+        shipment = case.shipments.order_by(RmaVendorShipment.shiptovendortime.desc()).first()
+        if shipment:
+            shipment.vendorname = vendorname
+        else:
+            case.shipments.append(RmaVendorShipment(rma_case_id=case.id, vendorrmano=vendor_rma,
+                                shippn=request.form.get('shippn_close', ''), partsn=request.form.get('partsn_close', ''),
+                                vendorname=vendorname, assetowner='NTA'))
     else:
         case.status = 'closed'
         case.closetime = datetime.datetime.now()

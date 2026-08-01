@@ -328,20 +328,26 @@
               <small class="text-muted">Wait Inspect</small>
             </div>
           </div>
-          <div class="progress mt-3" style="height:20px;">
-            {% set total_backlog = backlog.unassigned + backlog.pending + backlog.processing + backlog.waiting_inspection %}
+           <div class="progress mt-3" style="height:20px;">
+            {% set total_backlog = backlog.unassigned + backlog.pending + backlog.processing + backlog.waiting_inspection + backlog.waiting_packing + backlog.packing + backlog.waiting_final %}
             {% if total_backlog > 0 %}
             <div class="progress-bar progress-c-red" role="progressbar" style="width:{{ (backlog.unassigned / total_backlog) * 100 }}%;" title="Unassigned ({{ backlog.unassigned }})">{{ backlog.unassigned }}</div>
             <div class="progress-bar progress-c-yellow" role="progressbar" style="width:{{ (backlog.pending / total_backlog) * 100 }}%;" title="Pending ({{ backlog.pending }})">{{ backlog.pending }}</div>
-            <div class="progress-bar progress-c-theme" role="progressbar" style="width:{{ (backlog.processing / total_backlog) * 100 }}%;" title="Processing ({{ backlog.processing }})">{{ backlog.processing }}</div>
+            <div class="progress-bar progress-c-theme" role="progressbar" style="width:{{ (backlog.processing / total_backlog) * 100 }}%;" title="Bld&amp;Tst ({{ backlog.processing }})">{{ backlog.processing }}</div>
             <div class="progress-bar progress-c-theme2" role="progressbar" style="width:{{ (backlog.waiting_inspection / total_backlog) * 100 }}%;" title="Wait Inspect ({{ backlog.waiting_inspection }})">{{ backlog.waiting_inspection }}</div>
+            <div class="progress-bar bg-warning" role="progressbar" style="width:{{ (backlog.waiting_packing / total_backlog) * 100 }}%;" title="Wait Pack ({{ backlog.waiting_packing }})">{{ backlog.waiting_packing }}</div>
+            <div class="progress-bar bg-secondary" role="progressbar" style="width:{{ (backlog.packing / total_backlog) * 100 }}%;" title="Packing ({{ backlog.packing }})">{{ backlog.packing }}</div>
+            <div class="progress-bar bg-dark" role="progressbar" style="width:{{ (backlog.waiting_final / total_backlog) * 100 }}%;" title="Wait Final ({{ backlog.waiting_final }})">{{ backlog.waiting_final }}</div>
             {% endif %}
           </div>
           <div class="row mt-2">
             <div class="col text-center"><small><span class="badge bg-danger">&nbsp;</span> Unassigned</small></div>
             <div class="col text-center"><small><span class="badge bg-warning">&nbsp;</span> Pending</small></div>
-            <div class="col text-center"><small><span class="badge" style="background:linear-gradient(-135deg, #1de9b6 0%, #1dc4e9 100%);">&nbsp;</span> Processing</small></div>
-            <div class="col text-center"><small><span class="badge" style="background:linear-gradient(-135deg, #899FD4 0%, #A389D4 100%);">&nbsp;</span> Wait Inspect</small></div>
+            <div class="col text-center"><small><span class="badge" style="background:linear-gradient(-135deg, #1de9b6 0%, #1dc4e9 100%);">&nbsp;</span> Bld&amp;Tst</small></div>
+            <div class="col text-center"><small><span class="badge" style="background:linear-gradient(-135deg, #899FD4 0%, #A389D4 100%);">&nbsp;</span> Wait Insp</small></div>
+            <div class="col text-center"><small><span class="badge" style="background:#ff9800">&nbsp;</span> Wait Pkg</small></div>
+            <div class="col text-center"><small><span class="badge bg-secondary">&nbsp;</span> Packing</small></div>
+            <div class="col text-center"><small><span class="badge bg-dark">&nbsp;</span> Wait Fin</small></div>
           </div>
         </div>
       </div>

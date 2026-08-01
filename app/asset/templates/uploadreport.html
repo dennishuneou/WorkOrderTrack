@@ -18,12 +18,10 @@
                 <div class="card-body bg-light">
                     <h4 style="margin-left: 45px"> Upload Report File  </h4>
                     <input type="file" id="file-input" accept=".log"/>
-                    <button id="read-button">Read File</button>
                     <pre id="file-contents"></pre>
                     <hr>
                     <script type="text/javascript">
-                        document.querySelector("#read-button").addEventListener('click', function() {
-                            let file = document.querySelector("#file-input").files[0];
+                        function parseReportFile(file) {
                             let reader = new FileReader();
                             reader.addEventListener('load', function(e)  //Linux version Log
                             {
@@ -95,6 +93,10 @@
                                     document.getElementById('report').value = text
                             });
                             reader.readAsText(file);
+                        }
+                        document.querySelector("#file-input").addEventListener('change', function() {
+                            let file = this.files[0];
+                            if (file) parseReportFile(file);
                         });
                     </script>
                 </div>

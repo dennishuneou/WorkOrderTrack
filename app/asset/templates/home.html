@@ -20,8 +20,14 @@
             <li class="nav-item">
                 <a class="nav-link " id="home-tab" data-toggle="tab" href="#Pending" role="tab" aria-controls="home" aria-selected="false">Pending <span class="badge badge-warning" data-badge="pending">{{ pending_count }}</span></a>
             </li>
-            <li class="nav-item">
-               <a class="nav-link active" id="profile-tab" data-toggle="tab" href="#Processing" role="tab" aria-controls="profile" aria-selected="true">Processing <span class="badge badge-primary" data-badge="processing">{{ processing_count }}</span></a>
+             <li class="nav-item">
+                <a class="nav-link active" id="profile-tab" data-toggle="tab" href="#BldTst" role="tab" aria-controls="profile" aria-selected="true">Bld&Tst&Cfg <span class="badge badge-primary" data-badge="bldtst">{{ bldtst_count }}</span></a>
+            </li>
+             <li class="nav-item">
+                <a class="nav-link" id="wait-pack-tab" data-toggle="tab" href="#WaitPack" role="tab" aria-controls="contact" aria-selected="false">Wait Packing <span class="badge badge-warning" data-badge="waiting_packing">{{ wfp_count }}</span></a>
+            </li>
+             <li class="nav-item">
+                <a class="nav-link" id="wait-inspect-tab" data-toggle="tab" href="#WaitInspect" role="tab" aria-controls="contact" aria-selected="false">Wait Inspect <span class="badge badge-info" data-badge="waiting_inspection">{{ wfi_count }}</span></a>
             </li>
              <li class="nav-item">
                 <a class="nav-link" id="contact-tab" data-toggle="tab" href="#Completed" role="tab" aria-controls="contact" aria-selected="false">Completed Today <span class="badge badge-success" data-badge="completed_today">{{ completed_today_count }}</span></a>
@@ -219,19 +225,19 @@
                     </table>
                 </div>
             </div>    
-        <div class="tab-pane fade active show" id="Processing" role="tabpanel" aria-labelledby="home-tab">
-            <div class="col my-2">
-                <h6 class="font-weight-bold">Processing WorkOrder</h6>
+        <div class="tab-pane fade active show" id="BldTst" role="tabpanel" aria-labelledby="home-tab">
+                <div class="col my-2">
+                     <h6 class="font-weight-bold">Bld&amp;Tst&amp;Cfg WorkOrder</h6>
             </div>
-            <button onclick="UploadSelected()">Upload more</button>  
-            {% if userrole > 0 %}
-            <button onclick="InspectSelected()">Inspect more</button> 
-            {% endif %}
+            <div class="d-flex justify-content-between align-items-center my-2">
+              <button onclick="UploadSelected()">Upload more</button>
+              <input type="text" class="form-control form-control-sm" style="width:200px" placeholder="Search..." onkeyup="filterTable('BldTst', this.value)">
+            </div>
             <div class="table-responsive">
-                <table data-search="true" data-toggle="table" class="table table-striped table-hover">
+                <table class="table table-striped table-hover">
                     <thead class="thead-light">
                         <tr style="background-color: #e3f2fd;">
-                            <th data-checkbox="true"></th>
+                            <th><input type="checkbox" onclick="var c=this.checked; this.closest('table').querySelectorAll('.chk').forEach(function(e){if(e.offsetParent!==null)e.checked=c})"></th>
                             <th data-sortable="true"> ID</th>
                             <th data-sortable="true"> Leadtime</th>
                             <th data-sortable="true"> WorkOrder</th>
@@ -245,14 +251,13 @@
                             <th> Upload Report</th>
                             {% if userrole > 0 %}
                             <th> Build By </th>
-                            <th> Inspection</th>
                             {% endif %}
                         </tr>
                     </thead>
                     <tbody>
-                    {% for each in processing %}
+                    {% for each in bldtst %}
                     <tr>
-                        <td> </td>
+                        <td><input type="checkbox" class="chk"></td>
                         <td> {{ each.id }}</td>
                         <td> {% if each.ldtime != None %} 
                                 {{ each.ldtime.strftime('%m/%d') }}
@@ -272,7 +277,7 @@
                         <td> {% if each.status ==  -1 %}
                             <span class="badge badge-warning">Unassigned</span>
                              {% elif each.status == 0 %}
-                            <span class="badge badge-warning">Processing</span>
+                            <span class="badge badge-primary">Bld&amp;Tst</span>
                              {% elif each.status == 1 %} 
                             <span class="badge badge-success">Waiting for inspection</span>
                              {% else %}
@@ -300,74 +305,195 @@
                             {% endif %}
                         </td>
                         {% if userrole > 0 %}
-                        <td> {{ each.asid | usersname }}</td>
-                        <td>
-                            {% if each.status ==  1 %}
-                            <a class="btn btn-light btn-sm"
-                               href="{{ url_for('main.ReviewReport', id=each.id) }}"
-                               role="button">
-                               <i class="fa fa-arrow-up" aria-hidden="true"></i>
-                            </a>
-                            {% endif %}
-                        </td>
-                        {% endif %}
+                         <td> {{ each.asid | usersname }}</td>
+                         {% endif %}
                     </tr>
                     {% endfor %}
                     </tbody>
                     <script type="text/javascript">
-                        function UploadSelected() {
-                            //Reference the Table.
-                            var grid = document.getElementById("Processing");
-                     
-                            //Reference the CheckBoxes in Table.
-                            var checkBoxes = grid.getElementsByTagName("input");
-                            var message = "";
-                            var cnt=0;
-                            //Loop through the CheckBoxes.
-                            for (var i = 2; i < checkBoxes.length; i++) {
-                                if (checkBoxes[i].checked) {
-                                    var row = checkBoxes[i].parentNode.parentNode.parentNode;
-                                    message += row.cells[1].innerHTML;
-                                    message += ' ';
-                                    cnt=cnt +1;
-                                }
-                            }
-                     
-                            //Display selected Row data in Alert Box.
-                            fetch("{{ url_for('main.uploadmore')}}", {
-                                            method: "POST",
-                                            headers: { "Content-type": "application/json" },
-                                            body: JSON.stringify({ message})
-                                   });
-                            if(cnt!=0) location.reload();       
-                        }
-                        function InspectSelected() {
-                            //Reference the Table.
-                            var grid = document.getElementById("Processing");
-                     
-                            //Reference the CheckBoxes in Table.
-                            var checkBoxes = grid.getElementsByTagName("input");
-                            var message = "";
-                            var cnt=0;
-                            //Loop through the CheckBoxes.
-                            for (var i = 2; i < checkBoxes.length; i++) {
-                                if (checkBoxes[i].checked) {
-                                    var row = checkBoxes[i].parentNode.parentNode.parentNode;
-                                    message += row.cells[1].innerHTML;
-                                    message += ' ';
-                                    cnt=cnt +1;
-                                }
-                            }
-                     
-                            //Display selected Row data in Alert Box.
-                            fetch("{{ url_for('main.inspectmore')}}", {
-                                            method: "POST",
-                                            headers: { "Content-type": "application/json" },
-                                            body: JSON.stringify({ message})
-                                   });
-                            if(cnt!=0) location.reload();       
-                        }
-                    </script>
+                         function UploadSelected() {
+                             var ids = []; var cnt = 0;
+                             document.querySelectorAll('#BldTst input.chk:checked').forEach(function(cb) {
+                                 ids.push(cb.closest('tr').cells[1].innerText.trim()); cnt++;
+                             });
+                             if (cnt == 0) return;
+                             var xhr = new XMLHttpRequest();
+                             xhr.open('POST', '{{ url_for("main.uploadmore") }}', true);
+                             xhr.setRequestHeader('Content-Type', 'application/json');
+                             xhr.onload = function() { location.reload(); };
+                             xhr.send(JSON.stringify({message: ids.join(' ')}));
+                         }
+                         function InspectSelected() {
+                             var ids = []; var cnt = 0;
+                             document.querySelectorAll('#WaitInspect input.chk:checked').forEach(function(cb) {
+                                 ids.push(cb.closest('tr').cells[1].innerText.trim()); cnt++;
+                             });
+                             if (cnt == 0) return;
+                             var xhr = new XMLHttpRequest();
+                             xhr.open('POST', '{{ url_for("main.inspectmore") }}', true);
+                             xhr.setRequestHeader('Content-Type', 'application/json');
+                             xhr.onload = function() { location.reload(); };
+                             xhr.send(JSON.stringify({message: ids.join(' ')}));
+                         }
+                          function filterTable(tabId, value) {
+                              var rows = document.getElementById(tabId).querySelectorAll('tbody tr');
+                              var q = value.toLowerCase();
+                              rows.forEach(function(tr) {
+                                  var match = false;
+                                  tr.querySelectorAll('td').forEach(function(td) {
+                                      if (td.textContent.toLowerCase().indexOf(q) >= 0) match = true;
+                                  });
+                                  tr.style.display = match ? '' : 'none';
+                              });
+                          }
+                          function PackSelected() {
+                              var ids = []; var cnt = 0;
+                              document.querySelectorAll('#WaitPack input.chk:checked').forEach(function(cb) {
+                                  ids.push(cb.closest('tr').cells[1].innerText.trim()); cnt++;
+                              });
+                              if (cnt == 0) return;
+                              var xhr = new XMLHttpRequest();
+                              xhr.open('GET', '/api/packing-solution/' + ids[0], true);
+                              xhr.onload = function() {
+                                  var resp = JSON.parse(xhr.responseText);
+                                  if (resp.found) {
+                                      var d = resp.data;
+                                      var html = '<strong>WO:</strong> ' + d.wo + '<br><strong>PN:</strong> ' + d.pn + '<br><hr>';
+                                      if (d.internal && d.internal.length) {
+                                          html += '<strong>Items:</strong><ul>';
+                                          d.internal.forEach(function(i){ html += '<li>' + i + '</li>'; });
+                                          html += '</ul>';
+                                      }
+                                      if (d.external && d.external.length) {
+                                          html += '<strong>To pack in box:</strong><ul>';
+                                          d.external.forEach(function(e){ html += '<li>' + e + '</li>'; });
+                                          html += '</ul>';
+                                      }
+                                      if (d.boxes && d.boxes.length) {
+                                          d.boxes.forEach(function(box, bi) {
+                                              html += '<strong>Box ' + (bi+1) + ':</strong> ' + box.name;
+                                              if (box.w) html += ' (' + box.w + 'x' + box.t + 'x' + box.h + ')';
+                                              html += '<br><ul>';
+                                              (box.packages || []).forEach(function(p){ html += '<li>' + p + '</li>'; });
+                                              html += '</ul>';
+                                          });
+                                      }
+                                      document.getElementById('packModalBody').innerHTML = html;
+                                      document.getElementById('packConfirmBtn').onclick = function() {
+                                          var xhr2 = new XMLHttpRequest();
+                                          xhr2.open('POST', '{{ url_for("main.packmore") }}', true);
+                                          xhr2.setRequestHeader('Content-Type', 'application/json');
+                                          xhr2.onload = function() { location.reload(); };
+                                          xhr2.send(JSON.stringify({message: ids.join(' ')}));
+                                      };
+                                      var pm = new bootstrap.Modal(document.getElementById('packModal')); pm.show();
+                                  } else {
+                                      var xhr2 = new XMLHttpRequest();
+                                      xhr2.open('POST', '{{ url_for("main.packmore") }}', true);
+                                      xhr2.setRequestHeader('Content-Type', 'application/json');
+                                      xhr2.onload = function() { location.reload(); };
+                                      xhr2.send(JSON.stringify({message: ids.join(' ')}));
+                                  }
+                              };
+                              xhr.onerror = function() {
+                                  var xhr2 = new XMLHttpRequest();
+                                  xhr2.open('POST', '{{ url_for("main.packmore") }}', true);
+                                  xhr2.setRequestHeader('Content-Type', 'application/json');
+                                  xhr2.onload = function() { location.reload(); };
+                                  xhr2.send(JSON.stringify({message: ids.join(' ')}));
+                              };
+                              xhr.send();
+                          }
+                          function PackDoneSelected() {
+                             var ids = []; var cnt = 0;
+                             document.querySelectorAll('#Packing input.chk:checked').forEach(function(cb) {
+                                 ids.push(cb.closest('tr').cells[1].innerText.trim()); cnt++;
+                             });
+                             if (cnt == 0) return;
+                             var xhr = new XMLHttpRequest();
+                             xhr.open('POST', '{{ url_for("main.packdone") }}', true);
+                             xhr.setRequestHeader('Content-Type', 'application/json');
+                             xhr.onload = function() { location.reload(); };
+                             xhr.send(JSON.stringify({message: ids.join(' ')}));
+                         }
+                         function InspectFinalSelected() {
+                             var ids = []; var cnt = 0;
+                             document.querySelectorAll('#Packing input.chk:checked').forEach(function(cb) {
+                                 ids.push(cb.closest('tr').cells[1].innerText.trim()); cnt++;
+                             });
+                             if (cnt == 0) return;
+                             var xhr = new XMLHttpRequest();
+                             xhr.open('POST', '{{ url_for("main.inspectfinal") }}', true);
+                             xhr.setRequestHeader('Content-Type', 'application/json');
+                             xhr.onload = function() { location.reload(); };
+                             xhr.send(JSON.stringify({message: ids.join(' ')}));
+                         }
+                     </script>
+                 </table>
+             </div>
+         </div>
+        <!-- Wait Packing tab -->
+        <div class="tab-pane fade" id="WaitPack" role="tabpanel">
+            <div class="col my-2"><h6 class="font-weight-bold">Wait for Packing</h6></div>
+            <div class="d-flex justify-content-between align-items-center my-2">
+              <button onclick="PackSelected()">Pack more</button>
+              <input type="text" class="form-control form-control-sm" style="width:200px" placeholder="Search..." onkeyup="filterTable('WaitPack', this.value)">
+            </div>
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="thead-light">
+                        <tr style="background-color:#e3f2fd;">
+                            <th><input type="checkbox" onclick="var c=this.checked; this.closest('table').querySelectorAll('.chk').forEach(function(e){if(e.offsetParent!==null)e.checked=c})"></th><th>ID</th><th>WO#</th><th>Customer</th><th>Product</th><th>CSN</th><th>Type</th><th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for wo in wfp %}
+                    <tr>
+                        <td><input type="checkbox" class="chk"></td>
+                        <td>{{ wo.id }}</td><td>{{ wo.wo }}</td><td>{{ wo.customers }}</td>
+                        <td><a href="{{ url_for('main.CheckWorkOrder',id=wo.id)}}">{{ wo.pn }}</a></td>
+                        <td>{{ wo.csn }}</td>
+                        <td>{% if wo.packgo %}PG{% else %}Build{% endif %}</td>
+                        <td><span class="badge badge-warning">Wait Pack</span></td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <!-- Wait Inspect tab -->
+        <div class="tab-pane fade" id="WaitInspect" role="tabpanel">
+            <div class="col my-2"><h6 class="font-weight-bold">Wait Inspection</h6></div>
+            <div class="d-flex justify-content-between align-items-center my-2">
+              <div>{% if userrole > 0 %}<button onclick="InspectSelected()">Inspect more</button>{% endif %}</div>
+              <input type="text" class="form-control form-control-sm" style="width:200px" placeholder="Search..." onkeyup="filterTable('WaitInspect', this.value)">
+            </div>
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="thead-light">
+                        <tr style="background-color:#e3f2fd;">
+                            {% if userrole > 0 %}<th><input type="checkbox" onclick="var c=this.checked; this.closest('table').querySelectorAll('.chk').forEach(function(e){if(e.offsetParent!==null)e.checked=c})"></th>{% endif %}
+                            <th>ID</th><th>WO#</th><th>Customer</th><th>Product</th><th>CSN</th><th>Type</th><th>Take at</th><th>Build by</th><th>Status</th>
+                            {% if userrole > 0 %}<th>Inspection</th>{% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for wo in wfi %}
+                    <tr>
+                        {% if userrole > 0 %}<td><input type="checkbox" class="chk"></td>{% endif %}
+                        <td>{{ wo.id }}</td><td>{{ wo.wo }}</td><td>{{ wo.customers }}</td>
+                        <td><a href="{{ url_for('main.CheckWorkOrder',id=wo.id)}}">{{ wo.pn }}</a></td>
+                        <td>{{ wo.csn }}</td>
+                        <td>{% if wo.packgo %}PG{% else %}Build{% endif %}</td>
+                        <td>{{ wo.tktime.strftime('%m/%d %H:%M') if wo.tktime }}</td>
+                        <td>{{ wo.asid | usersname }}</td>
+                        <td><span class="badge badge-info">Wait Inspect</span></td>
+                        {% if userrole > 0 %}
+                        <td><a href="{{ url_for('main.ReviewReport',id=wo.id)}}"><i class="fa fa-arrow-up"></i></a></td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                    </tbody>
                 </table>
             </div>
         </div>
@@ -484,6 +610,19 @@
   </div>
 </div>
 </div>
+<!-- Packing solution modal -->
+<div class="modal fade" id="packModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header"><h5 class="modal-title">Packing Solution</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body" id="packModalBody"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" id="packConfirmBtn">Confirm Pack</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -507,7 +646,10 @@ document.addEventListener('DOMContentLoaded', function () {
           .then(function (data) {
             document.querySelectorAll('[data-badge="unassigned"]').forEach(function (el) { el.textContent = data.unassigned; });
             document.querySelectorAll('[data-badge="pending"]').forEach(function (el) { el.textContent = data.pending; });
-            document.querySelectorAll('[data-badge="processing"]').forEach(function (el) { el.textContent = data.processing; });
+            document.querySelectorAll('[data-badge="bldtst"]').forEach(function (el) { el.textContent = data.bldtst; });
+            document.querySelectorAll('[data-badge="waiting_inspection"]').forEach(function (el) { el.textContent = data.waiting_inspection; });
+            document.querySelectorAll('[data-badge="waiting_packing"]').forEach(function (el) { el.textContent = data.waiting_packing; });
+            document.querySelectorAll('[data-badge="packing"]').forEach(function (el) { el.textContent = data.packing + data.waiting_final; });
             document.querySelectorAll('[data-badge="completed_today"]').forEach(function (el) { el.textContent = data.completed_today; });
             document.querySelectorAll('[data-badge="completed_lw"]').forEach(function (el) { el.textContent = data.completed_lw; });
           });

@@ -154,7 +154,7 @@ def report_check(form, field):
         '2B85': [{'part_number': 'GC-RTX5090-OC-MSI', 'key_message': 'RTX 5090'}],
         '2BB4': [{'part_number': 'GC-RTX6000Ada-PNY', 'key_message': 'RTX 6000 Ada'}, {'part_number': 'GC-RTX6000Ada-PNY-601', 'key_message': 'RTX 6000 Ada'}, {'part_number': 'GC-RTXPRO6000-PNY', 'key_message': 'RTX PRO 6000'}],
         '25B0': [{'part_number': 'GC-RTXA1000-8GB-LT', 'key_message': 'RTX A1000'}, {'part_number': 'GC-RTXA1000-8GB-PNY', 'key_message': 'RTX A1000'}],
-        '25B1': [{'part_number': 'GC-RTXA2000-12GB-LT', 'key_message': 'RTX A2000'}, {'part_number': 'GC-RTXA2000-12GB-PNY', 'key_message': 'RTX A2000'}],
+        '25B1': [{'part_number': 'GC-RTXA2000-12GB-LT', 'key_message': 'RTX A2000'}, {'part_number': 'GC-RTXA2000-12GB-PNY', 'key_message': 'RTX A2000'}, {'part_number': 'GC-RTXA2000-12GB-PNY', 'key_message': 'RTX A2000 12GB'}],
         '24B0': [{'part_number': 'GC-RTXA4000-LT', 'key_message': 'RTX A4000'}, {'part_number': 'GC-RTXA4000-LT1', 'key_message': 'RTX A4000'}, {'part_number': 'GC-RTXA4000-PNY', 'key_message': 'RTX A4000'}],
         '24B1': [{'part_number': 'GC-RTXA4500-LT', 'key_message': 'RTX A4500'}, {'part_number': 'GC-RTXA4500-PNY', 'key_message': 'RTX A4500'}],
         '2231': [{'part_number': 'GC-RTXA5000-LT', 'key_message': 'RTX A5000'}, {'part_number': 'GC-RTXA5000-PNY', 'key_message': 'RTX A5000'}],
@@ -258,11 +258,10 @@ def report_check(form, field):
                     elif gpu_match.group(2):
                        extracted_name = gpu_match.group(2).strip()
 	                  # Lookup using the key_message mapping
-	                  # Since keys are part numbers, scan the values to find the matching 'key_message'
                     for part_data in gpu_part_to_device.values():
-                       if part_data['key_message'] == extracted_name:
+                       if extracted_name.startswith(part_data['key_message']) or part_data['key_message'] == extracted_name:
                           device_id = part_data['device_id'].upper()
-                          break # Stop scanning once matched
+                          break
 	                  # Use your lookup map to cross-reference text string to hex ID
                     if device_id and device_id not in gpu_device_ids:
                           gpu_device_ids.append(device_id)
@@ -435,7 +434,8 @@ def report_check(form, field):
                 pass
             elif ("/dev/sd" in line) and "Size:" in line:
                 #Jetson SATA: skip USB, /dev/sdb Size:28.7GB E: ID_SERIAL=...
-                if "USB" not in line:
+                #/dev/sda Size:14.4GB E: ID_SERIAL=Kingston_DataTraveler_2.0_AC220B280549B090490E26AC-0:0 
+                if "USB" not in line and "Kingston" not in line :
                     words = line.split()
                     for word in words:
                         if "Size:" in word:
@@ -1064,8 +1064,7 @@ class EditQualityLogForm(FlaskForm):
     wo = StringField('WO or RMA or Invoice', validators=[DataRequired(),Length(max=100)])
     pn = StringField('Product Model', validators=[DataRequired(),pn_check0,Length(max=100)])
     csn = StringField('Chassis Serial Number', validators=[DataRequired(),Length(max=100)])
-    options = [('Motherboard','Motherboard'),('Daughterboard','Daughterboard'),('Chassis','Chassis'),('CPU','CPU'),('MEMORY','MEMORY'),('DISK','DISK'),('GPU','GPU'),('MODULES','MODULE'),('Package','Package')]
-    defectpart = SelectField('Defect Part', choices= options,validators=[DataRequired(),Length(max=100)])
+    defectpart = StringField('Defective Parts', validators=[DataRequired(),Length(max=100)])
     defectpartsn = StringField('Defect Part SN(or NA)', validators=[DataRequired(),Length(max=100)])
     reason = StringField('Issue Description', validators=[DataRequired(),Length(max=300)],widget=TextArea())
     options = [('New','New'),('Processing','Processing'),('Pending','Pending'),('Closed','Closed')]
