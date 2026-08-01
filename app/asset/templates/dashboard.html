@@ -424,7 +424,14 @@
                 {% endfor %}
               </div>
               <div class="text-center mt-1"><small class="text-muted">IW {{ rma_counts.iw }} / OOW {{ rma_counts.oow }}</small></div>
-              {% if rma_counts.conclusions %}<canvas id="pieTotal" height="60" class="mt-1" style="max-width:75%;margin:0 auto"></canvas>{% endif %}
+              <div class="mt-1">
+                {% if rma_counts.conclusions %}<canvas id="pieTotal" height="60" class="mt-1" style="max-width:75%;margin:0 auto"></canvas>{% endif %}
+                <div class="text-center" style="font-size:0.72rem;max-height:80px;overflow-y:auto;">
+                  {% for n in rma_counts.closed_notes %}
+                  <div><strong>{{ n.count }}</strong> Processed by {{ n.processby }}</div>
+                  {% endfor %}
+                </div>
+              </div>
             </div>
           </div>
         </div>

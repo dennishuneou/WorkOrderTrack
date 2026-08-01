@@ -627,6 +627,13 @@ def dashboard():
     rma_counts_val = rma_counts_for(all_q)
     rma_counts_val['conclusions'] = flat_conc(conclusions_for(all_q))
     rma_counts_val['iw'], rma_counts_val['oow'] = iw_oow(all_q)
+    closed_rows = db.session.query(RmaCases.processid, sa_func.count(RmaCases.id)).filter(
+        RmaCases.status == 'closed', RmaCases.processid != None
+    ).group_by(RmaCases.processid).order_by(sa_func.count(RmaCases.id).desc()).all()
+    rma_counts_val['closed_notes'] = [
+        {'count': int(cnt), 'processby': get_username(pid) if pid else ''}
+        for pid, cnt in closed_rows
+    ]
     rma_retail_val = rma_counts_for(retail_q)
     rma_retail_val['conclusions'] = flat_conc(conclusions_for(retail_q))
     rma_retail_val['iw'], rma_retail_val['oow'] = iw_oow(retail_q)
