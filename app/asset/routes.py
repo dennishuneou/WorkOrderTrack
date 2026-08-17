@@ -1,10 +1,10 @@
-import os, subprocess, csv, io
+import os, subprocess, csv, io, re
 from flask_login import login_required
 from app.asset.forms import AddWorkorderForm, UploadReportForm, ReviewReportForm, ReviewReportFileForm,EditOneComputerForm,ReportSearchForm,QueryForm,ViewReportForm,ReviewOneComputerForm
 from app.asset.forms import AddProductForm,QueryProductsForm,EditProductForm,QueryWorkordersForm,PackingCalculateForm
 from app.asset.forms import QueryQlogForm,AddQualityLogForm,EditQualityLogForm
 from app.asset import main
-from app.asset.models import WorkOrder, Production, PnMap, PackageBox, QualityLog, RmaCases, RmaVendorShipment
+from app.asset.models import WorkOrder, Production, PnMap, PackageBox, QualityLog, RmaCases, RmaVendorShipment, RmaParts, PartsInventory
 
 def lookup_pn(pn):
     """Lookup PN in PnMap, trying exact match first, then stripping common suffixes."""
@@ -684,6 +684,7 @@ def dashboard():
         )
         for c in channel_names:
             rma_q = rma_q.filter(~RmaCases.customers.ilike(f'%{c}%'))
+        rma_q = rma_q.filter(~RmaCases.customers.ilike('NTA'))
         numer = 0
         for c in rma_q.all():
             w = (c.warranty or '').strip().lower()
@@ -701,6 +702,7 @@ def dashboard():
         )
         for c in channel_names:
             doa_q = doa_q.filter(~RmaCases.customers.ilike(f'%{c}%'))
+        doa_q = doa_q.filter(~RmaCases.customers.ilike('NTA'))
         doa_cnt = doa_q.count()
         doa_quarters.append({
             'label': label, 'numer': doa_cnt, 'denom': prev_denom,
@@ -710,6 +712,130 @@ def dashboard():
         q_start = q_end
     rma_rate_data = rma_quarters
     doa_rate_data = doa_quarters
+
+    # Monthly RMA & DOA rates for the current (partial) quarter
+    def _month_build(s, e):
+        q = WorkOrder.query.filter(
+            WorkOrder.intime >= s, WorkOrder.intime < e,
+            WorkOrder.status == 2,
+            db.or_(*[WorkOrder.pn.like(f'{p}%') for p in computer_prefixes]),
+            db.or_(WorkOrder.cpuinstall == True, WorkOrder.memoryinstall == True, WorkOrder.packgo == True),
+        )
+        for c in channel_names:
+            q = q.filter(~WorkOrder.customers.ilike(f'%{c}%'))
+        return q.count()
+
+    def _prev_month_avg(y, mo, k):
+        counts = []
+        for back in range(1, k + 1):
+            yy, mm = y, mo
+            for _ in range(back):
+                mm -= 1
+                if mm == 0:
+                    mm = 12
+                    yy -= 1
+            ps = datetime.datetime(yy, mm, 1)
+            pey, pem = (yy + 1, 1) if mm == 12 else (yy, mm + 1)
+            pe = datetime.datetime(pey, pem, 1)
+            counts.append(_month_build(ps, pe))
+        return round(sum(counts) / len(counts), 2) if counts else 0
+
+    rma_months = []
+    doa_months = []
+    m = datetime.datetime(last_complete.year, last_complete.month, 1)
+    today_mid = datetime.datetime(today.year, today.month, today.day)
+    while m < today_mid + datetime.timedelta(days=1):
+        ny, nm = (m.year + 1, 1) if m.month == 12 else (m.year, m.month + 1)
+        m_end = datetime.datetime(ny, nm, 1)
+        if m_end > today_mid:
+            m_end = today_mid + datetime.timedelta(days=1)
+        denom_m = _month_build(m, m_end)
+        rma_m = RmaCases.query.filter(
+            RmaCases.cstime >= m, RmaCases.cstime < m_end,
+            RmaCases.status == 'closed',
+            ~RmaCases.conclusion.ilike('%No Problem Found%'),
+            ~RmaCases.rmatype.ilike('ECN'),
+        )
+        for c in channel_names:
+            rma_m = rma_m.filter(~RmaCases.customers.ilike(f'%{c}%'))
+        rma_m = rma_m.filter(~RmaCases.customers.ilike('NTA'))
+        numer_m = 0
+        for c in rma_m.all():
+            w = (c.warranty or '').strip().lower()
+            if w in ('yes',) or '-' in w or '/' in w:
+                numer_m += 1
+        doa_m = RmaCases.query.filter(
+            RmaCases.cstime >= m, RmaCases.cstime < m_end,
+            RmaCases.rmatype == 'DOA',
+        )
+        for c in channel_names:
+            doa_m = doa_m.filter(~RmaCases.customers.ilike(f'%{c}%'))
+        doa_m = doa_m.filter(~RmaCases.customers.ilike('NTA'))
+        doa_cnt_m = doa_m.count()
+        doa_denom = _prev_month_avg(m.year, m.month, 3)
+        mlabel = f"{m.year}-{m.month:02d}"
+        rma_months.append({
+            'label': mlabel, 'numer': numer_m, 'denom': denom_m,
+            'rate': round(numer_m / denom_m * 100, 2) if denom_m else 0,
+        })
+        doa_months.append({
+            'label': mlabel, 'numer': doa_cnt_m, 'denom': doa_denom,
+            'rate': round(doa_cnt_m / doa_denom * 100, 2) if doa_denom else 0,
+        })
+        m = m_end
+
+    # RMA process efficiency: of all cases received in a month, % closed within 15 work days (receive->close), monthly since 2026-01-01
+    def _workdays(a, b):
+        d = a.date() + datetime.timedelta(days=1)
+        end = b.date()
+        cnt = 0
+        while d <= end:
+            if d.weekday() < 5:
+                cnt += 1
+            d += datetime.timedelta(days=1)
+        return cnt
+
+    rma_eff_iw = []
+    rma_eff_oow = []
+    em = datetime.datetime(2026, 1, 1)
+    em_max = today_mid + datetime.timedelta(days=1)
+    while em < em_max:
+        ey, emn = (em.year + 1, 1) if em.month == 12 else (em.year, em.month + 1)
+        em_end = datetime.datetime(ey, emn, 1)
+        if em_end > em_max:
+            em_end = em_max
+        eff_q = RmaCases.query.filter(
+            RmaCases.recvtime >= em, RmaCases.recvtime < em_end,
+        )
+        eff_q = eff_q.filter(~RmaCases.customers.ilike('NTA'))
+        eff_cases = eff_q.all()
+        iw_total = 0
+        iw_on = 0
+        oow_total = 0
+        oow_on = 0
+        for c in eff_cases:
+            w = (c.warranty or '').strip().lower()
+            is_iw = (w in ('yes',)) or ('-' in w) or ('/' in w)
+            closed_on_time = c.closetime and c.recvtime and _workdays(c.recvtime, c.closetime) <= 15
+            if is_iw:
+                iw_total += 1
+                if closed_on_time:
+                    iw_on += 1
+            else:
+                oow_total += 1
+                if closed_on_time:
+                    oow_on += 1
+        rma_eff_iw.append({
+            'label': f"{em.year}-{em.month:02d}",
+            'total': iw_total, 'ontime': iw_on,
+            'rate': round(iw_on / iw_total * 100, 2) if iw_total else 100,
+        })
+        rma_eff_oow.append({
+            'label': f"{em.year}-{em.month:02d}",
+            'total': oow_total, 'ontime': oow_on,
+            'rate': round(oow_on / oow_total * 100, 2) if oow_total else 100,
+        })
+        em = em_end
 
     # Operator ranking
     rank_period_days = 7
@@ -1032,7 +1158,8 @@ def dashboard():
                            ranking_labels28=ranking_labels28, ranking_counts28=ranking_counts28,
                             ranking_scores28=ranking_scores28, quality_data=quality_data, userrole=role,
                             detail_table=detail_table, detail_table28=detail_table28,
-                            rma_counts=rma_counts_val, rma_retail=rma_retail_val, rma_channel=rma_channel_val, rma_rate=rma_rate_data, doa_rate=doa_rate_data)
+                            rma_counts=rma_counts_val, rma_retail=rma_retail_val, rma_channel=rma_channel_val,                             rma_rate=rma_rate_data, doa_rate=doa_rate_data,
+                            rma_months=rma_months, doa_months=doa_months, rma_eff_iw=rma_eff_iw, rma_eff_oow=rma_eff_oow)
 
 @main.route('/api/workorder-counts')
 @login_required
@@ -1674,7 +1801,7 @@ def ReviewReport(id):
         workorder.intime=datetime.datetime.now()
         if form.validate_on_submit():
             if form.action.data == '0' :
-                workorder.status = 3
+                workorder.status = 2
                 workorder.insid = current_user.id
             else: 
                 workorder.status = 0  
@@ -1978,6 +2105,140 @@ def queryproduct():
         products = products.filter(PnMap.pn.contains(pn))
         form.pn.data = pn
     return render_template('query_products.html', form=form, userrole=role, searched=1 if pn else 0, products=products)
+
+@main.route('/rmaparts', methods=['GET', 'POST'])
+@login_required
+def rmaparts():
+    role = get_userrole(current_user.id)
+    if role < 2:
+        return redirect(url_for('main.display_workorders'))
+    msg = ''
+    if request.method == 'POST':
+        partsname = request.form.get('partsname', '').strip()
+        category = request.form.get('category', '').strip()
+        workwith = request.form.get('workwith', '').strip()
+        if not partsname:
+            msg = 'Parts Name is required'
+        elif RmaParts.query.filter_by(partsname=partsname).count():
+            msg = f'Parts "{partsname}" already exists'
+        else:
+            db.session.add(RmaParts(partsname=partsname, category=category, workwith=workwith))
+            db.session.commit()
+            msg = f'Parts "{partsname}" created'
+    all_parts = RmaParts.query.order_by(RmaParts.category, RmaParts.partsname).all()
+    rma_names = {p.partsname for p in all_parts}
+    available = [{
+        'partsname': p.partsname,
+        'partsn': p.partsn,
+        'warehouse': p.warehouse or '',
+        'history': p.history or '',
+    } for p in PartsInventory.query.filter(PartsInventory.partsname.in_(rma_names), PartsInventory.warehouse.in_(('WH10', 'WH12', 'WH04'))).order_by(PartsInventory.partsname, PartsInventory.partsn).all()]
+    return render_template('rmaparts.html', parts=all_parts, available=available,
+                           warehouses=['WH10', 'WH04', 'WH12'], msg=msg, userrole=role,
+                           productlist=[p[0] for p in PnMap.query.with_entities(PnMap.pn).all()])
+
+@main.route('/rmaparts/sns', methods=['GET'])
+@login_required
+def rmaparts_sns():
+    if get_userrole(current_user.id) < 2: abort(403)
+    warehouse = request.args.get('warehouse', '').strip().upper()
+    partsname = request.args.get('partsname', '').strip()
+    if warehouse not in ('WH10', 'WH12'):
+        return {'sns': []}
+    sns = [p.partsn for p in PartsInventory.query.filter_by(warehouse=warehouse, partsname=partsname).all()]
+    return {'sns': sns}
+
+@main.route('/rmaparts/transfer', methods=['POST'])
+@login_required
+def rmaparts_transfer():
+    if get_userrole(current_user.id) < 2: abort(403)
+    partsname = request.form.get('partsname', '').strip()
+    partsn = request.form.get('partsn', '').strip()
+    target = request.form.get('target', '').strip().upper()
+    if target not in ('WH10', 'WH04', 'WH12'):
+        flash('Invalid target warehouse')
+        return redirect(url_for('main.rmaparts'))
+    rows = PartsInventory.query.filter_by(partsname=partsname, partsn=partsn).all()
+    if not rows:
+        flash(f'No inventory found for "{partsname}" / "{partsn}"')
+        return redirect(url_for('main.rmaparts'))
+    now = datetime.datetime.now().strftime('%m/%d/%Y %H:%M')
+    for r in rows:
+        old = r.warehouse or ''
+        r.warehouse = target
+        entry = f"[{now}] Transferred {old} -> {target}"
+        r.history = (r.history.rstrip() + '\n' + entry) if r.history else entry
+    db.session.commit()
+    flash(f'Transferred {len(rows)} item(s) of "{partsname}" / "{partsn}" to {target}')
+    return redirect(url_for('main.rmaparts'))
+
+@main.route('/rmaparts/edit', methods=['POST'])
+@login_required
+def rmaparts_edit():
+    if get_userrole(current_user.id) < 2: abort(403)
+    partsname = request.form.get('partsname', '').strip()
+    category = request.form.get('category', '').strip()
+    workwith = request.form.get('workwith', '').strip()
+    part = RmaParts.query.filter_by(partsname=partsname).first()
+    if not part:
+        flash(f'Parts "{partsname}" not found')
+        return redirect(url_for('main.rmaparts'))
+    part.category = category
+    part.workwith = workwith
+    db.session.commit()
+    flash(f'Parts "{partsname}" updated')
+    return redirect(url_for('main.rmaparts'))
+
+@main.route('/rmaparts/receive', methods=['POST'])
+@login_required
+def rmaparts_receive():
+    if get_userrole(current_user.id) < 2: abort(403)
+    partsname = request.form.get('partsname', '').strip()
+    warehouse = request.form.get('warehouse', '').strip().upper()
+    sns = [x.strip() for x in request.form.get('partsn', '').replace(',', ' ').split() if x.strip()]
+    if not partsname or not sns or warehouse not in ('WH10', 'WH12'):
+        flash('Parts Name, Serial Number(s), and Warehouse are required', 'danger')
+        return redirect(url_for('main.rmaparts'))
+    if not RmaParts.query.filter_by(partsname=partsname).count():
+        flash(f'Parts "{partsname}" does not exist in rmaparts', 'danger')
+        return redirect(url_for('main.rmaparts'))
+    inv_time = datetime.datetime.now().strftime('%m/%d/%Y %H:%M')
+    cnt = 0
+    skipped = 0
+    for sn in sns:
+        if PartsInventory.query.filter_by(partsname=partsname, partsn=sn).count():
+            skipped += 1
+            continue
+        db.session.add(PartsInventory(partsname=partsname, partsn=sn, warehouse=warehouse, history=f"[{inv_time}] Received"))
+        cnt += 1
+    db.session.commit()
+    msg = f'Received {cnt} item(s) of "{partsname}" into {warehouse}'
+    if skipped:
+        msg += f' ({skipped} duplicate SN(s) skipped)'
+    flash(msg)
+    return redirect(url_for('main.rmaparts'))
+
+@main.route('/rmaparts/addlog', methods=['POST'])
+@login_required
+def rmaparts_addlog():
+    if get_userrole(current_user.id) < 2: abort(403)
+    partsname = request.form.get('partsname', '').strip()
+    partsn = request.form.get('partsn', '').strip()
+    logtext = request.form.get('logtext', '').strip()
+    if not logtext:
+        flash('Log content is required')
+        return redirect(url_for('main.rmaparts'))
+    rows = PartsInventory.query.filter_by(partsname=partsname, partsn=partsn).all()
+    if not rows:
+        flash(f'No inventory found for "{partsname}" / "{partsn}"')
+        return redirect(url_for('main.rmaparts'))
+    now = datetime.datetime.now().strftime('%m/%d/%Y %H:%M')
+    entry = f"[{now}] {logtext}"
+    for r in rows:
+        r.history = (r.history.rstrip() + '\n' + entry) if r.history else entry
+    db.session.commit()
+    flash(f'Log added to "{partsname}" / "{partsn}"')
+    return redirect(url_for('main.rmaparts'))
 
 
 @main.route('/createproduct', methods=['GET', 'POST'])
@@ -2403,7 +2664,8 @@ def add_qualitylog():
                     defectpart=form.defectpart.data,defectpartsn=form.defectpartsn.data,reason=form.reason.data,
                     status="New",reportid=current_user.id,reporttime = datetime.datetime.now(),
                     ownerid = -1,processlog=processlog,conclusion="", cause=None,
-                    vendorname=form.vendorname.data or '', category=form.category.data or '')
+                    vendorname=form.vendorname.data or '', category=form.category.data or '',
+                    nonconformingno=form.nonconformingno.data or '')
         db.session.add(transaction)
         db.session.commit()
         flash('Create Log successful')
@@ -2467,6 +2729,7 @@ def queryqlog():
         rows.append(qlog.reason)
         rows.append(qlog.conclusion)
         rows.append(qlog.cause)
+        rows.append(qlog.nonconformingno or '')
         searchtable.append(rows)
     return render_template('queryqlog.html', form=form, userrole=role, searched=searched,searchtable=searchtable)
 
@@ -2502,6 +2765,7 @@ def ViewEditQlog(id):
         qlog_org[0].processlog=processlog
         qlog_org[0].conclusion=form.conclusion.data.strip()
         qlog_org[0].cause=form.cause.data.strip()
+        qlog_org[0].nonconformingno=form.nonconformingno.data.strip() if form.nonconformingno.data else ''
         db.session.commit()
         flash('Update successful')
         #return redirect(session.get('previous_url','/'))
@@ -2513,7 +2777,7 @@ def ViewEditQlog(id):
 def rma_list():
     if get_userrole(current_user.id) < 2: abort(403)
     role = get_userrole(current_user.id)
-    status_filter = request.args.get('status', 'all')
+    status_filter = request.args.get('status', 'new')
     start_date = request.args.get('start_date', '')
     end_date = request.args.get('end_date', '')
     keywords = request.args.get('keywords', '')
@@ -2554,7 +2818,8 @@ def rma_list():
         c.file_base = f"00_Neousys_{c.ntarmano}_{safe_cust}_{safe_pn}_{cnt}Units"
         c.recvby = get_username(c.recvid) if c.recvid else ''
         c.processby = get_username(c.processid) if c.processid else ''
-        latest = c.shipments.order_by(RmaVendorShipment.shiptovendortime.desc()).first()
+        c.shipment_count = c.shipments.filter_by(status='shipped').count()
+        latest = c.shipments.filter_by(status='shipped').order_by(RmaVendorShipment.shiptovendortime.desc()).first()
         c.latest_shipment = latest
         c.shipby = get_username(latest.shiptovendorid) if (latest and latest.shiptovendorid) else ''
         c.recvfromvendorby = get_username(latest.recvfromvendorid) if (latest and latest.recvfromvendorid) else ''
@@ -2584,7 +2849,9 @@ def rma_list():
     return render_template('rma.html', cases=cases, counts=counts,
                            current_status=status_filter, userrole=role,
                            start_date=start_date, end_date=end_date,
-                           keywords=keywords)
+                           keywords=keywords,
+                           productlist=[p[0] for p in PnMap.query.with_entities(PnMap.pn).all()],
+                           invparts={wh: [p.partsname for p in PartsInventory.query.filter_by(warehouse=wh).all()] for wh in ('WH10', 'WH12')})
 
 def next_ntarmano():
     now = datetime.datetime.now()
@@ -2693,7 +2960,7 @@ def generate_rma_files(case, csns=None):
         doc_xml = set_xml_cell(doc_xml, 0, 7, 1, case.rmacontactphone or '')
         if case.rmacontactname1:
             doc_xml = set_xml_cell(doc_xml, 0, 8, 1, case.rmacontactname1)
-            doc_xml = set_xml_cell(doc_xml, 0, 8, 4, case.rmacontactemail1 or '')
+            doc_xml = set_xml_cell(doc_xml, 0, 8, 5, case.rmacontactemail1 or '')
         if case.rmacontactphone1:
             doc_xml = set_xml_cell(doc_xml, 0, 9, 1, case.rmacontactphone1)
         csn_str = ', '.join(csns) if csns else case.csn
@@ -2713,6 +2980,12 @@ def generate_rma_files(case, csns=None):
                     zout.writestr(item, zin.read(item.filename))
 
     return base
+
+def rma_back():
+    ref = request.referrer or ''
+    if 'rma_list' in ref or '/rma' in ref.split('?')[0]:
+        return redirect(ref)
+    return redirect(url_for('main.rma_list'))
 
 @main.route('/rma/new', methods=['GET', 'POST'])
 @login_required
@@ -2751,12 +3024,18 @@ def rma_new():
             )
             db.session.add(case)
             case.assetowner = case.customers
+            if case.customers.strip().upper() == 'NTA':
+                case.status = 'processing'
+                case.processid = current_user.id
+                case.startprocesstime = datetime.datetime.now()
             if first_case is None:
                 first_case = case
         db.session.commit()
         base = generate_rma_files(first_case, csns)
         flash(f'RMA case created ({len(csns)} units). Files: {base}.doc / {base}.pdf')
-        return redirect(url_for('main.rma_list'))
+        if first_case.customers.strip().upper() == 'NTA':
+            return redirect(url_for('main.rma_list', status='processing'))
+        return redirect(url_for('main.rma_list', status='new'))
     ntarmano = next_ntarmano()
     productlist = PnMap.query.with_entities(PnMap.pn).all()
     products = []
@@ -2777,24 +3056,94 @@ def rma_receive(id):
     case.recvid = current_user.id
     case.recvtime = datetime.datetime.now()
     db.session.commit()
-    return redirect(url_for('main.rma_list'))
+    return rma_back()
 
 @main.route('/rma/<int:id>/wait-shipping', methods=['POST'])
 @login_required
 def rma_wait_shipping(id):
     if get_userrole(current_user.id) < 2: abort(403)
     case = RmaCases.query.get_or_404(id)
-    case.status = 'waiting_for_shipping'
     vendorrmano = request.form.get('vendorrmano', '')
     vendorname = request.form.get('vendorname', '')
     shippn = request.form.get('shippn', '')
     partsn = request.form.get('partsn', '')
-    if vendorrmano or shippn or partsn:
-        ao = 'NTA' if shippn else case.customers
-        shipment = RmaVendorShipment(rma_case_id=case.id, vendorrmano=vendorrmano, shippn=shippn, partsn=partsn, assetowner=ao, vendorname=vendorname)
-        db.session.add(shipment)
+    category = request.form.get('category', '')
+    rwo_wh = request.form.get('rwo_warehouse', '').strip().upper()
+    rma_parts_pn = request.form.get('rma_parts_pn', '').strip()
+    rma_part_sn = request.form.get('rma_part_sn', '').strip()
+    inv_time = datetime.datetime.now().strftime('%m/%d/%Y %H:%M')
+    if rwo_wh in ('WH01', 'WH10', 'WH12'):
+        wh_msg = f"{rwo_wh} to WH04 at shipping, WH04 to {rwo_wh} at receiving"
+        if shippn and partsn:
+            existing = PartsInventory.query.filter_by(partsname=shippn, partsn=partsn).count()
+            if existing:
+                flash('Duplicate item in partsinventory, it is wrong', 'danger')
+                return rma_back()
+        if rwo_wh in ('WH10', 'WH12') and rma_parts_pn and rma_part_sn:
+            for r in PartsInventory.query.filter_by(partsname=rma_parts_pn, partsn=rma_part_sn).all():
+                r.warehouse = 'OUTOFSTOCK'
+                entry = f"[{inv_time}]: used for {case.ntarmano} of {case.customers}"
+                r.history = (r.history.rstrip() + '\n' + entry) if r.history else entry
+        if shippn and partsn:
+            hist = f"[{inv_time}]:from {case.ntarmano} of {case.customers},shipped with {vendorrmano}, replaced by {rma_parts_pn}/{rma_part_sn} from {rwo_wh}"
+            db.session.add(PartsInventory(partsname=shippn, partsn=partsn, warehouse='WH04', history=hist))
+        # create a new NTA RMA case representing the NTA<->vendor RMA (no docx)
+        new_ntar = next_ntarmano()
+        desc = f"Created for <RWO {case.ntarmano}>."
+        new_case = RmaCases(
+            ntarmano=new_ntar,
+            customers='NTA',
+            pn=shippn,
+            csn=partsn,
+            warranty='',
+            descriptionbycustomer=desc,
+            csid=current_user.id,
+            cstime=datetime.datetime.now(),
+            rmacontactname='NTA',
+            rmacontactemail='nta.rma@neousys-tech.com',
+            rmacontactphone='847-656-3298',
+            shippingaddress='55 E Hintz Rd, Wheeling, IL 60090',
+            rmatype='RMA',
+        )
+        new_case.assetowner = 'NTA'
+        new_case.status = 'waiting_for_shipping'
+        db.session.add(new_case)
+        db.session.flush()
+        new_shipment = RmaVendorShipment(
+            rma_case_id=new_case.id,
+            vendorrmano=vendorrmano,
+            shippn=shippn,
+            partsn=partsn,
+            vendorname=vendorname,
+            category=category,
+            assetowner='NTA',
+            shiptovendortime=datetime.datetime.now(),
+            shiptovendorid=current_user.id,
+            warehousetransfer=wh_msg,
+        )
+        db.session.add(new_shipment)
+    else:
+        case.status = 'waiting_for_shipping'
+        if vendorrmano or shippn or partsn or vendorname:
+            active = case.shipments.order_by(RmaVendorShipment.id.desc()).first()
+            if active and active.status != 'received':
+                active.vendorrmano = vendorrmano
+                active.shippn = shippn
+                active.partsn = partsn
+                active.vendorname = vendorname
+                active.category = category
+                active.assetowner = case.customers
+                active.warehousetransfer = ''
+                active.shiptovendortime = datetime.datetime.now()
+                active.shiptovendorid = current_user.id
+            else:
+                ao = case.customers
+                shipment = RmaVendorShipment(rma_case_id=case.id, vendorrmano=vendorrmano, shippn=shippn, partsn=partsn, assetowner=ao, vendorname=vendorname, category=category,
+                                             shiptovendortime=datetime.datetime.now(), shiptovendorid=current_user.id, warehousetransfer='')
+                db.session.add(shipment)
+                case.assetowner = ao
     db.session.commit()
-    return redirect(url_for('main.rma_list'))
+    return rma_back()
 
 @main.route('/rma/<int:id>/delete', methods=['POST'])
 @login_required
@@ -2804,7 +3153,7 @@ def rma_delete(id):
     if case.status == 'new':
         case.status = 'canceled'
         db.session.commit()
-    return redirect(url_for('main.rma_list'))
+    return rma_back()
 
 @main.route('/rma/<int:id>/hard-delete', methods=['POST'])
 @login_required
@@ -2815,7 +3164,7 @@ def rma_hard_delete(id):
         RmaVendorShipment.query.filter_by(rma_case_id=case.id).delete()
         db.session.delete(case)
         db.session.commit()
-    return redirect(url_for('main.rma_list'))
+    return rma_back()
 
 @main.route('/rma/<int:id>/unreceive', methods=['POST'])
 @login_required
@@ -2827,7 +3176,7 @@ def rma_unreceive(id):
         case.recvid = None
         case.recvtime = None
         db.session.commit()
-    return redirect(url_for('main.rma_list'))
+    return rma_back()
 
 @main.route('/rma/<int:id>/start', methods=['POST'])
 @login_required
@@ -2838,7 +3187,7 @@ def rma_start(id):
     case.processid = current_user.id
     case.startprocesstime = datetime.datetime.now()
     db.session.commit()
-    return redirect(url_for('main.rma_list'))
+    return rma_back()
 
 @main.route('/rma/<int:id>/create-wo', methods=['POST'])
 @login_required
@@ -2849,7 +3198,7 @@ def rma_create_wo(id):
     exists = WorkOrder.query.filter_by(wo=wo_num, csn=case.csn).first()
     if exists:
         flash(f'WorkOrder {wo_num} already exists for CSN {case.csn}')
-        return redirect(url_for('main.rma_list'))
+        return rma_back()
     wo = WorkOrder(
         wo=wo_num, customers=case.customers, pn=case.pn, csn=case.csn,
         cputype='', memorysize='', disksize='',
@@ -2864,7 +3213,7 @@ def rma_create_wo(id):
     db.session.add(wo)
     db.session.commit()
     flash(f'WorkOrder {wo_num} created for {case.customers}')
-    return redirect(url_for('main.rma_list'))
+    return rma_back()
 
 @main.route('/rma/<int:id>/save-notes', methods=['POST'])
 @login_required
@@ -2886,7 +3235,7 @@ def rma_unprocess(id):
         case.processid = None
         case.startprocesstime = None
         db.session.commit()
-    return redirect(url_for('main.rma_list'))
+    return rma_back()
 
 @main.route('/rma/<int:id>/unwait', methods=['POST'])
 @login_required
@@ -2896,7 +3245,7 @@ def rma_unwait(id):
     if case.status == 'waiting_for_shipping':
         case.status = 'processing'
         db.session.commit()
-    return redirect(url_for('main.rma_list'))
+    return rma_back()
 
 @main.route('/rma/<int:id>/unshipped', methods=['POST'])
 @login_required
@@ -2904,12 +3253,9 @@ def rma_unshipped(id):
     if get_userrole(current_user.id) < 2: abort(403)
     case = RmaCases.query.get_or_404(id)
     if case.status == 'shipped_to_vendor':
-        s = case.shipments.filter_by(status='shipped').order_by(RmaVendorShipment.shiptovendortime.desc()).first()
-        if s:
-            db.session.delete(s)
         case.status = 'waiting_for_shipping'
         db.session.commit()
-    return redirect(url_for('main.rma_list'))
+    return rma_back()
 
 @main.route('/rma/<int:id>/unrecv-vendor', methods=['POST'])
 @login_required
@@ -2924,13 +3270,16 @@ def rma_unrecv_vendor(id):
             s.status = 'shipped'
         case.status = 'shipped_to_vendor'
         db.session.commit()
-    return redirect(url_for('main.rma_list'))
+    return rma_back()
 
 @main.route('/rma/<int:id>/ship-vendor', methods=['POST'])
 @login_required
 def rma_ship_vendor(id):
     if get_userrole(current_user.id) < 2: abort(403)
     case = RmaCases.query.get_or_404(id)
+    if case.status != 'waiting_for_shipping':
+        flash('Case is not in Wait Shipping state', 'danger')
+        return rma_back()
     case.status = 'shipped_to_vendor'
     shippn = request.form.get('shippn', '') or ''
     partsn = request.form.get('partsn', '') or ''
@@ -2938,44 +3287,33 @@ def rma_ship_vendor(id):
     category = request.form.get('category', '')
     vendorrmano = request.form.get('vendorrmano', '')
 
-    asset_owner = 'NTA' if shippn else case.customers
-    shipment = RmaVendorShipment(
-        rma_case_id=case.id,
-        vendorrmano=vendorrmano,
-        shippn=shippn,
-        partsn=partsn,
-        vendorname=vendorname,
-        category=category,
-        shiptovendortime=datetime.datetime.now(),
-        shiptovendorid=current_user.id,
-        assetowner=asset_owner,
-    )
-    db.session.add(shipment)
-
-    if request.form.get('report_quality'):
-        source = 'Production Line' if case.customers.upper() == 'NTA' else 'RMA'
-        ql = QualityLog(
-            source=source,
-            wo=case.ntarmano,
-            pn=case.pn,
-            csn=case.csn,
-            defectpart=shippn,
-            defectpartsn=partsn,
-            reason=case.descriptionbycustomer or '',
-            status='New',
-            reportid=current_user.id,
-            reporttime=datetime.datetime.now(),
-            ownerid=current_user.id,
-            processlog='',
-            conclusion=None,
-            cause=None,
+    asset_owner = case.customers
+    shipment = case.shipments.filter_by(status='shipped').order_by(RmaVendorShipment.id.desc()).first()
+    if shipment:
+        shipment.vendorrmano = vendorrmano
+        shipment.shippn = shippn
+        shipment.partsn = partsn
+        shipment.vendorname = vendorname
+        shipment.category = category
+        shipment.shiptovendortime = datetime.datetime.now()
+        shipment.shiptovendorid = current_user.id
+        shipment.status = 'shipped'
+    else:
+        shipment = RmaVendorShipment(
+            rma_case_id=case.id,
+            vendorrmano=vendorrmano,
+            shippn=shippn,
+            partsn=partsn,
             vendorname=vendorname,
             category=category,
+            shiptovendortime=datetime.datetime.now(),
+            shiptovendorid=current_user.id,
+            assetowner=asset_owner,
         )
-        db.session.add(ql)
+        db.session.add(shipment)
 
     db.session.commit()
-    return redirect(url_for('main.rma_list'))
+    return rma_back()
 
 @main.route('/rma/<int:id>/recv-vendor', methods=['POST'])
 @login_required
@@ -2990,7 +3328,7 @@ def rma_recv_vendor(id):
     case.status = 'processing'
     db.session.commit()
     flash('Vendor shipment received, case returned to processing')
-    return redirect(url_for('main.rma_list'))
+    return rma_back()
 
 @main.route('/rma/<int:id>/close', methods=['POST'])
 @login_required
@@ -2999,27 +3337,96 @@ def rma_close(id):
     case = RmaCases.query.get_or_404(id)
     case.conclusion = request.form['conclusion']
     case.notes = request.form.get('notes', '')
-    vendor_rma = request.form.get('vendorrmano_close', '').strip()
-    vendorname = request.form.get('vendorname_close', '').strip()
-    if vendor_rma:
-        case.status = 'waiting_for_shipping'
-        case.vendorrmano = vendor_rma
-        case.shippn = request.form.get('shippn_close', '')
-        case.partsn = request.form.get('partsn_close', '')
-        case.assetowner = 'NTA'
-        shipment = case.shipments.order_by(RmaVendorShipment.shiptovendortime.desc()).first()
-        if shipment:
-            shipment.vendorname = vendorname
-        else:
-            case.shipments.append(RmaVendorShipment(rma_case_id=case.id, vendorrmano=vendor_rma,
-                                shippn=request.form.get('shippn_close', ''), partsn=request.form.get('partsn_close', ''),
-                                vendorname=vendorname, assetowner='NTA'))
-    else:
-        case.status = 'closed'
-        case.closetime = datetime.datetime.now()
-        case.closeid = current_user.id
+    case.status = 'closed'
+    case.closetime = datetime.datetime.now()
+    case.closeid = current_user.id
+    if request.form.get('report_quality_close'):
+        source = 'Production Line' if case.customers.upper() == 'NTA' else 'RMA'
+        ql = QualityLog(
+            source=source,
+            wo=case.ntarmano,
+            pn=case.pn,
+            csn=case.csn,
+            defectpart=case.pn,
+            defectpartsn=case.csn,
+            reason=(case.descriptionbycustomer or '')[:1000],
+            status='New',
+            reportid=current_user.id,
+            reporttime=datetime.datetime.now(),
+            ownerid=current_user.id,
+            processlog='',
+            conclusion=None,
+            cause=None,
+            vendorname='',
+            category='',
+        )
+        db.session.add(ql)
     db.session.commit()
-    return redirect(url_for('main.rma_list'))
+    return rma_back()
+
+@main.route('/rma/<int:id>/recv-close', methods=['POST'])
+@login_required
+def rma_recv_close(id):
+    if get_userrole(current_user.id) < 2: abort(403)
+    case = RmaCases.query.get_or_404(id)
+    shipment = case.shipments.filter_by(status='shipped').order_by(RmaVendorShipment.shiptovendortime.desc()).first()
+    if shipment:
+        shipment.recvfromvendortime = datetime.datetime.now()
+        shipment.recvfromvendorid = current_user.id
+        shipment.status = 'received'
+        if shipment.shippn:
+            inv_time = datetime.datetime.now().strftime('%m/%d/%Y %H:%M')
+            inv_rows = PartsInventory.query.filter_by(partsname=shipment.shippn, partsn=shipment.partsn).all()
+            if not inv_rows:
+                inv_rows = PartsInventory.query.filter(
+                    PartsInventory.partsname == shipment.shippn,
+                    PartsInventory.warehouse == 'WH04',
+                    PartsInventory.history.ilike('%' + case.ntarmano + '%'),
+                ).all()
+            for r in inv_rows:
+                m = re.search(r'from\s+(WH\d+)', r.history or '')
+                if m:
+                    r.warehouse = m.group(1)
+                entry = f"[{inv_time}] received from {shipment.vendorrmano or ''} of {shipment.vendorname or ''}"
+                r.history = (r.history.rstrip() + '\n' + entry) if r.history else entry
+    case.conclusion = request.form['conclusion']
+    case.notes = request.form.get('notes', '')
+    m_rwo = re.search(r'<RWO\s+([^>]+)>', case.descriptionbycustomer or '')
+    if m_rwo:
+        orig_ntar = m_rwo.group(1).strip()
+        orig = RmaCases.query.filter(RmaCases.ntarmano == orig_ntar).first()
+        if orig:
+            orig.conclusion = case.conclusion
+    vendorname = request.form.get('vendorname_close', '').strip()
+    if vendorname and shipment:
+        shipment.vendorname = vendorname
+    case.status = 'closed'
+    case.closetime = datetime.datetime.now()
+    case.closeid = current_user.id
+    if request.form.get('report_quality_close'):
+        source = 'Production Line' if case.customers.upper() == 'NTA' else 'RMA'
+        ql = QualityLog(
+            source=source,
+            wo=case.ntarmano,
+            pn=case.pn,
+            csn=case.csn,
+            defectpart=shipment.shippn if shipment else '',
+            defectpartsn=shipment.partsn if shipment else '',
+            reason=(case.descriptionbycustomer or '')[:1000],
+            status='New',
+            reportid=current_user.id,
+            reporttime=datetime.datetime.now(),
+            ownerid=current_user.id,
+            processlog='',
+            conclusion=None,
+            cause=None,
+            vendorname=shipment.vendorname if shipment else '',
+            category='',
+        )
+        db.session.add(ql)
+    db.session.commit()
+    flash('Received from vendor and closed RMA case')
+    return rma_back()
 
 @main.route('/rma/download/<filename>')
 @login_required

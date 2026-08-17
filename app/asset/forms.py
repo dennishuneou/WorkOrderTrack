@@ -1040,6 +1040,7 @@ class AddQualityLogForm(FlaskForm):
     vendorname = StringField('Vendor Name', validators=[Length(max=100)])
     cat_options = [('','-- Select --'),('Motherboard','Motherboard'),('Daughterboard','Daughterboard'),('Chassis','Chassis'),('CPU','CPU'),('MEMORY','MEMORY'),('DISK','DISK'),('Package','Package'),('Others','Others')]
     category = SelectField('Category', choices=cat_options, validators=[Length(max=32)])
+    nonconformingno = StringField('Non-Conforming No', validators=[Length(max=100)])
     submit = SubmitField('Create New Quality Log')
        
 class QueryQlogForm(FlaskForm):
@@ -1071,6 +1072,7 @@ class EditQualityLogForm(FlaskForm):
     status = SelectField('Case status(New,Processing,Pending,Closed)', choices= options,validators=[DataRequired(),Length(max=100)])
     conclusion = StringField('Case Conclusion', validators=[Length(max=100)])
     cause = SelectField('Cause', choices=[('','-- Select --'),('no_problem_found','No Problem Found'),('boards_quality_issue','Boards Quality Issue'),('parts_quality_issue','Parts Quality Issue'),('improperly_use','Improperly Use'),('SOP','SOP'),('unknown','Unknown')], validators=[Length(max=32)])
+    nonconformingno = StringField('Non-Conforming No', validators=[Length(max=100)])
     processlog = StringField('Process Log', render_kw={'readonly': True},widget=TextArea())
     newaction = StringField('New Action Log',validators=[Length(max=200)],widget=TextArea())
     submit = SubmitField('Update Quality Log')

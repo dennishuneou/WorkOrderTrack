@@ -469,14 +469,21 @@
       <div class="row">
         <div class="col-6">
           <div class="card card-social h-100">
-            <div class="card-block border-bottom py-2"><h6 class="mb-0 text-muted">RMA Rate (IW)</h6></div>
+            <div class="card-block border-bottom py-2"><h6 class="mb-0 text-muted">RMA Rate (IW-LocalBld)</h6></div>
             <div class="card-block py-2">
               <table class="table table-sm table-borderless mb-0">
-                <thead><tr><th>Qtr</th><th class="text-right">RMA</th><th class="text-right">Bld</th><th class="text-right">%</th></tr></thead>
+                <thead><tr><th>Last 4 Qtrs</th><th class="text-right">Bld Local</th><th class="text-right">RMA</th><th class="text-right">RMA Rate%</th></tr></thead>
                 <tbody>
                   {% for q in rma_rate %}
-                  <tr><td>{{ q.label }}</td><td class="text-right">{{ q.numer }}</td><td class="text-right">{{ q.denom }}</td><td class="text-right">{{ q.rate }}%</td></tr>
+                  <tr><td>{{ q.label }}</td><td class="text-right">{{ q.denom }}</td><td class="text-right">{{ q.numer }}</td><td class="text-right">{{ q.rate }}%</td></tr>
                   {% endfor %}
+                  {% if rma_months %}
+                  <tr><td colspan="4"><hr class="my-1"></td></tr>
+                  <tr><td colspan="4" class="font-weight-bold">Current Qtr</td></tr>
+                  {% for q in rma_months %}
+                  <tr><td>{{ q.label }}</td><td class="text-right">{{ q.denom }}</td><td class="text-right">{{ q.numer }}</td><td class="text-right">{{ q.rate }}%</td></tr>
+                  {% endfor %}
+                  {% endif %}
                 </tbody>
               </table>
             </div>
@@ -487,10 +494,49 @@
             <div class="card-block border-bottom py-2"><h6 class="mb-0 text-muted">DOA Rate</h6></div>
             <div class="card-block py-2">
               <table class="table table-sm table-borderless mb-0">
-                <thead><tr><th>Qtr</th><th class="text-right">DOA</th><th class="text-right">PBld</th><th class="text-right">%</th></tr></thead>
+                <thead><tr><th>Qtr</th><th class="text-right">Prev Qtr LocalBld</th><th class="text-right">DOA</th><th class="text-right">DOA Rate%</th></tr></thead>
                 <tbody>
                   {% for q in doa_rate %}
-                  <tr><td>{{ q.label }}</td><td class="text-right">{{ q.numer }}</td><td class="text-right">{{ q.denom }}</td><td class="text-right">{{ q.rate }}%</td></tr>
+                  <tr><td>{{ q.label }}</td><td class="text-right">{{ q.denom }}</td><td class="text-right">{{ q.numer }}</td><td class="text-right">{{ q.rate }}%</td></tr>
+                  {% endfor %}
+                  {% if doa_months %}
+                  <tr><td colspan="4"><hr class="my-1"></td></tr>
+                  <tr><td colspan="4" class="font-weight-bold">Current Qtr</td></tr>
+                  {% for q in doa_months %}
+                  <tr><td>{{ q.label }}</td><td class="text-right">{{ q.denom }}</td><td class="text-right">{{ q.numer }}</td><td class="text-right">{{ q.rate }}%</td></tr>
+                  {% endfor %}
+                  {% endif %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="row mt-3">
+        <div class="col-6">
+          <div class="card card-social h-100">
+            <div class="card-block border-bottom py-2"><h6 class="mb-0 text-muted">RMA Process Efficiency IW (&lt;=15 work days)</h6></div>
+            <div class="card-block py-2">
+              <table class="table table-sm table-borderless mb-0">
+                <thead><tr><th>Month</th><th class="text-right">Received</th><th class="text-right">Closed in 15 wd</th><th class="text-right">Efficiency%</th></tr></thead>
+                <tbody>
+                  {% for q in rma_eff_iw %}
+                  <tr><td>{{ q.label }}</td><td class="text-right">{{ q.total }}</td><td class="text-right">{{ q.ontime }}</td><td class="text-right">{{ q.rate }}%</td></tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="col-6">
+          <div class="card card-social h-100">
+            <div class="card-block border-bottom py-2"><h6 class="mb-0 text-muted">RMA Process Efficiency OOW (&lt;=15 work days)</h6></div>
+            <div class="card-block py-2">
+              <table class="table table-sm table-borderless mb-0">
+                <thead><tr><th>Month</th><th class="text-right">Received</th><th class="text-right">Closed in 15 wd</th><th class="text-right">Efficiency%</th></tr></thead>
+                <tbody>
+                  {% for q in rma_eff_oow %}
+                  <tr><td>{{ q.label }}</td><td class="text-right">{{ q.total }}</td><td class="text-right">{{ q.ontime }}</td><td class="text-right">{{ q.rate }}%</td></tr>
                   {% endfor %}
                 </tbody>
               </table>

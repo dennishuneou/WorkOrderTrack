@@ -240,7 +240,7 @@ class QualityLog(db.Model):
     csn = db.Column(db.String(100), nullable=False)
     defectpart =  db.Column(db.String(100), nullable=False)
     defectpartsn =  db.Column(db.String(100), nullable=False)
-    reason =  db.Column(db.String(300), nullable=False)
+    reason =  db.Column(db.String(1000), nullable=False)
     #New, Processing, Pending, Closed
     status =  db.Column(db.String(100), nullable=False)
     reportid = db.Column(db.Integer, nullable=False)
@@ -251,8 +251,9 @@ class QualityLog(db.Model):
     cause =  db.Column(db.String(32), nullable=True)
     vendorname = db.Column(db.String(100), nullable=True)
     category = db.Column(db.String(32), nullable=True)
+    nonconformingno = db.Column(db.String(100), nullable=True)
 
-    def __init__(self, source, wo, pn, csn, defectpart, defectpartsn, reason, status, reportid, reporttime, ownerid, processlog,conclusion,cause,vendorname=None,category=None):
+    def __init__(self, source, wo, pn, csn, defectpart, defectpartsn, reason, status, reportid, reporttime, ownerid, processlog,conclusion,cause,vendorname=None,category=None,nonconformingno=None):
         self.wo = wo
         self.source = source
         self.pn = pn
@@ -269,6 +270,7 @@ class QualityLog(db.Model):
         self.cause = cause
         self.vendorname = vendorname
         self.category = category
+        self.nonconformingno = nonconformingno
      
     def __repr__(self):
         return '{} by {}'.format(self.wo)
@@ -349,10 +351,11 @@ class RmaVendorShipment(db.Model):
     recvfromvendorid = db.Column(db.Integer, nullable=True)
     status = db.Column(db.String(16), nullable=False, default='shipped')
     assetowner = db.Column(db.String(100), nullable=True)
+    warehousetransfer = db.Column(db.String(200), nullable=True)
 
     def __init__(self, rma_case_id, vendorrmano='', shippn='', partsn='',
                  vendorname='', category='', shiptovendortime=None,
-                 shiptovendorid=None, assetowner=None):
+                 shiptovendorid=None, assetowner=None, warehousetransfer=''):
         self.rma_case_id = rma_case_id
         self.vendorrmano = vendorrmano
         self.shippn = shippn
@@ -362,5 +365,34 @@ class RmaVendorShipment(db.Model):
         self.shiptovendortime = shiptovendortime
         self.shiptovendorid = shiptovendorid
         self.assetowner = assetowner
+        self.warehousetransfer = warehousetransfer
         self.status = 'shipped'
+
+class RmaParts(db.Model):
+    __tablename__ = 'rmaparts'
+
+    id = db.Column(db.Integer, primary_key=True)
+    partsname = db.Column(db.String(200), nullable=False)
+    category = db.Column(db.String(100), nullable=True)
+    workwith = db.Column(db.String(200), nullable=True)
+
+    def __init__(self, partsname, category='', workwith=''):
+        self.partsname = partsname
+        self.category = category or ''
+        self.workwith = workwith or ''
+
+class PartsInventory(db.Model):
+    __tablename__ = 'partsinventory'
+
+    id = db.Column(db.Integer, primary_key=True)
+    partsname = db.Column(db.String(100), nullable=False)
+    partsn = db.Column(db.String(100), nullable=False)
+    warehouse = db.Column(db.String(16), nullable=True)
+    history = db.Column(db.Text, nullable=True)
+
+    def __init__(self, partsname, partsn, warehouse='', history=''):
+        self.partsname = partsname
+        self.partsn = partsn
+        self.warehouse = warehouse or ''
+        self.history = history or ''
 

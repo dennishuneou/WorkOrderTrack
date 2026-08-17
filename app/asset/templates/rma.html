@@ -60,10 +60,10 @@
                     {% if current_status in ('received', 'all') %}<th class="sortable">Received <i class="bi bi-arrow-down-up"></i></th><th class="sortable">By <i class="bi bi-arrow-down-up"></i></th>{% endif %}
                     {% if current_status in ('processing', 'all') %}<th class="sortable">Process <i class="bi bi-arrow-down-up"></i></th><th class="sortable">By <i class="bi bi-arrow-down-up"></i></th><th>Notes</th>{% endif %}
                     {% if current_status == 'waiting_for_shipping' %}<th class="sortable">Owner <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Vendor <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Ship PN <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Part SN <i class="bi bi-arrow-down-up"></i></th>{% endif %}
-                    {% if current_status in ('shipped_to_vendor', 'all') %}<th class="sortable">Shipped <i class="bi bi-arrow-down-up"></i></th><th class="sortable">By <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Vendor RMA <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Ship PN <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Part SN <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Owner <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Vendor Name <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Category <i class="bi bi-arrow-down-up"></i></th>{% endif %}
+                    {% if current_status in ('shipped_to_vendor', 'all') %}<th class="sortable">Shipped <i class="bi bi-arrow-down-up"></i></th><th class="sortable">By <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Vendor RMA <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Ship PN <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Part SN <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Owner <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Vendor Name <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Category <i class="bi bi-arrow-down-up"></i></th>{% if current_status == 'shipped_to_vendor' %}<th class="sortable">Warehouse transfer <i class="bi bi-arrow-down-up"></i></th>{% endif %}{% endif %}
                     {% if current_status in ('closed', 'all') %}<th class="sortable">Closed <i class="bi bi-arrow-down-up"></i></th><th class="sortable">By <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Conclusion <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Vendor RMA <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Owner <i class="bi bi-arrow-down-up"></i></th>{% endif %}
                     {% if current_status == 'all' %}<th>Notes</th>{% endif %}
-                    <th class="sortable">Status <i class="bi bi-arrow-down-up"></i></th>
+                    {% if current_status in ('new', 'received', 'processing', 'waiting_for_shipping') %}<th class="sortable">RMA Type <i class="bi bi-arrow-down-up"></i></th>{% elif current_status != 'shipped_to_vendor' %}<th class="sortable">Status <i class="bi bi-arrow-down-up"></i></th>{% endif %}
                     {% if current_status == 'new' %}<th>Files</th>{% endif %}
                     <th>Actions</th>
                 </tr>
@@ -81,14 +81,14 @@
                     {% if current_status in ('processing', 'all') %}<td>{{ case.startprocesstime.strftime('%m/%d %H:%M') if case.startprocesstime else '' }}</td><td>{{ case.processby }}</td>
                     <td title="{{ case.notes }}">{{ case.notes[:80] if case.notes else '' }}{% if case.notes and case.notes|length > 80 %}...{% endif %}</td>{% endif %}
                     {% set s = case.latest_shipment %}
-                    {% if current_status in ('shipped_to_vendor', 'all') %}<td>{{ s.shiptovendortime.strftime('%m/%d %H:%M') if s and s.shiptovendortime else '' }}</td><td>{{ case.shipby }}</td><td>{{ s.vendorrmano or '' if s else '' }}</td><td>{{ s.shippn or '' if s else '' }}</td><td>{{ s.partsn or '' if s else '' }}</td><td>{{ s.assetowner or case.assetowner }}</td><td>{{ s.vendorname or '' if s else '' }}</td><td>{{ s.category or '' if s else '' }}</td>{% endif %}
+                    {% if current_status in ('shipped_to_vendor', 'all') %}<td>{{ s.shiptovendortime.strftime('%m/%d %H:%M') if s and s.shiptovendortime else '' }}</td><td>{{ case.shipby }}</td><td>{{ s.vendorrmano or '' if s else '' }}</td><td>{{ s.shippn or '' if s else '' }}</td><td>{{ s.partsn or '' if s else '' }}</td><td>{{ s.assetowner or case.assetowner }}</td><td>{{ s.vendorname or '' if s else '' }}</td><td>{{ s.category or '' if s else '' }}</td>{% if current_status == 'shipped_to_vendor' %}<td title="{{ s.warehousetransfer if s else '' }}">{{ s.warehousetransfer[:50] if s and s.warehousetransfer else '' }}{% if s and s.warehousetransfer and s.warehousetransfer|length > 50 %}...{% endif %}</td>{% endif %}{% endif %}
                     {% if current_status == 'waiting_for_shipping' %}<td>{{ s.assetowner or case.assetowner }}</td><td>{{ s.vendorname or '' if s else '' }}</td><td>{{ s.shippn or '' if s else '' }}</td><td>{{ s.partsn or '' if s else '' }}</td>{% endif %}
                     {% if current_status in ('closed', 'all') %}<td>{{ case.closetime.strftime('%m/%d %H:%M') if case.closetime else '' }}</td><td>{{ case.closeby }}</td><td>{{ case.conclusion }}</td><td>{{ s.vendorrmano or '' if s else '' }}</td><td>{{ s.assetowner or case.assetowner }}</td>{% endif %}
                     {% if current_status == 'all' %}<td>
                         <textarea id="notes-{{ case.id }}" rows="2" style="width:200px;font-size:0.8rem">{{ case.notes or '' }}</textarea>
                         <button class="btn btn-sm btn-outline-primary" onclick="saveNotes({{ case.id }})">Save</button>
                     </td>{% endif %}
-                    <td>
+                    {% if current_status in ('new', 'received', 'processing', 'waiting_for_shipping') %}<td>{{ case.rmatype }}</td>{% elif current_status != 'shipped_to_vendor' %}<td>
                         {% if case.status == 'new' %}
                             <span class="badge badge-warning">New</span>
                         {% elif case.status == 'received' %}
@@ -106,7 +106,7 @@
                         {% elif case.status == 'canceled' %}
                             <span class="badge badge-dark">Canceled</span>
                         {% endif %}
-                    </td>
+                    </td>{% endif %}
                     {% if current_status == 'new' %}
                     <td>
                         {% set docx_name = case.file_base ~ '.docx' %}
@@ -132,22 +132,28 @@
                             <button class="btn btn-sm btn-outline-secondary">Go Back</button>
                         </form>
                         {% elif case.status == 'processing' %}
-                        <button class="btn btn-sm btn-warning" onclick="showWaitShipModal({{ case.id }}, '{{ case.ntarmano }}')">Wait for Shipping</button>
+                        <button class="btn btn-sm btn-warning" onclick='showWaitShipModal({{ case.id }}, {{ case.ntarmano|tojson }}, {{ case.pn|tojson }}, {{ case.csn|tojson }})'>Wait for Shipping</button>
                         <button class="btn btn-sm btn-primary" onclick="showWOModal({{ case.id }}, '{{ case.ntarmano }}')">Create WO</button>
                         <form action="{{ url_for('main.rma_unprocess', id=case.id) }}" method="post" style="display:inline" onsubmit="return confirm('Return {{ case.ntarmano }} to Received?')">
                             <button class="btn btn-sm btn-outline-secondary">Go Back</button>
                         </form>
-                        <button class="btn btn-sm btn-success" onclick='showCloseModal({{ case.id }}, {{ case.ntarmano|tojson }}, {{ s.vendorname|tojson if s and s.vendorname else ""|tojson }})'>Close Case</button>
+                        {% if case.customers.upper() != 'NTA' %}
+                        <button class="btn btn-sm btn-success" onclick='showCloseModal({{ case.id }}, {{ case.ntarmano|tojson }}, {{ case.conclusion|tojson if case.conclusion else ""|tojson }})'>Close Case</button>
+                        {% endif %}
                         {% elif case.status == 'waiting_for_shipping' %}
-                        <button class="btn btn-sm btn-secondary" onclick='showShipModal({{ case.id }}, {{ case.ntarmano|tojson }}, {{ s.vendorname|tojson if s and s.vendorname else ""|tojson }})'>Ship to Vendor</button>
+                        <button class="btn btn-sm btn-secondary" onclick='showShipModal({{ case.id }}, {{ case.ntarmano|tojson }}, {{ s.vendorname|tojson if s and s.vendorname else ""|tojson }}, {{ s.vendorrmano|tojson if s and s.vendorrmano else ""|tojson }}, {{ s.shippn|tojson if s and s.shippn else ""|tojson }}, {{ s.partsn|tojson if s and s.partsn else ""|tojson }}, {{ s.category|tojson if s and s.category else ""|tojson }})'>Ship to Vendor</button>
                         <form action="{{ url_for('main.rma_unwait', id=case.id) }}" method="post" style="display:inline" onsubmit="return confirm('Return {{ case.ntarmano }} to Processing?')">
                             <button class="btn btn-sm btn-outline-secondary">Go Back</button>
                         </form>
                         {% elif case.status in ('shipped_to_vendor', 'recv_from_vendor') %}
                         {% if case.status == 'shipped_to_vendor' %}
-                        <form action="{{ url_for('main.rma_recv_vendor', id=case.id) }}" method="post" style="display:inline">
+                        {% if (s.assetowner or case.assetowner or '').upper() == 'NTA' %}
+                        <button class="btn btn-sm btn-success" onclick='if (confirm("Receive and close RMA {{ case.ntarmano }}?")) showRecvCloseModal({{ case.id }}, {{ case.ntarmano|tojson }})'>Recv &amp; Close Case</button>
+                        {% else %}
+                        <form action="{{ url_for('main.rma_recv_vendor', id=case.id) }}" method="post" style="display:inline" onsubmit="return confirm('Mark {{ case.ntarmano }} as Received from Vendor?')">
                             <button class="btn btn-sm btn-secondary">Received from Vendor</button>
                         </form>
+                        {% endif %}
                         <form action="{{ url_for('main.rma_unshipped', id=case.id) }}" method="post" style="display:inline" onsubmit="return confirm('Return {{ case.ntarmano }} to Wait Shipping?')">
                             <button class="btn btn-sm btn-outline-secondary">Go Back</button>
                         </form>
@@ -155,9 +161,9 @@
                         <form action="{{ url_for('main.rma_unrecv_vendor', id=case.id) }}" method="post" style="display:inline" onsubmit="return confirm('Return {{ case.ntarmano }} to Shipped?')">
                             <button class="btn btn-sm btn-outline-secondary">Go Back</button>
                         </form>
+                        <button class="btn btn-sm btn-success" onclick='if (confirm("Close RMA {{ case.ntarmano }}?")) showCloseModal({{ case.id }}, {{ case.ntarmano|tojson }}, {{ case.conclusion|tojson if case.conclusion else ""|tojson }})'>Close Case</button>
                         {% endif %}
-                        <button class="btn btn-sm btn-success" onclick='showCloseModal({{ case.id }}, {{ case.ntarmano|tojson }}, {{ s.vendorname|tojson if s and s.vendorname else ""|tojson }})'>Close Case</button>
-                        <span class="badge badge-info" style="margin-left:4px">{{ case.shipments.count() }} shipment(s)</span>
+                        <span class="badge badge-info" style="margin-left:4px">{{ case.shipment_count }} shipment(s)</span>
                         {% endif %}
                     </td>
                 </tr>
@@ -191,29 +197,60 @@
                         </select>
                     </div>
                     <div class="form-group">
+                        <div class="custom-control custom-checkbox">
+                            <input type="checkbox" name="report_quality_close" value="1" class="custom-control-input" id="reportQualityClose">
+                            <label class="custom-control-label" for="reportQualityClose">Report Quality Issue</label>
+                        </div>
+                    </div>
+                    <div class="form-group">
                         <label>Notes</label>
                         <textarea name="notes" class="form-control" rows="3"></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label>Vendor Name</label>
-                        <input type="text" name="vendorname_close" class="form-control">
-                    </div>
-                    <div class="form-group">
-                        <label>Vendor RMA # <small class="text-muted">(if shipping replaced parts to vendor)</small></label>
-                        <input type="text" name="vendorrmano_close" class="form-control">
-                    </div>
-                    <div class="form-group">
-                        <label>Ship PN</label>
-                        <input type="text" name="shippn_close" class="form-control" placeholder="Part number being shipped">
-                    </div>
-                    <div class="form-group">
-                        <label>Part SN</label>
-                        <input type="text" name="partsn_close" class="form-control" placeholder="Serial number of shipped part">
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="submit" class="btn btn-success">Close Case</button>
                     <button type="button" class="btn btn-secondary" data-dismiss="modal" onclick="$('#closeModal').modal('hide');return false;">Cancel</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal fade" id="recvCloseModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <form id="recvCloseForm" method="post">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Recv & Close RMA</h5>
+                    <button type="button" class="close" data-dismiss="modal" onclick="$('#recvCloseModal').modal('hide');return false;">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Conclusion</label>
+                        <select name="conclusion" class="form-control" required>
+                            <option value="">-- Select --</option>
+                            <option value="no_problem_found">No Problem Found</option>
+                            <option value="boards_quality_issue">Boards Quality Issue</option>
+                            <option value="parts_quality_issue">Parts Quality Issue</option>
+                            <option value="assembling_issue">Assembling Issue</option>
+                            <option value="improperly_use">Improperly Use</option>
+                            <option value="unknown">Unknown</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <div class="custom-control custom-checkbox">
+                            <input type="checkbox" name="report_quality_close" value="1" class="custom-control-input" id="reportQualityRecvClose">
+                            <label class="custom-control-label" for="reportQualityRecvClose">Report Quality Issue</label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Notes</label>
+                        <textarea name="notes" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-success">Recv & Close</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal" onclick="$('#recvCloseModal').modal('hide');return false;">Cancel</button>
                 </div>
             </div>
         </form>
@@ -259,12 +296,6 @@
                         <label>Part SN</label>
                         <input type="text" name="partsn" class="form-control" placeholder="Serial number of shipped part">
                     </div>
-                    <div class="form-group">
-                        <div class="custom-control custom-checkbox">
-                            <input type="checkbox" name="report_quality" value="1" class="custom-control-input" id="reportQuality">
-                            <label class="custom-control-label" for="reportQuality">Report Quality Issue</label>
-                        </div>
-                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="submit" class="btn btn-secondary">Ship to Vendor</button>
@@ -299,6 +330,39 @@
                     <div class="form-group">
                         <label>Part SN</label>
                         <input type="text" name="partsn" class="form-control" placeholder="Serial number">
+                    </div>
+                    <div class="form-group">
+                        <label>Category</label>
+                        <select name="category" class="form-control">
+                            <option value="">-- Select --</option>
+                            <option value="Motherboard">Motherboard</option>
+                            <option value="Daughterboard">Daughterboard</option>
+                            <option value="Chassis">Chassis</option>
+                            <option value="CPU">CPU</option>
+                            <option value="MEMORY">MEMORY</option>
+                            <option value="DISK">DISK</option>
+                            <option value="Package">Package</option>
+                            <option value="Others">Others</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>RWO from warehouse <small class="text-muted">(if replaced parts)</small></label>
+                        <select name="rwo_warehouse" class="form-control" id="rwoWarehouse" onchange="populateRMAParts()">
+                            <option value="">-- Select --</option>
+                            <option value="WH01">WH01</option>
+                            <option value="WH10">WH10</option>
+                            <option value="WH12">WH12</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>RMA parts PN</label>
+                        <input type="text" name="rma_parts_pn" class="form-control" id="rmaPartsPn" list="rmaPartsDatalist" autocomplete="off" onchange="populateRMASNs()">
+                        <datalist id="rmaPartsDatalist"></datalist>
+                    </div>
+                    <div class="form-group">
+                        <label>RMA Part SN</label>
+                        <input type="text" name="rma_part_sn" class="form-control" id="rmaPartSn" list="rmaPartsSnDatalist" autocomplete="off">
+                        <datalist id="rmaPartsSnDatalist"></datalist>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -359,11 +423,14 @@ $(function() {
 </script>
 <script>
 function saveNotes(id) {
+    var btn = event.target;
+    if (btn && btn.disabled) return;
+    if (btn) btn.disabled = true;
     var val = document.getElementById('notes-' + id).value;
     var xhr = new XMLHttpRequest();
     xhr.open('POST', '/rma/' + id + '/save-notes', true);
     xhr.setRequestHeader('Content-Type', 'application/json');
-    xhr.onload = function() { if (xhr.status == 200) alert('Saved'); };
+    xhr.onload = function() { if (xhr.status == 200) alert('Saved'); if (btn) btn.disabled = false; };
     xhr.send(JSON.stringify({notes: val}));
 }
 function showCloseModal(id, ntarmano, vendorname) {
@@ -372,10 +439,19 @@ function showCloseModal(id, ntarmano, vendorname) {
     document.querySelector('#closeForm input[name=vendorname_close]').value = vendorname || '';
     $('#closeModal').modal('show');
 }
-function showShipModal(id, ntarmano, vendorname) {
+function showRecvCloseModal(id, ntarmano) {
+    document.getElementById('recvCloseForm').action = '/rma/' + id + '/recv-close';
+    document.getElementById('recvCloseModal').querySelector('.modal-title').textContent = 'Recv & Close RMA ' + ntarmano;
+    $('#recvCloseModal').modal('show');
+}
+function showShipModal(id, ntarmano, vendorname, vendorrmano, shippn, partsn, category) {
     document.getElementById('shipForm').action = '/rma/' + id + '/ship-vendor';
     document.getElementById('shipModal').querySelector('.modal-title').textContent = 'Ship to Vendor - ' + ntarmano;
     document.querySelector('#shipForm input[name=vendorname]').value = vendorname || '';
+    document.querySelector('#shipForm input[name=vendorrmano]').value = vendorrmano || '';
+    document.querySelector('#shipForm input[name=shippn]').value = shippn || '';
+    document.querySelector('#shipForm input[name=partsn]').value = partsn || '';
+    document.querySelector('#shipForm select[name=category]').value = category || '';
     $('#shipModal').modal('show');
 }
 function showWOModal(id, ntarmano) {
@@ -383,10 +459,69 @@ function showWOModal(id, ntarmano) {
     document.querySelector('#woForm input[name=wo]').value = ntarmano;
     $('#woModal').modal('show');
 }
-function showWaitShipModal(id, ntarmano) {
-    document.getElementById('waitShipForm').action = '/rma/' + id + '/wait-shipping';
+function showWaitShipModal(id, ntarmano, pn, csn) {
+    var wsForm = document.getElementById('waitShipForm');
+    wsForm.action = '/rma/' + id + '/wait-shipping';
     document.getElementById('waitShipModal').querySelector('.modal-title').textContent = 'Wait for Shipping - ' + ntarmano;
+    wsForm.elements['shippn'].value = pn || '';
+    wsForm.elements['partsn'].value = csn || '';
+    document.querySelector('#waitShipForm select[name=rwo_warehouse]').value = '';
+    document.getElementById('rmaPartsPn').value = '';
+    document.getElementById('rmaPartSn').value = '';
+    document.getElementById('rmaPartsDatalist').innerHTML = '';
+    document.getElementById('rmaPartsSnDatalist').innerHTML = '';
     $('#waitShipModal').modal('show');
+}
+$(function() {
+    $('form').on('submit', function() {
+        var onsb = $(this).attr('onsubmit') || '';
+        if (onsb.indexOf('confirm(') >= 0) return;
+        if ($(this).data('submitted')) return false;
+        $(this).data('submitted', true);
+        $(this).find('button, input[type=submit]').prop('disabled', true);
+    });
+});
+var rmaProductList = {{ productlist | tojson }};
+var rmaInvParts = {{ invparts | tojson }};
+function populateRMAParts() {
+    var wh = document.getElementById('rwoWarehouse').value;
+    var dl = document.getElementById('rmaPartsDatalist');
+    var input = document.getElementById('rmaPartsPn');
+    dl.innerHTML = '';
+    input.value = '';
+    var opts = [];
+    if (wh === 'WH01') opts = rmaProductList;
+    else if (wh === 'WH10' || wh === 'WH12') opts = rmaInvParts[wh] || [];
+    opts.forEach(function(v) {
+        var o = document.createElement('option');
+        o.value = v;
+        dl.appendChild(o);
+    });
+}
+function populateRMASNs() {
+    var wh = document.getElementById('rwoWarehouse').value;
+    var pn = document.getElementById('rmaPartsPn').value.trim();
+    var dl = document.getElementById('rmaPartsSnDatalist');
+    var input = document.getElementById('rmaPartSn');
+    dl.innerHTML = '';
+    input.value = '';
+    if ((wh === 'WH10' || wh === 'WH12') && pn) {
+        fetch('/rmaparts/sns?warehouse=' + encodeURIComponent(wh) + '&partsname=' + encodeURIComponent(pn))
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                (d.sns || []).forEach(function(v) {
+                    var o = document.createElement('option');
+                    o.value = v;
+                    dl.appendChild(o);
+                });
+            });
+    }
+}
+function showCloseModal(id, ntarmano, conclusion) {
+    document.getElementById('closeForm').action = '/rma/' + id + '/close';
+    document.getElementById('closeModal').querySelector('.modal-title').textContent = 'Close RMA ' + ntarmano;
+    document.querySelector('#closeForm select[name=conclusion]').value = conclusion || '';
+    $('#closeModal').modal('show');
 }
 </script>
 {% endblock %}

@@ -1,0 +1,327 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container">
+    <div class="row mb-3">
+        <div class="col">
+            <h4 class="font-weight-bold">RMAParts Management</h4>
+        </div>
+    </div>
+    {% if msg %}
+    <div class="alert alert-info py-2">{{ msg }}</div>
+    {% endif %}
+    <ul class="nav nav-tabs mb-3" id="rmapartTab" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link active" data-toggle="tab" href="#ListAllParts" role="tab">List all RMA parts</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-toggle="tab" href="#ListAvailParts" role="tab">List all available Parts</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-toggle="tab" href="#CreateParts" role="tab">Create a New Parts</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-toggle="tab" href="#ReceiveParts" role="tab">Receive Parts</a>
+        </li>
+    </ul>
+    <div class="tab-content">
+        <div class="tab-pane fade active show" id="ListAllParts" role="tabpanel">
+            <div class="table-responsive">
+                <table data-search="true" data-toggle="table" class="table table-striped table-hover">
+                    <thead class="thead-light">
+                        <tr style="background-color: #e3f2fd;">
+                            <th data-sortable="true">Parts Name</th>
+                            <th data-sortable="true">Category</th>
+                            <th data-sortable="true">Work With</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in parts %}
+                        <tr>
+                            <td>{{ p.partsname }}</td>
+                            <td>{{ p.category }}</td>
+                            <td>{{ p.workwith }}</td>
+                            <td><button class="btn btn-sm btn-outline-secondary" onclick='editPart({{ p.partsname|tojson }}, {{ p.category|tojson }}, {{ p.workwith|tojson }})'>Edit</button></td>
+                        </tr>
+                        {% endfor %}
+                        {% if not parts %}
+                        <tr><td colspan="4" class="text-center text-muted">No parts</td></tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="tab-pane fade" id="ListAvailParts" role="tabpanel">
+            <div class="table-responsive">
+                <table data-search="true" data-toggle="table" class="table table-striped table-hover">
+                    <thead class="thead-light">
+                        <tr style="background-color: #e3f2fd;">
+                            <th data-sortable="true">Parts Name</th>
+                            <th data-sortable="true">Parts SN</th>
+                            <th data-sortable="true">Warehouse</th>
+                            <th data-sortable="true">History</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for a in available %}
+                        <tr>
+                            <td>{{ a.partsname }}</td>
+                            <td>{{ a.partsn }}</td>
+                            <td>{{ a.warehouse }}</td>
+                            <td><pre style="white-space:pre-wrap;margin:0;max-height:60px;overflow-y:auto">{{ a.history }}</pre></td>
+                            <td><button class="btn btn-sm btn-outline-primary" onclick='transferPart({{ a.partsname|tojson }}, {{ a.partsn|tojson }}, {{ a.warehouse|tojson }})'>Warehouse Transfer</button> <button class="btn btn-sm btn-outline-secondary" onclick='addLogPart({{ a.partsname|tojson }}, {{ a.partsn|tojson }})'>Add log</button></td>
+                        </tr>
+                        {% endfor %}
+                        {% if not available %}
+                        <tr><td colspan="5" class="text-center text-muted">No available parts</td></tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="tab-pane fade" id="CreateParts" role="tabpanel">
+            <div class="col-md-6">
+                <form method="post" id="rmapartForm">
+                    <div class="form-group">
+                        <label>Parts Name *</label>
+                        <input type="text" name="partsname" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Category</label>
+                        <select name="category" class="form-control">
+                            <option value="">-- Select --</option>
+                            <option value="Wholeunit">Wholeunit</option>
+                            <option value="PCIe card">PCIe card</option>
+                            <option value="Motherboard">Motherboard</option>
+                            <option value="CPU">CPU</option>
+                            <option value="MEMORY">MEMORY</option>
+                            <option value="DISK">DISK</option>
+                            <option value="MezIO">MezIO</option>
+                            <option value="HeatSink">HeatSink</option>
+                            <option value="Chassis">Chassis</option>
+                            <option value="Others">Others</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Work With</label>
+                        <div id="wwTags" class="d-flex flex-wrap mb-1"></div>
+                        <input type="text" id="wwInput" class="form-control" list="workwithDatalist" placeholder="Type a product, press Space / Comma / Enter to add">
+                        <input type="hidden" name="workwith" id="wwHidden">
+                        <datalist id="workwithDatalist">
+                          {% for p in productlist %}
+                            <option value="{{ p }}">
+                          {% endfor %}
+                        </datalist>
+                        <small class="text-muted">Suggestions from product table; you can also type your own.</small>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Create</button>
+                </form>
+            </div>
+        </div>
+        <div class="tab-pane fade" id="ReceiveParts" role="tabpanel">
+            <div class="col-md-6">
+                <form method="post" action="{{ url_for('main.rmaparts_receive') }}">
+                    <div class="form-group">
+                        <label>Parts Name *</label>
+                        <input type="text" name="partsname" class="form-control" list="receivePartsDatalist" required>
+                        <datalist id="receivePartsDatalist">
+                          {% for p in parts %}
+                            <option value="{{ p.partsname }}">
+                          {% endfor %}
+                        </datalist>
+                    </div>
+                    <div class="form-group">
+                        <label>Parts Serial Number *</label>
+                        <input type="text" name="partsn" class="form-control" placeholder="One or multiple SN, separate by space or comma" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Warehouse *</label>
+                        <select name="warehouse" class="form-control" required>
+                            <option value="">-- Select --</option>
+                            <option value="WH10">WH10</option>
+                            <option value="WH12">WH12</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Receive</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="transferModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <form id="transferForm" method="post" action="{{ url_for('main.rmaparts_transfer') }}">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Warehouse Transfer</h5>
+                    <button type="button" class="close" data-dismiss="modal" onclick="$('#transferModal').modal('hide');return false;">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Parts Name</label>
+                        <input type="text" name="partsname" class="form-control" readonly id="transferPartsName">
+                    </div>
+                    <div class="form-group">
+                        <label>Parts SN</label>
+                        <input type="text" name="partsn" class="form-control" readonly id="transferPartsSN">
+                    </div>
+                    <div class="form-group">
+                        <label>Current Warehouse</label>
+                        <input type="text" class="form-control" readonly id="transferCurrentWH">
+                    </div>
+                    <div class="form-group">
+                        <label>Target Warehouse</label>
+                        <select name="target" class="form-control" required>
+                            <option value="">-- Select --</option>
+                            {% for w in warehouses %}
+                            <option value="{{ w }}">{{ w }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">Transfer</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal" onclick="$('#transferModal').modal('hide');return false;">Cancel</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+<div class="modal fade" id="addLogModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <form id="addLogForm" method="post" action="{{ url_for('main.rmaparts_addlog') }}">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add Log</h5>
+                    <button type="button" class="close" data-dismiss="modal" onclick="$('#addLogModal').modal('hide');return false;">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Parts Name</label>
+                        <input type="text" name="partsname" class="form-control" readonly id="logPartsName">
+                    </div>
+                    <div class="form-group">
+                        <label>Parts SN</label>
+                        <input type="text" name="partsn" class="form-control" readonly id="logPartsSN">
+                    </div>
+                    <div class="form-group">
+                        <label>Log Content *</label>
+                        <textarea name="logtext" class="form-control" rows="4" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">Add</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal" onclick="$('#addLogModal').modal('hide');return false;">Cancel</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+<div class="modal fade" id="editModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <form id="editForm" method="post" action="{{ url_for('main.rmaparts_edit') }}">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit RMA Part</h5>
+                    <button type="button" class="close" data-dismiss="modal" onclick="$('#editModal').modal('hide');return false;">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Parts Name</label>
+                        <input type="text" name="partsname" class="form-control" readonly id="editPartsName">
+                    </div>
+                    <div class="form-group">
+                        <label>Category</label>
+                        <select name="category" class="form-control" id="editCategory">
+                            <option value="">-- Select --</option>
+                            <option value="Wholeunit">Wholeunit</option>
+                            <option value="PCIe card">PCIe card</option>
+                            <option value="Motherboard">Motherboard</option>
+                            <option value="CPU">CPU</option>
+                            <option value="MEMORY">MEMORY</option>
+                            <option value="DISK">DISK</option>
+                            <option value="MezIO">MezIO</option>
+                            <option value="HeatSink">HeatSink</option>
+                            <option value="Chassis">Chassis</option>
+                            <option value="Others">Others</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Work With</label>
+                        <input type="text" name="workwith" class="form-control" id="editWorkwith">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">Update</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal" onclick="$('#editModal').modal('hide');return false;">Cancel</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+(function() {
+    window.editPart = function(partsname, category, workwith) {
+        document.getElementById('editPartsName').value = partsname || '';
+        document.getElementById('editWorkwith').value = workwith || '';
+        var sel = document.getElementById('editCategory');
+        sel.value = category || '';
+        if (!sel.value) {
+            var opt = document.createElement('option');
+            opt.value = category || '';
+            opt.textContent = category || '';
+            sel.appendChild(opt);
+            sel.value = category || '';
+        }
+        $('#editModal').modal('show');
+    };
+    window.addLogPart = function(partsname, partsn) {
+        document.getElementById('logPartsName').value = partsname || '';
+        document.getElementById('logPartsSN').value = partsn || '';
+        document.querySelector('#addLogForm textarea[name=logtext]').value = '';
+        $('#addLogModal').modal('show');
+    };
+    window.transferPart = function(partsname, partsn, warehouse) {
+        document.getElementById('transferPartsName').value = partsname || '';
+        document.getElementById('transferPartsSN').value = partsn || '';
+        document.getElementById('transferCurrentWH').value = warehouse || '';
+        document.querySelector('#transferForm select[name=target]').value = '';
+        $('#transferModal').modal('show');
+    };
+    var wwTags = document.getElementById('wwTags');
+    var wwInput = document.getElementById('wwInput');
+    var wwHidden = document.getElementById('wwHidden');
+    var wwList = [];
+    function renderWW() {
+        wwHidden.value = wwList.join(', ');
+    }
+    wwInput.addEventListener('keydown', function(e) {
+        if (e.key === ' ' || e.key === ',' || e.key === 'Enter') {
+            e.preventDefault();
+            var v = wwInput.value.trim().replace(/,+$/, '').trim();
+            if (v) {
+                wwList.push(v);
+                renderWW();
+                var chip = document.createElement('span');
+                chip.className = 'badge badge-primary mr-1 mb-1';
+                chip.textContent = v + '  \u00d7';
+                wwTags.appendChild(chip);
+            }
+            wwInput.value = '';
+        } else if (e.key === 'Backspace' && !wwInput.value && wwList.length) {
+            wwList.pop();
+            renderWW();
+            if (wwTags.lastChild) wwTags.lastChild.remove();
+        }
+    });
+    document.getElementById('rmapartForm').addEventListener('submit', function() {
+        var v = wwInput.value.trim();
+        if (v) {
+            wwList.push(v);
+            renderWW();
+        }
+    });
+})();
+</script>
+{% endblock %}
