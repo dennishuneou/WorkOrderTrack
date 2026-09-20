@@ -34,7 +34,7 @@ def lookup_pn(pn):
         if result:
             return result
     return None
-from flask import render_template, flash, request, redirect, url_for, session, send_from_directory, Response, abort
+from flask import render_template, flash, request, redirect, url_for, session, send_from_directory, Response, abort, make_response
 from app import db
 from app.asset.forms import get_biosversion, get_sopversion
 
@@ -369,6 +369,7 @@ def packing_solution_for(id):
 
     n_units = min(len(computer_pkgs), len(pa_pkgs), len(cbl_pkgs)) if pa_pkgs and cbl_pkgs else len(computer_pkgs)
     best_pdata = None
+    all_items = computer_pkgs + pa_pkgs + cbl_pkgs + other_pkgs
 
     if n_units > 0 and len(pa_pkgs) >= n_units and len(cbl_pkgs) >= n_units and all_items:
         # Strategy A: pack one set, then repeat
@@ -379,7 +380,6 @@ def packing_solution_for(id):
         a_ok = False
 
     # Strategy B: pack all items together
-    all_items = computer_pkgs + pa_pkgs + cbl_pkgs + other_pkgs
     if not all_items:
         return result
     sol_b, det_b, pct_b, pdata_b = classifier(platforms, all_items)
@@ -596,7 +596,7 @@ def dashboard():
             'processing': base_q.filter_by(status='processing').count(),
             'waiting_for_shipping': base_q.filter_by(status='waiting_for_shipping').count(),
             'shipped_to_vendor': base_q.filter_by(status='shipped_to_vendor').count(),
-            'closed': base_q.filter_by(status='closed').count(),
+            'closed': base_q.filter(RmaCases.status.in_(('closed', 'pre-closed'))).count(),
             'canceled': base_q.filter_by(status='canceled').count(),
             'total': base_q.count(),
         }
@@ -604,7 +604,7 @@ def dashboard():
     def conclusions_for(base_q):
         return db.session.query(RmaCases.conclusion, sa_func.count(RmaCases.id)).filter(
             RmaCases.id.in_(base_q.with_entities(RmaCases.id).subquery()),
-            RmaCases.status == 'closed', RmaCases.conclusion != None, RmaCases.conclusion != ''
+            RmaCases.status.in_(('closed', 'pre-closed')), RmaCases.conclusion != None, RmaCases.conclusion != ''
         ).group_by(RmaCases.conclusion).order_by(sa_func.count(RmaCases.id).desc()).all()
 
     all_q = RmaCases.query
@@ -617,7 +617,7 @@ def dashboard():
         return [[str(r[0]), int(r[1])] for r in rows]
     def iw_oow(base_q):
         iw = oow = 0
-        for c in base_q.filter_by(status='closed').all():
+        for c in base_q.filter(RmaCases.status.in_(('closed', 'pre-closed'))).all():
             w = (c.warranty or '').strip().lower()
             if w in ('yes',) or '-' in w or '/' in w:
                 iw += 1
@@ -628,7 +628,7 @@ def dashboard():
     rma_counts_val['conclusions'] = flat_conc(conclusions_for(all_q))
     rma_counts_val['iw'], rma_counts_val['oow'] = iw_oow(all_q)
     closed_rows = db.session.query(RmaCases.processid, sa_func.count(RmaCases.id)).filter(
-        RmaCases.status == 'closed', RmaCases.processid != None
+        RmaCases.status.in_(('closed', 'pre-closed')), RmaCases.processid != None
     ).group_by(RmaCases.processid).order_by(sa_func.count(RmaCases.id).desc()).all()
     rma_counts_val['closed_notes'] = [
         {'count': int(cnt), 'processby': get_username(pid) if pid else ''}
@@ -680,7 +680,7 @@ def dashboard():
             RmaCases.cstime >= q_start, RmaCases.cstime < q_end,
             RmaCases.status == 'closed',
             ~RmaCases.conclusion.ilike('%No Problem Found%'),
-            ~RmaCases.rmatype.ilike('ECN'),
+            RmaCases.rmatype.in_(('RMA', 'DOA')),
         )
         for c in channel_names:
             rma_q = rma_q.filter(~RmaCases.customers.ilike(f'%{c}%'))
@@ -754,7 +754,7 @@ def dashboard():
             RmaCases.cstime >= m, RmaCases.cstime < m_end,
             RmaCases.status == 'closed',
             ~RmaCases.conclusion.ilike('%No Problem Found%'),
-            ~RmaCases.rmatype.ilike('ECN'),
+            RmaCases.rmatype.in_(('RMA', 'DOA')),
         )
         for c in channel_names:
             rma_m = rma_m.filter(~RmaCases.customers.ilike(f'%{c}%'))
@@ -816,7 +816,10 @@ def dashboard():
         for c in eff_cases:
             w = (c.warranty or '').strip().lower()
             is_iw = (w in ('yes',)) or ('-' in w) or ('/' in w)
-            closed_on_time = c.closetime and c.recvtime and _workdays(c.recvtime, c.closetime) <= 15
+            eff_close = c.closetime or c.preclosetime
+            if not eff_close and c.recvtime and _workdays(c.recvtime, datetime.datetime.now()) < 15:
+                continue
+            closed_on_time = eff_close and c.recvtime and _workdays(c.recvtime, eff_close) <= 15
             if is_iw:
                 iw_total += 1
                 if closed_on_time:
@@ -1238,9 +1241,17 @@ def display_workorders():
     # Simpler approach: use role-based base
     def by_role(base):
         return base.filter(WorkOrder.asid == current_user.id) if role == 0 else base
+    user_obj = User.query.get(current_user.id)
+    user_auth = (user_obj.auth or '').lower() if user_obj and user_obj.auth else ''
+    def by_role_packing(base):
+        return base.filter(WorkOrder.asid == current_user.id) if (role == 0 and 'packing' not in user_auth) else base
+    def by_role_inspect(base):
+        if role == 0:
+            return base.filter(db.or_(WorkOrder.asid == current_user.id, WorkOrder.packid == current_user.id))
+        return base
     bldtst = by_role(WorkOrder.query.filter_by(status=0)).order_by(WorkOrder.wo)
-    wfi = by_role(WorkOrder.query.filter_by(status=1)).order_by(WorkOrder.wo)  # wait inspection
-    wfp = by_role(WorkOrder.query.filter_by(status=3)).order_by(WorkOrder.wo)  # wait for packing
+    wfi = by_role_inspect(WorkOrder.query.filter_by(status=1)).order_by(WorkOrder.wo)  # wait inspection
+    wfp = by_role_packing(WorkOrder.query.filter_by(status=3)).order_by(WorkOrder.wo)  # wait for packing
     packing = by_role(WorkOrder.query.filter_by(status=4)).order_by(WorkOrder.wo)  # packing
     wffi = by_role(WorkOrder.query.filter_by(status=5)).order_by(WorkOrder.wo)  # wait for final inspect
     if role == 0 :
@@ -1260,8 +1271,8 @@ def display_workorders():
     unassigned_count = WorkOrder.query.filter_by(status=-1).count()
     pending_count = WorkOrder.query.filter_by(status=-2).count()
     bldtst_count = by_role(WorkOrder.query.filter_by(status=0)).count()
-    wfi_count = by_role(WorkOrder.query.filter_by(status=1)).count()
-    wfp_count = by_role(WorkOrder.query.filter_by(status=3)).count()
+    wfi_count = by_role_inspect(WorkOrder.query.filter_by(status=1)).count()
+    wfp_count = by_role_packing(WorkOrder.query.filter_by(status=3)).count()
     packing_count = by_role(WorkOrder.query.filter_by(status=4)).count()
     wffi_count = by_role(WorkOrder.query.filter_by(status=5)).count()
     completed_today_count = WorkOrder.query.filter(func.DATE(WorkOrder.intime) == func.DATE(datetime.datetime.today()), WorkOrder.status == 2).count()
@@ -1311,7 +1322,7 @@ def query():
                 form.enddate.data = ed
         except: pass
     packgo = request.args.get('packgo')
-    if packgo != '1':
+    if not packgo:
         completedss = completedss.filter(WorkOrder.packgo != True)
     else:
         form.packgo.data = True
@@ -2834,6 +2845,7 @@ def rma_list():
         'shipped_to_vendor': RmaCases.query.filter_by(status='shipped_to_vendor').count(),
         'closed': RmaCases.query.filter_by(status='closed').count(),
         'canceled': RmaCases.query.filter_by(status='canceled').count(),
+        'preclosed': RmaCases.query.filter_by(status='pre-closed').count(),
     }
     # IW/OOW for closed cases (RMA page)
     closed_cases = RmaCases.query.filter_by(status='closed').all()
@@ -2846,12 +2858,15 @@ def rma_list():
             oow += 1
     counts['iw'] = iw
     counts['oow'] = oow
-    return render_template('rma.html', cases=cases, counts=counts,
+    resp = make_response(render_template('rma.html', cases=cases, counts=counts,
                            current_status=status_filter, userrole=role,
                            start_date=start_date, end_date=end_date,
                            keywords=keywords,
                            productlist=[p[0] for p in PnMap.query.with_entities(PnMap.pn).all()],
-                           invparts={wh: [p.partsname for p in PartsInventory.query.filter_by(warehouse=wh).all()] for wh in ('WH10', 'WH12')})
+                           invparts={wh: [p.partsname for p in PartsInventory.query.filter_by(warehouse=wh).all()] for wh in ('WH10', 'WH12')}))
+    resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    resp.headers['Pragma'] = 'no-cache'
+    return resp
 
 def next_ntarmano():
     now = datetime.datetime.now()
@@ -2992,11 +3007,13 @@ def rma_back():
 def rma_new():
     if get_userrole(current_user.id) < 2: abort(403)
     if request.method == 'POST':
-        csns = [c.strip() for c in request.form['csn'].replace('|', ' ').replace(',', ' ').split() if c.strip()]
+        def _clean(v):
+            return (v or '').replace('\x00', '').strip()
+        csns = [c.strip() for c in _clean(request.form['csn']).replace('|', ' ').replace(',', ' ').split() if c.strip()]
         if not csns:
             flash('At least one CSN is required')
             return redirect(url_for('main.rma_new'))
-        ntarmano = request.form['ntarmano']
+        ntarmano = _clean(request.form['ntarmano'])
         existing = RmaCases.query.filter(RmaCases.ntarmano == ntarmano, RmaCases.csn.in_(csns)).count()
         if existing:
             flash(f'Duplicate submission detected: {existing} record(s) already exist with this RMA#')
@@ -3005,22 +3022,22 @@ def rma_new():
         for csn in csns:
             case = RmaCases(
                 ntarmano=ntarmano,
-                customers=request.form['customers'],
-                pn=request.form['pn'],
+                customers=_clean(request.form['customers']),
+                pn=_clean(request.form['pn']),
                 csn=csn,
-                warranty=request.form.get('warranty', ''),
-                descriptionbycustomer=request.form['description'],
+                warranty=_clean(request.form.get('warranty', '')),
+                descriptionbycustomer=_clean(request.form['description']),
                 csid=current_user.id,
                 cstime=datetime.datetime.now(),
-                rmacontactname=request.form['contactname'],
-                rmacontactemail=request.form['email'],
-                rmacontactphone=request.form['phone'],
-                shippingaddress=request.form.get('shippingaddress', ''),
-                rmacontactname1=request.form.get('contactname1'),
-                rmacontactemail1=request.form.get('email1'),
-                rmacontactphone1=request.form.get('phone1'),
-                special=request.form.get('special', ''),
-                rmatype=request.form.get('rmatype', 'RMA'),
+                rmacontactname=_clean(request.form['contactname']),
+                rmacontactemail=_clean(request.form['email']),
+                rmacontactphone=_clean(request.form['phone']),
+                shippingaddress=_clean(request.form.get('shippingaddress', '')),
+                rmacontactname1=_clean(request.form.get('contactname1')),
+                rmacontactemail1=_clean(request.form.get('email1')),
+                rmacontactphone1=_clean(request.form.get('phone1')),
+                special=_clean(request.form.get('special', '')),
+                rmatype=_clean(request.form.get('rmatype', 'RMA')),
             )
             db.session.add(case)
             case.assetowner = case.customers
@@ -3073,7 +3090,7 @@ def rma_wait_shipping(id):
     rma_part_sn = request.form.get('rma_part_sn', '').strip()
     inv_time = datetime.datetime.now().strftime('%m/%d/%Y %H:%M')
     if rwo_wh in ('WH01', 'WH10', 'WH12'):
-        wh_msg = f"{rwo_wh} to WH04 at shipping, WH04 to {rwo_wh} at receiving"
+        wh_msg = f"WH04 to {rwo_wh} at receiving"
         if shippn and partsn:
             existing = PartsInventory.query.filter_by(partsname=shippn, partsn=partsn).count()
             if existing:
@@ -3117,16 +3134,15 @@ def rma_wait_shipping(id):
             vendorname=vendorname,
             category=category,
             assetowner='NTA',
-            shiptovendortime=datetime.datetime.now(),
-            shiptovendorid=current_user.id,
             warehousetransfer=wh_msg,
         )
+        new_shipment.status = 'waiting'
         db.session.add(new_shipment)
     else:
         case.status = 'waiting_for_shipping'
         if vendorrmano or shippn or partsn or vendorname:
-            active = case.shipments.order_by(RmaVendorShipment.id.desc()).first()
-            if active and active.status != 'received':
+            active = case.shipments.filter_by(status='waiting').order_by(RmaVendorShipment.id.desc()).first()
+            if active:
                 active.vendorrmano = vendorrmano
                 active.shippn = shippn
                 active.partsn = partsn
@@ -3134,15 +3150,24 @@ def rma_wait_shipping(id):
                 active.category = category
                 active.assetowner = case.customers
                 active.warehousetransfer = ''
-                active.shiptovendortime = datetime.datetime.now()
-                active.shiptovendorid = current_user.id
             else:
                 ao = case.customers
                 shipment = RmaVendorShipment(rma_case_id=case.id, vendorrmano=vendorrmano, shippn=shippn, partsn=partsn, assetowner=ao, vendorname=vendorname, category=category,
-                                             shiptovendortime=datetime.datetime.now(), shiptovendorid=current_user.id, warehousetransfer='')
+                                             warehousetransfer='')
+                shipment.status = 'waiting'
                 db.session.add(shipment)
                 case.assetowner = ao
     db.session.commit()
+    return rma_back()
+
+@main.route('/rma/<int:id>/unpreclose', methods=['POST'])
+@login_required
+def rma_unpreclose(id):
+    if get_userrole(current_user.id) < 2: abort(403)
+    case = RmaCases.query.get_or_404(id)
+    if case.status == 'pre-closed':
+        case.status = 'processing'
+        db.session.commit()
     return rma_back()
 
 @main.route('/rma/<int:id>/delete', methods=['POST'])
@@ -3315,6 +3340,68 @@ def rma_ship_vendor(id):
     db.session.commit()
     return rma_back()
 
+@main.route('/rma/<int:id>/add-shipping', methods=['POST'])
+@login_required
+def rma_add_shipping(id):
+    if get_userrole(current_user.id) < 2: abort(403)
+    case = RmaCases.query.get_or_404(id)
+    shippn = request.form.get('shippn', '').strip()
+    partsn = request.form.get('partsn', '').strip()
+    if not shippn or not partsn:
+        flash('Ship PN and Part SN are required', 'danger')
+        return rma_back()
+    shipment = RmaVendorShipment(
+        rma_case_id=case.id,
+        vendorrmano=request.form.get('vendorrmano', ''),
+        shippn=shippn,
+        partsn=partsn,
+        vendorname=request.form.get('vendorname', ''),
+        category=request.form.get('category', ''),
+        assetowner=case.customers,
+    )
+    shipment.status = 'waiting'
+    db.session.add(shipment)
+    db.session.commit()
+    flash(f'Added shipping record for {case.ntarmano}')
+    return rma_back()
+
+@main.route('/rma/ship-item/<int:shipment_id>', methods=['POST'])
+@login_required
+def rma_ship_item(shipment_id):
+    if get_userrole(current_user.id) < 2: abort(403)
+    shipment = RmaVendorShipment.query.get_or_404(shipment_id)
+    case = shipment.rma_case
+    shipment.vendorrmano = request.form.get('vendorrmano', shipment.vendorrmano or '')
+    shipment.vendorname = request.form.get('vendorname', shipment.vendorname or '')
+    shipment.category = request.form.get('category', shipment.category or '')
+    shipment.shippn = request.form.get('shippn', shipment.shippn or '')
+    shipment.partsn = request.form.get('partsn', shipment.partsn or '')
+    shipment.shiptovendortime = datetime.datetime.now()
+    shipment.shiptovendorid = current_user.id
+    shipment.status = 'shipped'
+    remaining = case.shipments.filter_by(status='waiting').count()
+    if remaining == 0:
+        case.status = 'shipped_to_vendor'
+    db.session.commit()
+    flash(f'Shipped item to vendor for {case.ntarmano}')
+    return rma_back()
+
+@main.route('/rma/recv-item/<int:shipment_id>', methods=['POST'])
+@login_required
+def rma_recv_item(shipment_id):
+    if get_userrole(current_user.id) < 2: abort(403)
+    shipment = RmaVendorShipment.query.get_or_404(shipment_id)
+    case = shipment.rma_case
+    shipment.recvfromvendortime = datetime.datetime.now()
+    shipment.recvfromvendorid = current_user.id
+    shipment.status = 'received'
+    remaining = case.shipments.filter_by(status='shipped').count()
+    if remaining == 0:
+        case.status = 'processing'
+    db.session.commit()
+    flash(f'Received item from vendor for {case.ntarmano}')
+    return rma_back()
+
 @main.route('/rma/<int:id>/recv-vendor', methods=['POST'])
 @login_required
 def rma_recv_vendor(id):
@@ -3330,6 +3417,24 @@ def rma_recv_vendor(id):
     flash('Vendor shipment received, case returned to processing')
     return rma_back()
 
+@main.route('/rma/<int:id>/preclose', methods=['POST'])
+@login_required
+def rma_preclose(id):
+    if get_userrole(current_user.id) < 2: abort(403)
+    case = RmaCases.query.get_or_404(id)
+    if case.status == 'processing':
+        case.status = 'pre-closed'
+        case.preclosetime = datetime.datetime.now()
+        notes = request.form.get('notes', '').strip()
+        if notes:
+            if case.notes and notes not in case.notes:
+                case.notes = case.notes.rstrip() + ' | ' + notes
+            elif not case.notes:
+                case.notes = notes
+        db.session.commit()
+        flash(f'Case {case.ntarmano} marked Pre-Closed')
+    return rma_back()
+
 @main.route('/rma/<int:id>/close', methods=['POST'])
 @login_required
 def rma_close(id):
@@ -3337,8 +3442,11 @@ def rma_close(id):
     case = RmaCases.query.get_or_404(id)
     case.conclusion = request.form['conclusion']
     case.notes = request.form.get('notes', '')
+    if case.status == 'pre-closed' and case.preclosetime:
+        case.closetime = case.preclosetime
+    else:
+        case.closetime = datetime.datetime.now()
     case.status = 'closed'
-    case.closetime = datetime.datetime.now()
     case.closeid = current_user.id
     if request.form.get('report_quality_close'):
         source = 'Production Line' if case.customers.upper() == 'NTA' else 'RMA'
@@ -3369,17 +3477,17 @@ def rma_close(id):
 def rma_recv_close(id):
     if get_userrole(current_user.id) < 2: abort(403)
     case = RmaCases.query.get_or_404(id)
-    shipment = case.shipments.filter_by(status='shipped').order_by(RmaVendorShipment.shiptovendortime.desc()).first()
-    if shipment:
-        shipment.recvfromvendortime = datetime.datetime.now()
-        shipment.recvfromvendorid = current_user.id
-        shipment.status = 'received'
-        if shipment.shippn:
+    shipments = case.shipments.filter_by(status='shipped').all()
+    for sh in shipments:
+        sh.recvfromvendortime = datetime.datetime.now()
+        sh.recvfromvendorid = current_user.id
+        sh.status = 'received'
+        if sh.shippn:
             inv_time = datetime.datetime.now().strftime('%m/%d/%Y %H:%M')
-            inv_rows = PartsInventory.query.filter_by(partsname=shipment.shippn, partsn=shipment.partsn).all()
+            inv_rows = PartsInventory.query.filter_by(partsname=sh.shippn, partsn=sh.partsn).all()
             if not inv_rows:
                 inv_rows = PartsInventory.query.filter(
-                    PartsInventory.partsname == shipment.shippn,
+                    PartsInventory.partsname == sh.shippn,
                     PartsInventory.warehouse == 'WH04',
                     PartsInventory.history.ilike('%' + case.ntarmano + '%'),
                 ).all()
@@ -3387,8 +3495,9 @@ def rma_recv_close(id):
                 m = re.search(r'from\s+(WH\d+)', r.history or '')
                 if m:
                     r.warehouse = m.group(1)
-                entry = f"[{inv_time}] received from {shipment.vendorrmano or ''} of {shipment.vendorname or ''}"
+                entry = f"[{inv_time}] received from {sh.vendorrmano or ''} of {sh.vendorname or ''}"
                 r.history = (r.history.rstrip() + '\n' + entry) if r.history else entry
+    shipment = shipments[-1] if shipments else None
     case.conclusion = request.form['conclusion']
     case.notes = request.form.get('notes', '')
     m_rwo = re.search(r'<RWO\s+([^>]+)>', case.descriptionbycustomer or '')

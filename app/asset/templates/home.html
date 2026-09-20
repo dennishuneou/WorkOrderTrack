@@ -386,7 +386,14 @@
                                           xhr2.onload = function() { location.reload(); };
                                           xhr2.send(JSON.stringify({message: ids.join(' ')}));
                                       };
-                                      var pm = new bootstrap.Modal(document.getElementById('packModal')); pm.show();
+                                      var packEl = document.getElementById('packModal');
+                                      var existingModal = bootstrap.Modal.getInstance(packEl);
+                                      if (existingModal) existingModal.dispose();
+                                      document.querySelectorAll('.modal-backdrop').forEach(function(b){ b.remove(); });
+                                      document.body.classList.remove('modal-open');
+                                      packEl.style.display = '';
+                                      var pm = new bootstrap.Modal(packEl);
+                                      pm.show();
                                   } else {
                                       var xhr2 = new XMLHttpRequest();
                                       xhr2.open('POST', '{{ url_for("main.packmore") }}', true);
@@ -474,7 +481,7 @@
                     <thead class="thead-light">
                         <tr style="background-color:#e3f2fd;">
                             {% if userrole > 0 %}<th><input type="checkbox" onclick="var c=this.checked; this.closest('table').querySelectorAll('.chk').forEach(function(e){if(e.offsetParent!==null)e.checked=c})"></th>{% endif %}
-                            <th>ID</th><th>WO#</th><th>Customer</th><th>Product</th><th>CSN</th><th>Type</th><th>Take at</th><th>Build by</th><th>Status</th>
+                            <th>ID</th><th>WO#</th><th>Customer</th><th>Product</th><th>CSN</th><th>Type</th><th>Take at</th><th>Build by</th><th>Packed by</th><th>Status</th>
                             {% if userrole > 0 %}<th>Inspection</th>{% endif %}
                         </tr>
                     </thead>
@@ -488,6 +495,7 @@
                         <td>{% if wo.packgo %}PG{% else %}Build{% endif %}</td>
                         <td>{{ wo.tktime.strftime('%m/%d %H:%M') if wo.tktime }}</td>
                         <td>{{ wo.asid | usersname }}</td>
+                        <td>{{ wo.packid | usersname }}</td>
                         <td><span class="badge badge-info">Wait Inspect</span></td>
                         {% if userrole > 0 %}
                         <td><a href="{{ url_for('main.ReviewReport',id=wo.id)}}"><i class="fa fa-arrow-up"></i></a></td>

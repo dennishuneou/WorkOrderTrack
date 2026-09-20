@@ -293,6 +293,7 @@ class RmaCases(db.Model):
     startprocesstime=db.Column(db.DateTime, nullable=True)
     closetime=db.Column(db.DateTime, nullable=True)
     closeid=db.Column(db.Integer, nullable=True)
+    preclosetime=db.Column(db.DateTime, nullable=True)
     conclusion = db.Column(db.String(32), nullable=True)
     notes = db.Column(db.String(2000), nullable=True)
     status = db.Column(db.String(32), nullable=False)
@@ -306,8 +307,7 @@ class RmaCases(db.Model):
     assetowner = db.Column(db.String(100), nullable=False, default='customer')
     special = db.Column(db.String(100), nullable=True)
     rmatype = db.Column(db.String(20), nullable=False, default='RMA')
-    shipments = db.relationship('RmaVendorShipment', backref='rma_case', lazy='dynamic',
-                                order_by='RmaVendorShipment.shiptovendortime')
+    shipments = db.relationship('RmaVendorShipment', backref='rma_case', lazy='dynamic')
 
     def __init__(self, ntarmano, customers, pn, csn, warranty,
                  descriptionbycustomer, csid, cstime,

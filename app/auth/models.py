@@ -13,6 +13,7 @@ class User(UserMixin, db.Model):
     registration_date = db.Column(db.DateTime, default=datetime.now())
     role = db.Column(db.Integer)
     status = db.Column(db.Integer)
+    auth = db.Column(db.String(100))
     def check_password(self, password):
         return bcrypt.check_password_hash(self.user_password, password)
 
