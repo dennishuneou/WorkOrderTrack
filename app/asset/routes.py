@@ -2033,6 +2033,7 @@ def add_workorder():
                                 form.ospreinstalled.data = True   
                         elif 'I7-' in row[0].upper() or 'I9-' in row[0].upper() or 'E22' in row[0].upper() \
                              or 'I3-' in row[0].upper() or 'I5-' in row[0].upper()  \
+                             or 'CORE ULTRA' in row[0].upper() \
                              or 'AGX' in row[0].upper() or 'ORIN' in row[0].upper() :
                             form.cputype.data = CPU_PN_MAP.get(row[0].strip(), row[0])
                             if 'installed' not in row[3] :
@@ -2414,21 +2415,24 @@ def packingcalculator():
             if form.dmpbr.data != None and form.qty_dmpbr.data!=0: 
                 dmpbr_name = form.dmpbr.data.pn
                 dmpbr_qty  = form.qty_dmpbr.data
-                inneraccessory_name = inneraccessory_name + '|DMPBR'
-                computer_weight +=  PnMap.query.filter_by(pn=dmpbr_name).first().weight # Add 2lbs for Dumping Bracket
-                dmpbr_qty = dmpbr_qty - computer_qty
+                if 'DUMPINGBRACKET' in computer.inneraccessory:
+                    inneraccessory_name = inneraccessory_name + '|DMPBR'
+                    computer_weight +=  PnMap.query.filter_by(pn=dmpbr_name).first().weight # Add 2lbs for Dumping Bracket
+                    dmpbr_qty = dmpbr_qty - computer_qty
             if form.fankit.data != None and form.qty_fankit.data!=0: 
                 fankit_name = form.fankit.data.pn
                 fankit_qty  = form.qty_fankit.data
-                inneraccessory_name = inneraccessory_name + '|FKIT'
-                computer_weight +=  PnMap.query.filter_by(pn=fankit_name).first().weight# Add 0.6lbs for FAN kit
-                fankit_qty = fankit_qty - computer_qty
+                if 'FANKIT' in computer.inneraccessory:
+                    inneraccessory_name = inneraccessory_name + '|FKIT'
+                    computer_weight +=  PnMap.query.filter_by(pn=fankit_name).first().weight# Add 0.6lbs for FAN kit
+                    fankit_qty = fankit_qty - computer_qty
             if form.wallmount.data != None and form.qty_wallmount.data !=0: 
                 wallmount_name = form.wallmount.data.pn
                 wallmount_qty  = form.qty_wallmount.data
-                inneraccessory_name = inneraccessory_name + '|WMNT'
-                computer_weight += PnMap.query.filter_by(pn=wallmount_name).first().weight # Add 0.3lbs for Wall Mount
-                wallmount_qty = wallmount_qty - computer_qty
+                if 'WALLMOUNT' in computer.inneraccessory:
+                    inneraccessory_name = inneraccessory_name + '|WMNT'
+                    computer_weight += PnMap.query.filter_by(pn=wallmount_name).first().weight # Add 0.3lbs for Wall Mount
+                    wallmount_qty = wallmount_qty - computer_qty
             if form.card1.data != None and form.qty_card1.data!=0: 
                 card1_name = form.card1.data.pn
                 card1_qty  = form.qty_card1.data
@@ -2613,14 +2617,17 @@ def packingcalculator():
                     pkg_list = []
                     for acc in one_set:
                         total_wt += acc.get_weight()
-                    solutions = [f"{bd['name']} | Packed: 100.00%",
-                                 f"{bd['w']} x {bd['t']} x {bd['h']}inches | Total Weight | {total_wt:.2f}lbs"]
+                    solutions = []
                     # Count items by name
                     from collections import Counter
                     name_counts = Counter(acc.get_name() for acc in one_set)
-                    for name, cnt in name_counts.items():
-                        wgt = sum(acc.get_weight() for acc in one_set if acc.get_name() == name)
-                        solutions.append(f"{name} | {wgt:.2f}lbs x {cnt}")
+                    for box_idx in range(computer_qty):
+                        solutions.append(f"Box {box_idx+1}: {bd['name']} | Packed: 100.00%")
+                        solutions.append(f"{bd['w']} x {bd['t']} x {bd['h']}inches | Total Weight | {total_wt:.2f}lbs")
+                        for name, cnt in name_counts.items():
+                            wgt = sum(acc.get_weight() for acc in one_set if acc.get_name() == name)
+                            per_wgt = wgt / cnt if cnt else 0
+                            solutions.append(f"{name} | {per_wgt:.2f}lbs x {cnt}")
                     # Use actual classifier output for positions/rotations
                     ref_box = pdata_a[0]
                     details.append(f"Details")
@@ -2886,7 +2893,7 @@ def generate_rma_files(case, csns=None):
     from lxml import etree
 
     basedir = os.path.dirname(os.path.abspath(__file__))
-    template = os.path.join(basedir, '../../rma_template.docx')
+    template = os.path.join(basedir, '../../NTA-PD-4016_RMA Form.docx')
     outdir = os.path.join(basedir, '../static/rma')
     outdir = os.path.abspath(outdir)
     os.makedirs(outdir, exist_ok=True)
@@ -3234,7 +3241,7 @@ def rma_create_wo(id):
         osinstall='', packgo=False,
         asid=-1, insid=-1, astime=None, intime=None, tktime=None,
         csid=current_user.id, cstime=datetime.datetime.now(),
-        ldtime=None, status=0, doc_items='')
+        ldtime=datetime.datetime.now(), status=-1, doc_items='')
     db.session.add(wo)
     db.session.commit()
     flash(f'WorkOrder {wo_num} created for {case.customers}')
@@ -3583,14 +3590,15 @@ def rma_export():
                  'Recv from Vendor', 'Vendor Recv By',
                  'Closed', 'Closed By', 'Conclusion', 'Notes'])
     for c in cases:
+        s = c.shipments.order_by(RmaVendorShipment.id.desc()).first()
         cw.writerow([c.ntarmano, c.customers, c.pn, c.csn, c.descriptionbycustomer,
                      c.cstime, c.status,
                      c.rmacontactname, c.rmacontactemail, c.rmacontactphone, c.shippingaddress,
                      c.recvtime, get_username(c.recvid) if c.recvid else '',
                      c.startprocesstime, get_username(c.processid) if c.processid else '',
-                     c.shiptovendortime, get_username(c.shiptovendorid) if c.shiptovendorid else '',
-                     c.vendorrmano,
-                     c.recvfromvendortime, get_username(c.recvfromvendorid) if c.recvfromvendorid else '',
+                     s.shiptovendortime if s else '', get_username(s.shiptovendorid) if (s and s.shiptovendorid) else '',
+                     s.vendorrmano if s else '',
+                     s.recvfromvendortime if s else '', get_username(s.recvfromvendorid) if (s and s.recvfromvendorid) else '',
                      c.closetime, get_username(c.closeid) if c.closeid else '',
                      c.conclusion, c.notes])
     out = si.getvalue()
