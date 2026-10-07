@@ -1768,9 +1768,9 @@ def UploadReport(id):
         db.session.add(transaction)
         db.session.commit()
         fstr = "Upload successful! "
-        if workorder.cpuinstall == False and ("Nuvo" in workorder.pn or "SEMIL" in workorder.pn):
+        if not workorder.cputype.strip()  and ("Nuvo" in workorder.pn or "SEMIL" in workorder.pn):
             fstr += "PLEASE uninstall CPU. "
-        if workorder.memoryinstall == False and ("Nuvo" in workorder.pn or "POC" in workorder.pn or "SEMIL" in workorder.pn) :    
+        if not workorder.memorysize.strip()  and ("Nuvo" in workorder.pn or "POC" in workorder.pn or "SEMIL" in workorder.pn) :    
             fstr += "PLEASE uninstall Memory."
         if "WARNING" in form.note.data :
             fstr += form.note.data     
