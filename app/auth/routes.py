@@ -31,7 +31,7 @@ def do_login():
 
     if current_user.is_authenticated:
         flash('You are already logged in.')
-        redirect(url_for('main.display_workorders'))
+        return redirect(url_for('main.display_workorders'))
     form = LoginForm()
     if form.validate_on_submit():
         user = User.query.filter_by(user_email=form.email.data).first()
