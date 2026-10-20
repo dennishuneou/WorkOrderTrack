@@ -67,7 +67,7 @@
                     {% if current_status in ('closed', 'all') %}<th class="sortable">Closed <i class="bi bi-arrow-down-up"></i></th><th class="sortable">By <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Conclusion <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Vendor RMA <i class="bi bi-arrow-down-up"></i></th><th class="sortable">Owner <i class="bi bi-arrow-down-up"></i></th>{% endif %}
                     {% if current_status == 'all' %}<th>Notes</th>{% endif %}
                     {% if current_status == 'pre-closed' %}<th class="sortable">Pre-Close <i class="bi bi-arrow-down-up"></i></th><th>Notes</th>{% endif %}
-                    {% if current_status in ('new', 'received', 'processing', 'waiting_for_shipping') %}<th class="sortable">RMA Type <i class="bi bi-arrow-down-up"></i></th>{% elif current_status != 'shipped_to_vendor' %}<th class="sortable">Status <i class="bi bi-arrow-down-up"></i></th>{% endif %}
+                    {% if current_status in ('new', 'received', 'processing', 'waiting_for_shipping') %}<th class="sortable">Service Type <i class="bi bi-arrow-down-up"></i></th>{% elif current_status != 'shipped_to_vendor' %}<th class="sortable">Status <i class="bi bi-arrow-down-up"></i></th>{% endif %}
                     {% if current_status == 'new' %}<th>Files</th>{% endif %}
                     <th>Actions</th>
                 </tr>

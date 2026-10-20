@@ -521,7 +521,7 @@
                 <thead><tr><th>Month</th><th class="text-right">Received</th><th class="text-right">Closed in 15 wd</th><th class="text-right">Efficiency%</th></tr></thead>
                 <tbody>
                   {% for q in rma_eff_iw %}
-                  <tr><td>{{ q.label }}</td><td class="text-right">{{ q.total }}</td><td class="text-right">{{ q.ontime }}</td><td class="text-right">{{ q.rate }}%</td></tr>
+                  <tr><td>{{ q.label }}</td><td class="text-right">{{ q.total }}</td><td class="text-right">{{ q.ontime }}{% if q.ontime %} <a href="{{ url_for('main.dashboard_rma_eff_export', month=q.label, type='iw') }}"><i class="bi bi-download"></i></a>{% endif %}</td><td class="text-right">{{ q.rate }}%</td></tr>
                   {% endfor %}
                 </tbody>
               </table>
@@ -536,7 +536,7 @@
                 <thead><tr><th>Month</th><th class="text-right">Received</th><th class="text-right">Closed in 15 wd</th><th class="text-right">Efficiency%</th></tr></thead>
                 <tbody>
                   {% for q in rma_eff_oow %}
-                  <tr><td>{{ q.label }}</td><td class="text-right">{{ q.total }}</td><td class="text-right">{{ q.ontime }}</td><td class="text-right">{{ q.rate }}%</td></tr>
+                  <tr><td>{{ q.label }}</td><td class="text-right">{{ q.total }}</td><td class="text-right">{{ q.ontime }}{% if q.ontime %} <a href="{{ url_for('main.dashboard_rma_eff_export', month=q.label, type='oow') }}"><i class="bi bi-download"></i></a>{% endif %}</td><td class="text-right">{{ q.rate }}%</td></tr>
                   {% endfor %}
                 </tbody>
               </table>
