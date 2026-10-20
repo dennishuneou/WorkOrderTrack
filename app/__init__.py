@@ -12,7 +12,7 @@ db = SQLAlchemy()
 bcrypt = Bcrypt()
 login_manager = LoginManager()
 login_manager.login_view = 'authentication.do_login'
-login_manager.session_protection = 'strong'
+login_manager.session_protection = 'basic'
 
 def create_app():    
 

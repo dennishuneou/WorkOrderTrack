@@ -1162,7 +1162,70 @@ def dashboard():
                             ranking_scores28=ranking_scores28, quality_data=quality_data, userrole=role,
                             detail_table=detail_table, detail_table28=detail_table28,
                             rma_counts=rma_counts_val, rma_retail=rma_retail_val, rma_channel=rma_channel_val,                             rma_rate=rma_rate_data, doa_rate=doa_rate_data,
-                            rma_months=rma_months, doa_months=doa_months, rma_eff_iw=rma_eff_iw, rma_eff_oow=rma_eff_oow)
+                             rma_months=rma_months, doa_months=doa_months, rma_eff_iw=rma_eff_iw, rma_eff_oow=rma_eff_oow)
+
+@main.route('/dashboard/rma-eff-export')
+@login_required
+def dashboard_rma_eff_export():
+    if get_userrole(current_user.id) < 2: abort(403)
+    month = request.args.get('month', '')
+    typ = request.args.get('type', 'iw')
+    try:
+        y, m = month.split('-')
+        em = datetime.datetime(int(y), int(m), 1)
+        ey, emn = (em.year + 1, 1) if em.month == 12 else (em.year, em.month + 1)
+        em_end = datetime.datetime(ey, emn, 1)
+    except Exception:
+        return 'Invalid month', 400
+
+    def _wd(a, b):
+        d = a.date() + datetime.timedelta(days=1)
+        end = b.date()
+        cnt = 0
+        while d <= end:
+            if d.weekday() < 5:
+                cnt += 1
+            d += datetime.timedelta(days=1)
+        return cnt
+
+    q = RmaCases.query.filter(RmaCases.recvtime >= em, RmaCases.recvtime < em_end)
+    q = q.filter(~RmaCases.customers.ilike('NTA'))
+    rows = []
+    now = datetime.datetime.now()
+    for c in q.all():
+        w = (c.warranty or '').strip().lower()
+        is_iw = (w in ('yes',)) or ('-' in w) or ('/' in w)
+        if (typ == 'iw') != is_iw:
+            continue
+        eff_close = c.closetime or c.preclosetime
+        if eff_close:
+            if c.recvtime and _wd(c.recvtime, eff_close) <= 15:
+                rows.append([c.ntarmano, c.customers, c.pn,
+                             c.recvtime.strftime('%m/%d/%Y'),
+                             eff_close.strftime('%m/%d/%Y'),
+                             'Closed (<=15wd)'])
+            else:
+                rows.append([c.ntarmano, c.customers, c.pn,
+                             c.recvtime.strftime('%m/%d/%Y'),
+                             eff_close.strftime('%m/%d/%Y'),
+                             'Closed (>15wd)'])
+        else:
+            if c.recvtime and _wd(c.recvtime, now) < 15:
+                continue
+            rows.append([c.ntarmano, c.customers, c.pn,
+                         c.recvtime.strftime('%m/%d/%Y'),
+                         '',
+                         'In Progress'])
+    si = io.StringIO()
+    cw = csv.writer(si)
+    cw.writerow(['RMA#', 'Customer', 'Product Number', 'Recv Time', 'Close Time', 'Status'])
+    for r in rows:
+        cw.writerow(r)
+    out = si.getvalue()
+    si.close()
+    fname = f"rma_eff_{typ}_{month}.csv"
+    return Response(out, mimetype='text/csv',
+                    headers={'Content-Disposition': f'attachment;filename={fname}'})
 
 @main.route('/api/workorder-counts')
 @login_required
