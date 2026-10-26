@@ -1370,10 +1370,10 @@ def query():
         return redirect(url_for('main.query', **params))
 
     role = get_userrole(current_user.id)
-    if role < 2:
-        return redirect(url_for('main.display_workorders'))
     searched = 0
     completedss = WorkOrder.query.filter(WorkOrder.status == 2)
+    if role == 0:
+        completedss = completedss.filter(WorkOrder.asid == current_user.id)
     if request.args.get('startdate') and request.args.get('enddate'):
         try:
             sd = datetime.datetime.strptime(request.args['startdate'], '%Y-%m-%d')

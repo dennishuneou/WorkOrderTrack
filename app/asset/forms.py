@@ -301,7 +301,7 @@ def report_check(form, field):
             totalnetportcnt = totalnetportcnt + 1
             line_lower = line.lower()
             prev_line_lower = contents[linecnt-2].lower()
-            if ("78:d0:04" in line_lower or "3c:6d:66" in line_lower or "48:b0:2d" in line_lower or "4c:bb:47" in line_lower or "ac:3a:e2" in line_lower or "74:25:54" in line_lower):
+            if ("78:d0:04" in line_lower or "3c:6d:66" in line_lower or "48:b0:2d" in line_lower or "4c:bb:47" in line_lower or "ac:3a:e2" in line_lower or "74:25:54" in line_lower or "14:78:30" in line_lower):
                 totalneonetportcnt =  totalneonetportcnt + 1
                 totalneonetportcnt =  totalneonetportcnt + 1
             elif "88:88:88:88:87:88" in line_lower :     

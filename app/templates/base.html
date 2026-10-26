@@ -80,7 +80,7 @@
                             {% endif %}
                         </ul>
                     </li>
-                    {% if userrole > 1 %}
+                    {% if userrole >= 0 %}
                     <li class="nav-item">
                         <a href="{{ url_for('main.query') }}"      class="nav-link">Query</a>
                     </li>
