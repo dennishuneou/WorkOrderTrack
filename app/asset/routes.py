@@ -2737,6 +2737,12 @@ def packingcalculator():
 def add_qualitylog():
     role = get_userrole(current_user.id)
     form = AddQualityLogForm()  
+    if request.method == 'GET':
+        if request.args.get('wo'): form.wo.data = request.args['wo']
+        if request.args.get('pn'): form.pn.data = request.args['pn']
+        if request.args.get('csn'): form.csn.data = request.args['csn']
+        if request.args.get('reason'): form.reason.data = request.args['reason']
+        if request.args.get('source'): form.source.data = request.args['source']
     if form.validate_on_submit():
         reportname = get_username(current_user.id)
         reporttime = datetime.datetime.now().strftime("%y/%m/%d %H:%M")
@@ -3158,56 +3164,83 @@ def rma_wait_shipping(id):
     rwo_wh = request.form.get('rwo_warehouse', '').strip().upper()
     rma_parts_pn = request.form.get('rma_parts_pn', '').strip()
     rma_part_sn = request.form.get('rma_part_sn', '').strip()
+    choose_items = request.form.get('choose_items', 'None').strip()
     inv_time = datetime.datetime.now().strftime('%m/%d/%Y %H:%M')
     if rwo_wh in ('WH01', 'WH10', 'WH12'):
-        wh_msg = f"WH04 to {rwo_wh} at receiving"
+        if choose_items == 'Production Line Parts Replacement':
+            wh_msg = f"{rwo_wh} to WH04 at shipping, WH04 to {rwo_wh} at receiving"
+        else:
+            wh_msg = f"WH04 to {rwo_wh} at receiving"
         if shippn and partsn:
             existing = PartsInventory.query.filter_by(partsname=shippn, partsn=partsn).count()
             if existing:
                 flash('Duplicate item in partsinventory, it is wrong', 'danger')
                 return rma_back()
-        if rwo_wh in ('WH10', 'WH12') and rma_parts_pn and rma_part_sn:
+        if choose_items == 'RWO for RMA Replacement' and rwo_wh in ('WH10', 'WH12') and rma_parts_pn and rma_part_sn:
             for r in PartsInventory.query.filter_by(partsname=rma_parts_pn, partsn=rma_part_sn).all():
                 r.warehouse = 'OUTOFSTOCK'
                 entry = f"[{inv_time}]: used for {case.ntarmano} of {case.customers}"
                 r.history = (r.history.rstrip() + '\n' + entry) if r.history else entry
         if shippn and partsn:
-            hist = f"[{inv_time}]:from {case.ntarmano} of {case.customers},shipped with {vendorrmano}, replaced by {rma_parts_pn}/{rma_part_sn} from {rwo_wh}"
+            if rma_parts_pn or rma_part_sn:
+                hist = f"[{inv_time}]:from {case.ntarmano} of {case.customers},shipped with {vendorrmano}, replaced by {rma_parts_pn}/{rma_part_sn} from {rwo_wh}"
+            else:
+                hist = f"[{inv_time}]:from {case.ntarmano} of {case.customers},shipped with {vendorrmano}, replaced from {rwo_wh}"
             db.session.add(PartsInventory(partsname=shippn, partsn=partsn, warehouse='WH04', history=hist))
-        # create a new NTA RMA case representing the NTA<->vendor RMA (no docx)
-        new_ntar = next_ntarmano()
-        desc = f"Created for <RWO {case.ntarmano}>."
-        new_case = RmaCases(
-            ntarmano=new_ntar,
-            customers='NTA',
-            pn=shippn,
-            csn=partsn,
-            warranty='',
-            descriptionbycustomer=desc,
-            csid=current_user.id,
-            cstime=datetime.datetime.now(),
-            rmacontactname='NTA',
-            rmacontactemail='nta.rma@neousys-tech.com',
-            rmacontactphone='847-656-3298',
-            shippingaddress='55 E Hintz Rd, Wheeling, IL 60090',
-            rmatype='RMA',
-        )
-        new_case.assetowner = 'NTA'
-        new_case.status = 'waiting_for_shipping'
-        db.session.add(new_case)
-        db.session.flush()
-        new_shipment = RmaVendorShipment(
-            rma_case_id=new_case.id,
-            vendorrmano=vendorrmano,
-            shippn=shippn,
-            partsn=partsn,
-            vendorname=vendorname,
-            category=category,
-            assetowner='NTA',
-            warehousetransfer=wh_msg,
-        )
-        new_shipment.status = 'waiting'
-        db.session.add(new_shipment)
+        # create a new NTA RMA case representing the NTA<->vendor RMA only for RWO for RMA Replacement
+        if choose_items == 'RWO for RMA Replacement':
+            new_ntar = next_ntarmano()
+            desc = f"Created for <RWO {case.ntarmano}>."
+            new_case = RmaCases(
+                ntarmano=new_ntar,
+                customers='NTA',
+                pn=shippn,
+                csn=partsn,
+                warranty='',
+                descriptionbycustomer=desc,
+                csid=current_user.id,
+                cstime=datetime.datetime.now(),
+                rmacontactname='NTA',
+                rmacontactemail='nta.rma@neousys-tech.com',
+                rmacontactphone='847-656-3298',
+                shippingaddress='55 E Hintz Rd, Wheeling, IL 60090',
+                rmatype='RMA',
+            )
+            new_case.assetowner = 'NTA'
+            new_case.status = 'waiting_for_shipping'
+            db.session.add(new_case)
+            db.session.flush()
+            new_shipment = RmaVendorShipment(
+                rma_case_id=new_case.id,
+                vendorrmano=vendorrmano,
+                shippn=shippn,
+                partsn=partsn,
+                vendorname=vendorname,
+                category=category,
+                assetowner='NTA',
+                warehousetransfer=wh_msg,
+            )
+            new_shipment.status = 'waiting'
+            db.session.add(new_shipment)
+        else:
+            case.status = 'waiting_for_shipping'
+            if vendorrmano or shippn or partsn or vendorname:
+                active = case.shipments.filter_by(status='waiting').order_by(RmaVendorShipment.id.desc()).first()
+                if active:
+                    active.vendorrmano = vendorrmano
+                    active.shippn = shippn
+                    active.partsn = partsn
+                    active.vendorname = vendorname
+                    active.category = category
+                    active.assetowner = case.customers
+                    active.warehousetransfer = wh_msg
+                else:
+                    ao = case.customers
+                    shipment = RmaVendorShipment(rma_case_id=case.id, vendorrmano=vendorrmano, shippn=shippn, partsn=partsn, assetowner=ao, vendorname=vendorname, category=category,
+                                                 warehousetransfer=wh_msg)
+                    shipment.status = 'waiting'
+                    db.session.add(shipment)
+                    case.assetowner = ao
     else:
         case.status = 'waiting_for_shipping'
         if vendorrmano or shippn or partsn or vendorname:
@@ -3338,6 +3371,10 @@ def rma_unwait(id):
     if get_userrole(current_user.id) < 2: abort(403)
     case = RmaCases.query.get_or_404(id)
     if case.status == 'waiting_for_shipping':
+        for s in case.shipments.all():
+            if s.shippn and s.partsn:
+                PartsInventory.query.filter_by(partsname=s.shippn, partsn=s.partsn, warehouse='WH04').delete()
+        RmaVendorShipment.query.filter_by(rma_case_id=case.id).delete()
         case.status = 'processing'
         db.session.commit()
     return rma_back()
@@ -3348,6 +3385,10 @@ def rma_unshipped(id):
     if get_userrole(current_user.id) < 2: abort(403)
     case = RmaCases.query.get_or_404(id)
     if case.status == 'shipped_to_vendor':
+        for s in case.shipments.all():
+            if s.shippn and s.partsn:
+                PartsInventory.query.filter_by(partsname=s.shippn, partsn=s.partsn, warehouse='WH04').delete()
+        RmaVendorShipment.query.filter_by(rma_case_id=case.id).delete()
         case.status = 'waiting_for_shipping'
         db.session.commit()
     return rma_back()
@@ -3582,29 +3623,14 @@ def rma_recv_close(id):
     case.status = 'closed'
     case.closetime = datetime.datetime.now()
     case.closeid = current_user.id
-    if request.form.get('report_quality_close'):
-        source = 'Production Line' if case.customers.upper() == 'NTA' else 'RMA'
-        ql = QualityLog(
-            source=source,
-            wo=case.ntarmano,
-            pn=case.pn,
-            csn=case.csn,
-            defectpart=shipment.shippn if shipment else '',
-            defectpartsn=shipment.partsn if shipment else '',
-            reason=(case.descriptionbycustomer or '')[:1000],
-            status='New',
-            reportid=current_user.id,
-            reporttime=datetime.datetime.now(),
-            ownerid=current_user.id,
-            processlog='',
-            conclusion=None,
-            cause=None,
-            vendorname=shipment.vendorname if shipment else '',
-            category='',
-        )
-        db.session.add(ql)
     db.session.commit()
     flash('Received from vendor and closed RMA case')
+    if request.form.get('report_quality_close'):
+        existing = QualityLog.query.filter_by(pn=case.pn, csn=case.csn).first()
+        if existing:
+            return redirect(url_for('main.ViewEditQlog', id=existing.id))
+        else:
+            return redirect(url_for('main.add_qualitylog', wo=case.ntarmano, pn=case.pn, csn=case.csn, reason=case.descriptionbycustomer, source='RMA'))
     return rma_back()
 
 @main.route('/rma/download/<filename>')

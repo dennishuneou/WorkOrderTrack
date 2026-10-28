@@ -164,6 +164,7 @@
                         {% elif case.status == 'processing' %}
                         <button class="btn btn-sm btn-warning" onclick='showWaitShipModal({{ case.id }}, {{ case.ntarmano|tojson }}, {{ case.pn|tojson }}, {{ case.csn|tojson }})'>Wait for Shipping</button>
                         <button class="btn btn-sm btn-primary" onclick="showWOModal({{ case.id }}, '{{ case.ntarmano }}')">Create WO</button>
+                        <a class="btn btn-sm btn-danger" href="{{ url_for('main.add_qualitylog', wo=case.ntarmano, pn=case.pn, csn=case.csn, reason=case.descriptionbycustomer, source='RMA') }}">Report Quality Issue</a>
                         <button class="btn btn-sm btn-info" onclick='showPreCloseModal({{ case.id }}, {{ case.ntarmano|tojson }})'>Pre-Close</button>
                         <form action="{{ url_for('main.rma_unprocess', id=case.id) }}" method="post" style="display:inline" onsubmit="return confirm('Return {{ case.ntarmano }} to Received?')">
                             <button class="btn btn-sm btn-outline-secondary">Go Back</button>
@@ -274,7 +275,7 @@
                     <div class="form-group">
                         <div class="custom-control custom-checkbox">
                             <input type="checkbox" name="report_quality_close" value="1" class="custom-control-input" id="reportQualityRecvClose">
-                            <label class="custom-control-label" for="reportQualityRecvClose">Report Quality Issue</label>
+                            <label class="custom-control-label" for="reportQualityRecvClose">Report or Update Quality Issue</label>
                         </div>
                     </div>
                     <div class="form-group">
@@ -338,6 +339,7 @@
                             <option value="MEMORY">MEMORY</option>
                             <option value="DISK">DISK</option>
                             <option value="Package">Package</option>
+                            <option value="System">System</option>
                             <option value="Others">Others</option>
                         </select>
                     </div>
@@ -399,6 +401,7 @@
                             <option value="MEMORY">MEMORY</option>
                             <option value="DISK">DISK</option>
                             <option value="Package">Package</option>
+                            <option value="System">System</option>
                             <option value="Others">Others</option>
                         </select>
                     </div>
@@ -448,11 +451,20 @@
                             <option value="MEMORY">MEMORY</option>
                             <option value="DISK">DISK</option>
                             <option value="Package">Package</option>
+                            <option value="System">System</option>
                             <option value="Others">Others</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>RWO from warehouse <small class="text-muted">(if replaced parts)</small></label>
+                        <label>Choose Action</label>
+                        <select name="choose_items" class="form-control" id="chooseItems" onchange="toggleReplacementFields()">
+                            <option value="None">None</option>
+                            <option value="Production Line Parts Replacement">Production Line Parts Replacement</option>
+                            <option value="RWO for RMA Replacement">RWO for RMA Replacement</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="replacedFromGroup" style="display:none">
+                        <label>Replaced parts from</label>
                         <select name="rwo_warehouse" class="form-control" id="rwoWarehouse" onchange="populateRMAParts()">
                             <option value="">-- Select --</option>
                             <option value="WH01">WH01</option>
@@ -460,15 +472,17 @@
                             <option value="WH12">WH12</option>
                         </select>
                     </div>
-                    <div class="form-group">
-                        <label>RMA parts PN</label>
-                        <input type="text" name="rma_parts_pn" class="form-control" id="rmaPartsPn" list="rmaPartsDatalist" autocomplete="off" onchange="populateRMASNs()">
-                        <datalist id="rmaPartsDatalist"></datalist>
-                    </div>
-                    <div class="form-group">
-                        <label>RMA Part SN</label>
-                        <input type="text" name="rma_part_sn" class="form-control" id="rmaPartSn" list="rmaPartsSnDatalist" autocomplete="off">
-                        <datalist id="rmaPartsSnDatalist"></datalist>
+                    <div id="rmaPartsGroup" style="display:none">
+                        <div class="form-group">
+                            <label>RMA parts PN</label>
+                            <input type="text" name="rma_parts_pn" class="form-control" id="rmaPartsPn" list="rmaPartsDatalist" autocomplete="off" onchange="populateRMASNs()">
+                            <datalist id="rmaPartsDatalist"></datalist>
+                        </div>
+                        <div class="form-group">
+                            <label>RMA Part SN</label>
+                            <input type="text" name="rma_part_sn" class="form-control" id="rmaPartSn" list="rmaPartsSnDatalist" autocomplete="off">
+                            <datalist id="rmaPartsSnDatalist"></datalist>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -591,6 +605,28 @@ function showWOModal(id, ntarmano) {
     document.querySelector('#woForm input[name=wo]').value = ntarmano;
     $('#woModal').modal('show');
 }
+function toggleReplacementFields() {
+    var choice = document.getElementById('chooseItems').value;
+    var replaced = document.getElementById('replacedFromGroup');
+    var parts = document.getElementById('rmaPartsGroup');
+    if (choice === 'None') {
+        replaced.style.display = 'none';
+        parts.style.display = 'none';
+        document.getElementById('rwoWarehouse').value = '';
+        document.getElementById('rmaPartsPn').value = '';
+        document.getElementById('rmaPartSn').value = '';
+    } else if (choice === 'Production Line Parts Replacement') {
+        replaced.style.display = '';
+        parts.style.display = 'none';
+        document.getElementById('rmaPartsPn').value = '';
+        document.getElementById('rmaPartSn').value = '';
+    } else if (choice === 'RWO for RMA Replacement') {
+        replaced.style.display = '';
+        parts.style.display = '';
+    }
+    document.getElementById('rmaPartsDatalist').innerHTML = '';
+    document.getElementById('rmaPartsSnDatalist').innerHTML = '';
+}
 function showWaitShipModal(id, ntarmano, pn, csn) {
     var wsForm = document.getElementById('waitShipForm');
     wsForm.action = '/rma/' + id + '/wait-shipping';
@@ -602,6 +638,8 @@ function showWaitShipModal(id, ntarmano, pn, csn) {
     document.getElementById('rmaPartSn').value = '';
     document.getElementById('rmaPartsDatalist').innerHTML = '';
     document.getElementById('rmaPartsSnDatalist').innerHTML = '';
+    document.getElementById('chooseItems').value = 'None';
+    toggleReplacementFields();
     $('#waitShipModal').modal('show');
 }
 $(function() {
